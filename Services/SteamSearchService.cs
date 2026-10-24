@@ -503,6 +503,9 @@ public partial class SteamSearchService
         s = s.Replace("®", "").Replace("™", "").Replace("©", "")
              .Replace("(r)", "").Replace("(tm)", "").Replace("(c)", "");
 
+        // A release year in brackets ("DOOM (2016)") tells two editions apart; it is not a sequel number.
+        s = Regex.Replace(s, @"\((?:19|20)\d{2}\)", " ");
+
         // Standardize common Roman numerals to digits
         s = Regex.Replace(s, @"\bviii\b", "8");
         s = Regex.Replace(s, @"\bvii\b", "7");

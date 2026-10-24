@@ -14,6 +14,7 @@ Registers the game's exe with Windows as "High performance" under Graphics setti
 - No effect on a single-GPU desktop.
 - Windows reads this preference when the game creates its graphics device, which is why the profile applies it before the game starts.
 - Not available for Steam-launched games, because their launch target is a steam:// link rather than an exe path.
+- Kept for the program file the game's Executable points at. For a game started by a `.bat` or `.cmd`, that is the script, so the preference doesn't reach the game it starts (see Games started by a script in How a game is launched).
 
 ## Details
 

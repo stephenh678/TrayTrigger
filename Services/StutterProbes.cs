@@ -247,15 +247,11 @@ public static class StutterProbes
         {
             var psi = new ProcessStartInfo("sc.exe", $"query {VCacheServiceName}")
             {
-                RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
-            using var process = Process.Start(psi);
-            if (process == null) return VCacheOptimizerState.Unknown;
-            string output = process.StandardOutput.ReadToEnd();
-            if (!process.WaitForExit(5000)) return VCacheOptimizerState.Unknown;
-            return ParseServiceQuery(output, process.ExitCode);
+            if (BoundedProcess.Run(psi, 5000) is not { Completed: true } result) return VCacheOptimizerState.Unknown;
+            return ParseServiceQuery(result.Output, result.ExitCode);
         }
         catch (Exception ex)
         {
@@ -276,8 +272,8 @@ public static class StutterProbes
         return match.Groups[1].Value == "4" ? VCacheOptimizerState.Running : VCacheOptimizerState.NotRunning;
     }
 
-    /// <summary>Core Ultra desktop and mobile parts, and the 14th-gen desktop K parts Intel added APO to.</summary>
-    private static readonly Regex ApoCpu = new(@"Core\(TM\)\s+Ultra|Core\s+Ultra|Core\(TM\)\s+i[579]-14\d{3}K", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    /// <summary>Core Ultra desktop and mobile parts, and the 14th-gen desktop K parts Intel added APO to. The "(TM)" is optional: the name shown in Hardware Specs has it removed.</summary>
+    private static readonly Regex ApoCpu = new(@"Core(?:\(TM\))?\s+(?:Ultra|i[579]-14\d{3}K)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static IntelApoState IntelApo(string cpuModelName)
     {

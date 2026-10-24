@@ -13,6 +13,7 @@ TrayTrigger changes things for your games and puts them back afterwards: a Perfo
 What's wrong right now, each with a button to fix it. It's shown only when there's something there, and each item goes by itself once it's fixed, so there's nothing to dismiss.
 
 - **A setting a Performance Profile couldn't put back**, such as the power plan or Windows' multimedia scheduler settings. Marked CRITICAL, because your PC was left changed. **Restore Previous** tries again; it may ask for administrator permission. Once everything is back, the item goes and the entry in Recent gets a green **FIXED** badge beside CRITICAL, with when it was put back.
+- **A newer NVIDIA driver**, once you've pressed Check for Newer Driver on the System page and it found one. **Get Driver** opens NVIDIA's page; the NVIDIA app can install it too. The item stays until that driver or a newer one is installed, which TrayTrigger notices the next time it reads your hardware (at the next start, or on Refresh under Hardware Specs).
 
 ## Recent
 
@@ -22,7 +23,7 @@ Everything TrayTrigger noted in the last 90 days, newest first. Older entries go
 
 - **Problems**: a game that didn't launch (its executable wasn't found, or the launch failed), a game that was started but never seen running, so no playtime was recorded, a script that failed or wasn't found, a display mode the display doesn't support, a monitor or sound output that isn't connected, or a display or sound change that couldn't be made or put back, a tool that didn't start with a game or couldn't be closed after it, a tool that couldn't be closed for a game or wasn't opened again after it, DLSS Override another app changed, a System tweak a Windows update changed back, an edited example script moved aside, a game that couldn't be resumed after it was suspended and is still frozen, DLSS Override that couldn't be put back when a game was removed, a settings, library or tools file that couldn't be read at startup.
 - **Changes**: what TrayTrigger changed and put back, and every change to what it's told to change - a game's profile put back after you played, a game's profile, CPU Cores or DLSS Override changed (from Edit Game, the card's menu or several games at once), Restore All for DLSS Override, a tweak switched on or off in the Optimized or Aggressive profile, the profile new games get, System tweaks you applied or restored, settings put back after TrayTrigger closed unexpectedly, a game left suspended that was resumed, a game's display (mode, main display) or sound output set and put back (and put back at the next start if TrayTrigger stopped during the game), a game removed from the library or put back with Undo, and a game's launch settings saved in Edit Game (its name, executable, launch arguments, working folder, run as administrator, launch directly, hidden, close launcher on exit, script settings, or a change to a Local game), with each old and new value in the entry's detail.
-- **Activity**: what happened in your library - games you played and for how long, games you added, games the startup scan found, games no longer installed or installed again, playtime recorded when TrayTrigger closed during a game, an update installed.
+- **Activity**: what happened in your library - games you played and for how long, games you added, games the startup scan found, games no longer installed or installed again, playtime recorded when TrayTrigger closed during a game, an update installed, a newer NVIDIA driver found by Check for Newer Driver (once for each version).
 
 Each game you play is one row, "Played Elden Ring · 2h 17m", and it moves to the top each time you play it. Open it and the row is the record of that launch, a line for each part, each only when it has something to say:
 
@@ -35,6 +36,14 @@ Each game you play is one row, "Played Elden Ring · 2h 17m", and it moves to th
 - **Tools**: what the Tools page did, and didn't: "Discord closed, opened again after · MSI Afterburner already running, left as it was · OneDrive wasn't running, nothing to close". Until your last game has exited it reads "closes after your last game", and if a tool then wouldn't close or couldn't be opened again the line says so, beside the problem row for it. The tools themselves don't get rows; the history is the game.
 
 The same thing happening again is one row too: a problem shows how many times (7 TIMES), and a setting you switched back and forth shows how often it changed ("changed 3 times"), and clicking a row shows each time, what it means, **Show in log** for the technical detail, and **Copy details** for a bug report, the whole launch record included. The tabs narrow the list to Problems, Changes or Activity, and the search box finds a game, a tool or what happened.
+
+Right-click a row for more:
+
+- **Copy details** and **Copy this line**: the whole entry for a bug report, or just its one-line title to paste into a chat.
+- **Show only this game**: puts the row's game or tool in the search box, so the list shows only that.
+- **Open this game**: opens Edit Game for the row's game, when it is still in your library.
+- **Open the log**: opens debug.log in your editor. It opens the file, not the place the entry is in; the log is cleared and rolls over, so an old entry may have no lines left, and some lines only appear with Verbose logging on.
+- **Remove this entry**: after a confirmation, removes the row and every time it happened (a row that says 7 TIMES removes all seven). It isn't offered for a Critical row while its setting is still under Needs attention, because that is a PC left changed; once the setting is back, the row can go, even if an older entry in it was never marked FIXED. Only the entries the row shows go: with a search or tab narrowing the list, the times it hides stay. Removing can't be undone.
 
 Games you add and changes to performance settings - Performance Profiles, CPU Cores, DLSS Override and System tweaks - are listed, quietly - no notification and no dot - because they decide what TrayTrigger changes on your PC. Other settings you change aren't listed: you're already looking at the result.
 

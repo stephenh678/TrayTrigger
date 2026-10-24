@@ -934,6 +934,29 @@ public partial class SystemTweaksService
         return false;
     }
 
+    private static int? ReadVisualFxMarker()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects");
+            return key?.GetValue("VisualFXSetting") is int value ? value : null;
+        }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
+        return null;
+    }
+
+    /// <summary>The marker recorded with the tweak's prior state: its number, "none" when the value did not exist, null when none was recorded.</summary>
+    internal static string? PriorVisualFxMarker(string prior)
+    {
+        foreach (var part in prior.Split(';'))
+        {
+            if (!part.StartsWith("fx=", StringComparison.Ordinal)) continue;
+            string value = part[3..];
+            return value == "none" || (int.TryParse(value, out int n) && n is >= 0 and <= 3) ? value : null;
+        }
+        return null;
+    }
+
     private static bool CheckVisualFxPerformance()
     {
         // VisualFXSetting alone is just a status marker Windows' own dialog writes - it doesn't
@@ -1890,20 +1913,14 @@ public partial class SystemTweaksService
                 FileName = SystemExecutables.Powercfg,
                 Arguments = arguments,
                 CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
+                UseShellExecute = false
             };
-            using var proc = Process.Start(psi);
-            if (proc == null) return false;
-            string stderr = proc.StandardError.ReadToEnd();
-            proc.WaitForExit(5000);
-            if (!proc.HasExited) return false;
-            if (proc.ExitCode != 0 && !string.IsNullOrWhiteSpace(stderr))
+            if (BoundedProcess.Run(psi, 5000) is not { Completed: true } result) return false;
+            if (result.ExitCode != 0 && !string.IsNullOrWhiteSpace(result.Error))
             {
-                LoggingService.Verbose("SystemTweaks", $"powercfg {arguments}: {stderr.Trim()}");
+                LoggingService.Verbose("SystemTweaks", $"powercfg {arguments}: {result.Error.Trim()}");
             }
-            return proc.ExitCode == 0;
+            return result.ExitCode == 0;
         }
         catch (Exception ex)
         {
@@ -1921,15 +1938,9 @@ public partial class SystemTweaksService
                 FileName = SystemExecutables.Powercfg,
                 Arguments = arguments,
                 CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true
+                UseShellExecute = false
             };
-            using var proc = Process.Start(psi);
-            if (proc == null) return string.Empty;
-
-            string output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5000);
-            return output;
+            return BoundedProcess.Run(psi, 5000) is { Completed: true } result ? result.Output : string.Empty;
         }
         catch (Exception ex)
         {
@@ -1950,9 +1961,10 @@ public partial class SystemTweaksService
         // Revert restores what the user actually had (a user who already had shadows off keeps
         // them off), falling back to Windows' defaults (both on) when nothing was recorded.
         bool animationOn = true, shadowOn = true;
+        string? priorMarker = null;
         if (performanceMode)
         {
-            CapturePrior("visual_fx", $"anim={(GetMinimizeAnimationEnabled() ? 1 : 0)};shadow={(GetDropShadowEnabled() ? 1 : 0)}");
+            CapturePrior("visual_fx", $"anim={(GetMinimizeAnimationEnabled() ? 1 : 0)};shadow={(GetDropShadowEnabled() ? 1 : 0)};fx={ReadVisualFxMarker()?.ToString() ?? "none"}");
         }
         else
         {
@@ -1961,6 +1973,7 @@ public partial class SystemTweaksService
             {
                 animationOn = !prior.Contains("anim=0", StringComparison.Ordinal);
                 shadowOn = !prior.Contains("shadow=0", StringComparison.Ordinal);
+                priorMarker = PriorVisualFxMarker(prior);
             }
         }
 
@@ -1971,7 +1984,16 @@ public partial class SystemTweaksService
         try
         {
             using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects");
-            key?.SetValue("VisualFXSetting", 3, RegistryValueKind.DWord);
+            if (!performanceMode && priorMarker == "none")
+            {
+                key?.DeleteValue("VisualFXSetting", throwOnMissingValue: false);
+            }
+            else
+            {
+                // On: 3. Off: what the user had before (0 Let Windows choose, 1 Best appearance,
+                // 2 Best performance, 3 Custom), or 3 when nothing was recorded.
+                key?.SetValue("VisualFXSetting", performanceMode || priorMarker == null ? 3 : int.Parse(priorMarker), RegistryValueKind.DWord);
+            }
         }
         catch (Exception ex)
         {

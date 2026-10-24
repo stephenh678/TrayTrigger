@@ -220,6 +220,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             Filter = "Programs and scripts (*.exe;*.bat;*.cmd;*.ps1)|*.exe;*.bat;*.cmd;*.ps1",
             CheckFileExists = true
         };
+        DialogStartLocation.ForFile(dialog, TargetPath, WorkingDirectory);
         if (FileDialogCloak.Show(dialog) != true) return;
         WorkingDirectory = ToolCatalog.WorkingDirectoryAfterRetarget(WorkingDirectory, TargetPath, dialog.FileName);
         TargetPath = dialog.FileName;
@@ -232,6 +233,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             Title = "Select Working Folder",
             Multiselect = false
         };
+        DialogStartLocation.ForFolder(dialog, WorkingDirectory, TargetPath);
         if (FileDialogCloak.Show(dialog) == true)
         {
             WorkingDirectory = dialog.FolderName;

@@ -301,8 +301,12 @@ public partial class FolderScannerService
         List<string> subdirs;
         try
         {
-            subdirs = Directory.GetDirectories(folderPath)
-                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)) && !IsIgnoredFolder(d) && !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d))
+            // A library root such as D:\SteamLibrary holds steamapps\common\<game>; expand it so the games are
+            // scanned, as ScanFolderOrLibrary does, rather than steamapps as if it were one game.
+            subdirs = ExpandLibraryContainers(Directory.GetDirectories(folderPath)
+                    .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
+                    .ToList())
+                .Where(d => !IsIgnoredFolder(d) && !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d))
                 .ToList();
         }
         catch (Exception ex)

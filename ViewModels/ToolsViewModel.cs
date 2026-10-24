@@ -655,6 +655,7 @@ public sealed class ToolsViewModel : ViewModelBase
             Filter = "Programs and scripts (*.exe;*.bat;*.cmd;*.ps1)|*.exe;*.bat;*.cmd;*.ps1",
             CheckFileExists = true
         };
+        DialogStartLocation.ForFile(dialog, card.Tool.TargetPath, card.Tool.WorkingDirectory);
         if (FileDialogCloak.Show(dialog) != true) return;
 
         string? problem = ToolCatalog.ValidateTarget(dialog.FileName);

@@ -16,6 +16,11 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 - **Edits and removals are recorded** - Activity & History now notes when you change a game's launch settings in Edit Game, with the old and new values, and when you remove a game or undo it.
 - **Favorite star at large text sizes** - On poster cards with a long category, the star is no longer pushed off the card, and the PLAYING tag moves below the middle of the poster so it always has room.
 - **Update window fix** - At a large text size, the Download & Install button no longer runs off the edge of the update window.
+- **A newer NVIDIA driver stays on the card** - Press Check for Newer Driver and a newer one is remembered, with a Get Driver button in Activity & History, until you install it.
+- **Browse opens where your path is** - In Edit Game and Edit Tool, the file or folder window starts at the path you already have.
+- **Admin games and .bat launchers** - A game that runs as administrator keeps its profile for the whole session, and a game started by a .bat gets its priority and CPU settings on the game itself.
+- **Right-click an Activity row** - Copy it, show only that game, open the game or the log, or remove the entry.
+- **Fixes** - Steam games stay Steam games, Play pressed twice launches once, and Scan Locations accept a library root.
 
 ## 1.7.0
 

@@ -84,11 +84,14 @@ public partial class SystemInfoService
     {
         if (_nvidiaResizableBarRead) return _nvidiaResizableBarCached;
         long largest = 0;
+        bool sawNvidia = false;
         try
         {
             ForEachDisplayDevice((IntPtr _, ref SP_DEVINFO_DATA data) =>
             {
-                if (IsNvidiaDevice(data.DevInst)) largest = Math.Max(largest, ReadLargestMemoryWindow(data.DevInst));
+                if (!IsNvidiaDevice(data.DevInst)) return;
+                sawNvidia = true;
+                largest = Math.Max(largest, ReadLargestMemoryWindow(data.DevInst));
             });
         }
         catch (Exception ex)
@@ -96,6 +99,9 @@ public partial class SystemInfoService
             LoggingService.Warn("SystemInfo", $"Could not read the NVIDIA card's memory windows: {ex.Message}");
             return null;
         }
+        // A card that is there but gave no window (a laptop's graphics chip asleep) is asked again
+        // next time rather than being called unknown for the rest of the session.
+        if (sawNvidia && largest <= 0) return null;
         _nvidiaResizableBarCached = largest <= 0 ? null : largest > GpuHardwareInfo.LegacyBarBytes;
         _nvidiaResizableBarRead = true;
         return _nvidiaResizableBarCached;

@@ -88,6 +88,26 @@ public sealed class ActivityViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Whether a game of this name is in the library; set by the main view model. Null in tests.</summary>
+    public Func<string, bool>? CanOpenGameNamed { get; set; }
+
+    /// <summary>Opens Edit Game for the game of this name; set by the main view model.</summary>
+    public Action<string>? OpenGameNamed { get; set; }
+
+    /// <summary>The confirmation a row's Remove shows, given how many entries it holds. Replaced in tests, where there's no window.</summary>
+    internal Func<int, bool> ConfirmRemove { get; set; } = count => ModernDialog.ConfirmDelete(
+        WindowHelper.ActiveOwner(),
+        "Remove from History",
+        count > 1 ? $"Remove all {count} entries in this row?" : "Remove this entry?",
+        "This can't be undone.");
+
+    /// <summary>Removes the row's entries after asking: every time the same thing happened, not just the latest.</summary>
+    internal void RemoveRow(ActivityGroupViewModel row)
+    {
+        if (!row.CanRemove || !ConfirmRemove(row.Count)) return;
+        _service.RemoveEntries(row.Group.EntryIds ?? []);
+    }
+
     /// <summary>The confirmation Clear history shows. Replaced in tests, where there's no window.</summary>
     internal Func<bool> ConfirmClear { get; set; } = () => ModernDialog.ConfirmDelete(
         WindowHelper.ActiveOwner(),
@@ -225,7 +245,7 @@ public sealed class ActivityViewModel : ViewModelBase
         DateTime now = DateTime.Now;
         foreach (var group in ActivityService.Group(entries))
         {
-            Groups.Add(new ActivityGroupViewModel(group, now) { IsExpanded = expanded.Contains(group.Key) });
+            Groups.Add(new ActivityGroupViewModel(group, now, RowActions) { IsExpanded = expanded.Contains(group.Key) });
         }
         // Rows come newest first and every later section holds strictly older days, so grouping
         // in order keeps both the sections and the rows within them in date order.
@@ -237,6 +257,16 @@ public sealed class ActivityViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowNoMatches));
         OnPropertyChanged(nameof(ShowRecent));
     }
+
+    private ActivityRowActions? _rowActions;
+
+    /// <summary>What every row's menu calls back into; one set, not one per row per rebuild.</summary>
+    private ActivityRowActions RowActions => _rowActions ??= new(
+        ShowOnly: subject => SearchText = subject,
+        CanOpenGame: subject => CanOpenGameNamed?.Invoke(subject) == true,
+        OpenGame: subject => OpenGameNamed?.Invoke(subject),
+        Remove: RemoveRow,
+        IsStillNeedingAttention: key => _service.States.Any(s => string.Equals(s.Key, key, StringComparison.Ordinal)));
 
     private static bool Matches(string? text, string query) =>
         text != null && text.Contains(query, StringComparison.CurrentCultureIgnoreCase);
@@ -305,10 +335,22 @@ public sealed class AttentionItemViewModel
 /// <summary>One line of a row's detail: the bold label, with its colon and space, and the rest.</summary>
 public sealed record ActivityDetailLine(string Label, string Body);
 
+/// <summary>What a row's menu does beyond the row itself; all null in a test that only reads the row.</summary>
+internal sealed record ActivityRowActions(
+    Action<string>? ShowOnly, Func<string, bool>? CanOpenGame, Action<string>? OpenGame, Action<ActivityGroupViewModel>? Remove,
+    Func<string, bool>? IsStillNeedingAttention = null);
+
 /// <summary>A RECENT row: one entry, or every time the same thing happened.</summary>
 public sealed class ActivityGroupViewModel : ViewModelBase
 {
     private bool _isExpanded;
+    private readonly ActivityRowActions? _actions;
+
+    internal ActivityGroupViewModel(ActivityGroup group, DateTime nowLocal, ActivityRowActions? actions)
+        : this(group, nowLocal)
+    {
+        _actions = actions;
+    }
 
     public ActivityGroupViewModel(ActivityGroup group, DateTime nowLocal)
     {
@@ -320,9 +362,29 @@ public sealed class ActivityGroupViewModel : ViewModelBase
         ToggleCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
         CopyCommand = new RelayCommand(CopyDetails);
         ShowLogCommand = new RelayCommand(LoggingService.OpenLogInEditor);
+        CopyLineCommand = new RelayCommand(CopyLine);
+        ShowOnlyThisCommand = new RelayCommand(() => { if (HasSubject) _actions?.ShowOnly?.Invoke(Subject); });
+        OpenGameCommand = new RelayCommand(() => { if (HasSubject) _actions?.OpenGame?.Invoke(Subject); });
+        RemoveCommand = new RelayCommand(() => _actions?.Remove?.Invoke(this));
     }
 
     public ActivityGroup Group { get; }
+
+    /// <summary>The game or tool the row is about, blank when it is about TrayTrigger itself.</summary>
+    public string Subject => Group.Latest.Subject ?? string.Empty;
+    /// <summary>The menu's Show only this game.</summary>
+    public bool HasSubject => !string.IsNullOrWhiteSpace(Subject);
+    /// <summary>The menu's Open this game: the subject is a game that is still in the library.</summary>
+    public bool CanOpenGame => HasSubject && _actions?.CanOpenGame?.Invoke(Subject) == true;
+    /// <summary>
+    /// The menu's Remove. Not for a Critical row while the thing it reports is still live - an item under Needs Attention
+    /// with the row's key: that is a PC left changed, and it stays until it has been dealt with. Once nothing is waiting,
+    /// earlier entries that were never marked FIXED (an earlier run's, or a record that can only be checked by hand) are
+    /// history too. With no actions to ask, a Critical row that isn't FIXED is kept. Everything else is history.
+    /// </summary>
+    public bool CanRemove =>
+        Group.Latest.Level != ActivityLevel.Critical || IsFixed
+        || _actions?.IsStillNeedingAttention?.Invoke(Group.Key) == false;
     public string Text => Group.Latest.Text;
     public string? Detail => Group.Latest.Detail;
     public bool HasDetail => !string.IsNullOrWhiteSpace(Detail);
@@ -432,6 +494,12 @@ public sealed class ActivityGroupViewModel : ViewModelBase
     public ICommand ToggleCommand { get; }
     public ICommand CopyCommand { get; }
     public ICommand ShowLogCommand { get; }
+    public ICommand CopyLineCommand { get; }
+    public ICommand ShowOnlyThisCommand { get; }
+    public ICommand OpenGameCommand { get; }
+    public ICommand RemoveCommand { get; }
+
+    private void CopyLine() => CopyToClipboard(Text, "line");
 
     /// <summary>The row as text, for a bug report or a Discussions post.</summary>
     internal string DetailsText()
@@ -447,10 +515,12 @@ public sealed class ActivityGroupViewModel : ViewModelBase
         return sb.ToString();
     }
 
-    private void CopyDetails()
+    private void CopyDetails() => CopyToClipboard(DetailsText(), "entry");
+
+    private static void CopyToClipboard(string text, string what)
     {
-        try { Clipboard.SetText(DetailsText()); }
-        catch (Exception ex) { LoggingService.Warn("Activity", $"Could not copy the entry to the clipboard: {ex.Message}"); }
+        try { Clipboard.SetText(text); }
+        catch (Exception ex) { LoggingService.Warn("Activity", $"Could not copy the {what} to the clipboard: {ex.Message}"); }
     }
 }
 
