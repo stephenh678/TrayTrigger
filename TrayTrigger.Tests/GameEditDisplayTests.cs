@@ -99,7 +99,6 @@ public sealed class GameEditDisplayTests : IDisposable
         Assert.Equal(
             [GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts],
             vm.AvailableSections);
-        Assert.True(vm.HasDisplayParts);
 
         vm.SelectedSection = GameEditSection.Display;
         Assert.True(vm.ShowDisplayCard);
@@ -124,7 +123,7 @@ public sealed class GameEditDisplayTests : IDisposable
     });
 
     [Fact]
-    public void WithNothingToShow_TheDisplayTabAndCardAreLeftOut() => Sta(() =>
+    public void WithNothingToChooseBetween_TheTabAndListsStay_DisabledWithANote() => Sta(() =>
     {
         _display.Mons = [_display.Mons[0]];
         _display.Listed = [];
@@ -132,11 +131,38 @@ public sealed class GameEditDisplayTests : IDisposable
         _audio.Mics = [new AudioDevice("desk-mic", "Desk microphone")];
         var vm = Open(new GameEntry { Name = "Hades", Category = "Action" }, monitors: 1);
 
-        Assert.False(vm.HasDisplayParts);
-        Assert.DoesNotContain(GameEditSection.Display, vm.AvailableSections);
+        Assert.Contains(GameEditSection.Display, vm.AvailableSections);
         vm.SelectedSection = GameEditSection.Display;
-        Assert.Equal(GameEditSection.All, vm.SelectedSection);
-        Assert.False(vm.ShowDisplayCard);
+        Assert.Equal(GameEditSection.Display, vm.SelectedSection);
+        Assert.True(vm.ShowDisplayCard);
+
+        // The lists are there but cannot be used, and each says why.
+        Assert.False(vm.ShowMonitorChoice || vm.ShowAudio || vm.ShowMicrophone || vm.ShowDisplay);
+        Assert.Contains("Only one monitor is connected", vm.MonitorNote);
+        Assert.Contains("Only one sound output is connected (Speakers)", vm.AudioNote);
+        Assert.Contains("Only one microphone is connected (Desk microphone)", vm.MicrophoneNote);
+        Assert.True(vm.HasDisplayNote);
+        // The options that need two monitors stay out of sight.
+        Assert.False(vm.ShowMakeMainDisplay || vm.ShowMouseLock || vm.ShowDim);
+    });
+
+    [Fact]
+    public void WithNoDeviceAtAll_TheNoteSaysNoneIsConnected() => Sta(() =>
+    {
+        _audio.Mics = [];
+        var vm = Open(new GameEntry { Name = "Hades", Category = "Action" });
+
+        Assert.Equal("No microphone is connected.", vm.MicrophoneNote);
+        Assert.False(vm.ShowMicrophone);
+    });
+
+    [Fact]
+    public void WithTwoDevices_TheListsWorkAndThereAreNoNotes() => Sta(() =>
+    {
+        var vm = Open(new GameEntry { Name = "Hades", Category = "Action" });
+
+        Assert.True(vm.ShowAudio && vm.ShowMicrophone && vm.ShowMonitorChoice);
+        Assert.False(vm.HasAudioNote || vm.HasMicrophoneNote || vm.HasMonitorNote);
     });
 
     [Fact]
@@ -291,7 +317,7 @@ public sealed class GameEditDisplayTests : IDisposable
     });
 
     [Fact]
-    public void WithOneRecordingDevice_TheMicrophoneListIsLeftOut() => Sta(() =>
+    public void WithOneRecordingDevice_TheMicrophoneListIsDisabled() => Sta(() =>
     {
         _audio.Mics = [new AudioDevice("desk-mic", "Desk microphone")];
         var vm = Open(new GameEntry { Name = "Hades", Category = "Action" });

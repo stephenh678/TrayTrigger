@@ -614,8 +614,23 @@ public class GameEditViewModel : ViewModelBase
             ? null
             : new DisplayMode(SelectedResolution.Width, SelectedResolution.Height, SelectedRate?.Hz ?? 0);
 
-    /// <summary>Shown when the display lists modes, or the game already has one.</summary>
+    /// <summary>The Resolution and Refresh rate lists can be used: the display lists modes, or the game already has one. Otherwise they are shown disabled, with <see cref="DisplayNote"/>.</summary>
     public bool ShowDisplay { get; private set; }
+
+    /// <summary>Why the Resolution and Refresh rate lists are disabled, or empty.</summary>
+    public string DisplayNote { get; private set; } = string.Empty;
+    public bool HasDisplayNote => DisplayNote.Length > 0;
+
+    /// <summary>Why a list with one device or none is disabled: what is connected, and when it works. Empty with two or more (or when the game already has a choice).</summary>
+    internal static string OnlyOneNote(string kind, IReadOnlyList<string> names, string whenMore)
+    {
+        return names.Count switch
+        {
+            0 => $"No {kind} is connected.",
+            1 => $"Only one {kind} is connected ({names[0]}), so there is nothing to switch to. {whenMore}",
+            _ => string.Empty,
+        };
+    }
 
     // --- The monitor, the main display, the mouse, the dimming and the sound ---
 
@@ -690,8 +705,11 @@ public class GameEditViewModel : ViewModelBase
         }
     }
 
-    /// <summary>The Monitor list shows with more than one monitor, or when the game already names one.</summary>
+    /// <summary>The Monitor list can be used: more than one monitor, or the game already names one. Otherwise it is shown disabled, with <see cref="MonitorNote"/>.</summary>
     public bool ShowMonitorChoice { get; private set; }
+
+    public string MonitorNote { get; private set; } = string.Empty;
+    public bool HasMonitorNote => MonitorNote.Length > 0;
 
     private bool _makeMainDisplay;
     public bool MakeMainDisplay
@@ -724,8 +742,11 @@ public class GameEditViewModel : ViewModelBase
         set { _selectedAudio = value ?? AudioOptions[0]; OnPropertyChanged(); }
     }
 
-    /// <summary>The Sound output list shows with more than one playback device, or when the game already has one.</summary>
+    /// <summary>The Sound output list can be used: more than one playback device, or the game already has one. Otherwise it is shown disabled, with <see cref="AudioNote"/>.</summary>
     public bool ShowAudio { get; private set; }
+
+    public string AudioNote { get; private set; } = string.Empty;
+    public bool HasAudioNote => AudioNote.Length > 0;
 
     internal const string MissingMicrophoneLabel = "A microphone that isn't connected";
 
@@ -737,8 +758,11 @@ public class GameEditViewModel : ViewModelBase
         set { _selectedMicrophone = value ?? MicrophoneOptions[0]; OnPropertyChanged(); }
     }
 
-    /// <summary>The Microphone list shows with more than one recording device, or when the game already has one.</summary>
+    /// <summary>The Microphone list can be used: more than one recording device, or the game already has one. Otherwise it is shown disabled, with <see cref="MicrophoneNote"/>.</summary>
     public bool ShowMicrophone { get; private set; }
+
+    public string MicrophoneNote { get; private set; } = string.Empty;
+    public bool HasMicrophoneNote => MicrophoneNote.Length > 0;
 
     private bool _keepMouseOnGameScreen;
     public bool KeepMouseOnGameScreen
@@ -756,11 +780,8 @@ public class GameEditViewModel : ViewModelBase
     public bool ShowMouseLock => _initialKeepMouse || MonitorCount() > 1;
     public bool ShowDim => _initialDim || MonitorCount() > 1;
 
-    /// <summary>Some part of the Display and sound card has something to offer on this PC (or the game already uses it); without, the card and its tab are left out.</summary>
-    public bool HasDisplayParts => ShowDisplay || ShowMouseLock || ShowDim || ShowMonitorChoice || ShowAudio || ShowMicrophone;
-
     /// <summary>The Display and sound card shows on the All tab and on its own Display tab.</summary>
-    public bool ShowDisplayCard => (IsAllSection || IsDisplaySection) && HasDisplayParts;
+    public bool ShowDisplayCard => IsAllSection || IsDisplaySection;
 
     public string DisplayHint
     {
@@ -787,6 +808,9 @@ public class GameEditViewModel : ViewModelBase
         MonitorOptions = BuildMonitorOptions(_monitors, game.DisplayMonitorId);
         _selectedMonitor = MonitorOptions.FirstOrDefault(o => string.Equals(o.Id, game.DisplayMonitorId, StringComparison.OrdinalIgnoreCase)) ?? MonitorOptions[0];
         ShowMonitorChoice = _monitors.Count > 1 || !string.IsNullOrEmpty(game.DisplayMonitorId);
+        MonitorNote = ShowMonitorChoice ? string.Empty : _monitors.Count == 0
+            ? "The monitors can't be read here (a remote session, for example)."
+            : $"Only one monitor is connected ({_monitors[0].Label}). With two or more, this list picks the monitor, and options to make it the main display, keep the mouse on it and dim the others appear.";
         _makeMainDisplay = game.MakeMainDisplay;
         _dimOtherScreens = game.DimOtherScreens;
         _initialDim = game.DimOtherScreens;
@@ -798,16 +822,19 @@ public class GameEditViewModel : ViewModelBase
         _rateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode, _desktopMode);
         _selectedRate = _rateOptions.FirstOrDefault(r => r.Hz == _savedMode?.RefreshHz) ?? _rateOptions[0];
         ShowDisplay = _availableModes.Count > 0 || _savedMode != null;
+        DisplayNote = ShowDisplay ? string.Empty : "The display's resolutions and refresh rates can't be read here (a remote session, for example).";
 
         var devices = AudioOutputService.Shared.AvailableDevices();
         AudioOptions = BuildAudioOptions(devices, game.AudioOutputDeviceId);
         _selectedAudio = AudioOptions.FirstOrDefault(o => string.Equals(o.Id, game.AudioOutputDeviceId, StringComparison.OrdinalIgnoreCase)) ?? AudioOptions[0];
         ShowAudio = devices.Count > 1 || !string.IsNullOrEmpty(game.AudioOutputDeviceId);
+        AudioNote = ShowAudio ? string.Empty : OnlyOneNote("sound output", devices.Select(d => d.Name).ToList(), "This list works when there are two or more.");
 
         var microphones = AudioOutputService.SharedInput.AvailableDevices();
         MicrophoneOptions = BuildAudioOptions(microphones, game.AudioInputDeviceId, MissingMicrophoneLabel);
         _selectedMicrophone = MicrophoneOptions.FirstOrDefault(o => string.Equals(o.Id, game.AudioInputDeviceId, StringComparison.OrdinalIgnoreCase)) ?? MicrophoneOptions[0];
         ShowMicrophone = microphones.Count > 1 || !string.IsNullOrEmpty(game.AudioInputDeviceId);
+        MicrophoneNote = ShowMicrophone ? string.Empty : OnlyOneNote("microphone", microphones.Select(d => d.Name).ToList(), "This list works when there are two or more.");
     }
 
     public sealed record HdrOption(HdrMode Value, string Label);
@@ -875,8 +902,6 @@ public class GameEditViewModel : ViewModelBase
         get => _selectedSection;
         set
         {
-            // Likewise the Display tab, which exists only while its card has something to show.
-            if (value == GameEditSection.Display && !HasDisplayParts) value = GameEditSection.All;
             if (SetProperty(ref _selectedSection, value))
             {
                 OnPropertyChanged(nameof(IsAllSection));
@@ -931,7 +956,7 @@ public class GameEditViewModel : ViewModelBase
         get
         {
             var sections = new List<GameEditSection> { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance };
-            if (HasDisplayParts) sections.Add(GameEditSection.Display);
+            sections.Add(GameEditSection.Display);
             sections.Add(GameEditSection.Scripts);
             return sections;
         }

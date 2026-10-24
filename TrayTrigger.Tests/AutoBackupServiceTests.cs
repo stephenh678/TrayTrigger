@@ -5,6 +5,7 @@ using TrayTrigger.Services;
 namespace TrayTrigger.Tests;
 
 /// <summary>Automatic backups: when one is due, that a manual backup resets the clock, what is kept, and what a failure records.</summary>
+[Collection(ActivityCurrentCollection.Name)]
 public class AutoBackupServiceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerAutoBackup", Guid.NewGuid().ToString("N"));

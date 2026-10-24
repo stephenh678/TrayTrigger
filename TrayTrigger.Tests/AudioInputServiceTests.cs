@@ -7,6 +7,7 @@ using Xunit;
 namespace TrayTrigger.Tests;
 
 /// <summary>Per-game microphone: the same behavior as the sound output, on the recording side.</summary>
+[Collection(ActivityCurrentCollection.Name)]
 public sealed class AudioInputServiceTests : System.IDisposable
 {
     private readonly string _dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TrayTriggerMic_" + System.Guid.NewGuid().ToString("N"));

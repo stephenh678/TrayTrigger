@@ -2,13 +2,13 @@
 
 ## What it does
 
-Edit Game has a **Display & Sound** tab for each game, holding the **Display and sound** card (it is on the All tab too, after the Performance and DLSS cards). The tab is left out on a PC where there's nothing for it to show. It holds everything about the screens and speakers a game runs on, and each part shows only when it can do something on your PC:
+Edit Game has a **Display & Sound** tab for each game, holding the **Display and sound** card (it is on the All tab too, after the Performance and DLSS cards). The tab is always there. It holds everything about the screens and speakers a game runs on. A list with only one choice on your PC (one monitor, one sound output, one microphone) stays in place but greyed out, with a line saying what is connected and when it works; the options that need two monitors appear only with two:
 
-- **Resolution and refresh rate** for a monitor (always, when your display lists modes).
-- **Monitor**, **Identify**, **Make this monitor the main display** and **Dim the other screens** (with more than one monitor).
+- **Resolution and refresh rate** for a monitor (greyed out only where Windows can't list the display's modes, such as a remote session).
+- **Monitor** and **Identify**; with more than one monitor also **Make this monitor the main display** and **Dim the other screens**.
 - **Keep the mouse on the game's screen** (with more than one monitor).
-- **Sound output** (with more than one playback device).
-- **Microphone** (with more than one recording device).
+- **Sound output** (works with more than one playback device).
+- **Microphone** (works with more than one recording device).
 
 Everything is off until you choose it, set just before the game starts, and put back when it ends.
 
