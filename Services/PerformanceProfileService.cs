@@ -1324,27 +1324,7 @@ public class PerformanceProfileService
 
             foreach (var want in wanted)
             {
-                var reading = session.GetSetting(global, want.SettingId, out error);
-                if (error != null)
-                {
-                    // A failed read is not "absent": recording it as such would make undo delete a
-                    // value the user had chosen.
-                    LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not read the driver's setting ({error}); left unchanged.");
-                    Skipped($"{want.Label}, the driver's setting couldn't be read");
-                    continue;
-                }
-                if (reading?.Value == want.Value)
-                {
-                    LoggingService.Verbose("PerformanceProfile", $"{want.Label}: already {want.Describe}; nothing to do.");
-                    Skipped($"{want.Label} already {want.Describe}");
-                    continue;
-                }
-                if (want.LeaveAlone(reading) is string reason)
-                {
-                    LoggingService.Verbose("PerformanceProfile", $"{want.Label}: {reason}; left as it is.");
-                    Skipped($"{want.Label}, {reason}");
-                    continue;
-                }
+                if (!ShouldWriteNvidia(session, global, want, out var reading)) continue;
                 if (!session.SetSetting(global, want.SettingId, want.Value, out error))
                 {
                     LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not set {want.Describe}: {error}");
@@ -1389,6 +1369,35 @@ public class PerformanceProfileService
     }
 
     /// <summary>
+    /// Reads what the Global profile holds for a setting the session is about to write, and when there is nothing to write says why, in the log and
+    /// the launch record: it can't be read (a failed read is not "absent": recording it as such would make undo delete a value the user had chosen),
+    /// it already has the value, or it is the user's own choice. True when the write should go ahead.
+    /// </summary>
+    private bool ShouldWriteNvidia(IDrsSession session, DrsProfileHandle global, NvidiaWanted want, out DrsSettingReading? reading)
+    {
+        reading = session.GetSetting(global, want.SettingId, out string? error);
+        if (error != null)
+        {
+            LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not read the driver's setting ({error}); left unchanged.");
+            Skipped($"{want.Label}, the driver's setting couldn't be read");
+            return false;
+        }
+        if (reading?.Value == want.Value)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"{want.Label}: already {want.Describe}; nothing to do.");
+            Skipped($"{want.Label} already {want.Describe}");
+            return false;
+        }
+        if (want.LeaveAlone(reading) is string reason)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"{want.Label}: {reason}; left as it is.");
+            Skipped($"{want.Label}, {reason}");
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Works out whether Resizable BAR is to be set for this session, and if so writes what was there to the crash-recovery
     /// snapshot (before anything is changed) and adds the change to <paramref name="ops"/> for the elevated step. Reading
     /// needs no administrator rights. Null when there is nothing to do.
@@ -1414,26 +1423,7 @@ public class PerformanceProfileService
             return null;
         }
 
-        var reading = session.GetSetting(global, want.SettingId, out error);
-        if (error != null)
-        {
-            // A failed read is not "absent": recording it as such would make undo delete a value the user had chosen.
-            LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not read the driver's setting ({error}); left unchanged.");
-            Skipped($"{want.Label}, the driver's setting couldn't be read");
-            return null;
-        }
-        if (reading?.Value == want.Value)
-        {
-            LoggingService.Verbose("PerformanceProfile", $"{want.Label}: already {want.Describe}; nothing to do.");
-            Skipped($"{want.Label} already {want.Describe}");
-            return null;
-        }
-        if (want.LeaveAlone(reading) is string reason)
-        {
-            LoggingService.Verbose("PerformanceProfile", $"{want.Label}: {reason}; left as it is.");
-            Skipped($"{want.Label}, {reason}");
-            return null;
-        }
+        if (!ShouldWriteNvidia(session, global, want, out var reading)) return null;
 
         var record = new NvidiaSettingSnapshot { SettingId = want.SettingId, Written = want.Value, Previous = NvidiaGlobalSetting.TokenFor(reading) };
         snapshot.NvidiaSettings.Add(record);
@@ -1456,7 +1446,9 @@ public class PerformanceProfileService
             return;
         }
 
-        bool held = ReadGlobalValue(record.SettingId) == record.Written;
+        // Held, or not known not to be: an elevated step that was still running when the wait ended may make its change after all, and
+        // then there has to be a record to put it back from.
+        bool held = result.Unfinished || ReadGlobalValue(record.SettingId) == record.Written;
         if (!held)
         {
             snapshot.NvidiaSettings.Remove(record);
@@ -1465,7 +1457,7 @@ public class PerformanceProfileService
         LoggingService.Warn("PerformanceProfile", $"{label}: the elevated step did not set it ({result.Problem}); {(held ? "the driver holds it all the same" : "left as it was")}.");
         Skipped($"{label} couldn't be set");
         ActivityService.Add(ActivityLevel.Problem, $"{game.Name}: {label} couldn't be set", subject: game.Name,
-            detail: $"{result.Problem ?? "The change was not made."} {(held ? "The driver may hold it all the same; it is put back when the game ends." : "It was left as it was.")} The game started as usual.",
+            detail: $"{result.Problem ?? "The change was not made."} {(held ? "It may be set all the same; it is put back when the game ends." : "It was left as it was.")} The game started as usual.",
             groupKey: $"nvidia-set|{record.SettingId}");
     }
 

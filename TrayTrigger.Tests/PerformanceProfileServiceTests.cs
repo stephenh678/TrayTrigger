@@ -65,6 +65,8 @@ public class PerformanceProfileServiceTests : IDisposable
         public FakeDrsBackend? Driver;
         /// <summary>Makes the NVIDIA part of an elevated step fail, with this reason.</summary>
         public string? NvidiaProblem;
+        /// <summary>Makes the elevated step "still running" when the wait ends: it reports nothing, and has not written anything yet.</summary>
+        public bool NvidiaUnfinished;
         /// <summary>What each elevated step carried: registry changes and NVIDIA changes together.</summary>
         public readonly List<(int Registry, IReadOnlyList<NvidiaAdminOp> Nvidia)> AdminSteps = new();
 
@@ -76,6 +78,7 @@ public class PerformanceProfileServiceTests : IDisposable
             if (registry.Count == 0) ElevatedBatches++;
             bool regOk = ApplyHklmChanges(registry);
             if (nvidia.Count == 0) return new ElevatedResult(regOk, true);
+            if (NvidiaUnfinished) return new ElevatedResult(false, false, "The elevated step did not finish in time, so it is not known what it changed.", Unfinished: true);
             if (NvidiaProblem != null) return new ElevatedResult(regOk, false, NvidiaProblem);
             bool ok = Driver != null && ElevatedHelper.ApplyNvidiaOps(nvidia, Driver, out _);
             return new ElevatedResult(regOk, ok);
@@ -1389,6 +1392,36 @@ public class PerformanceProfileServiceTests : IDisposable
             var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
             Assert.Contains("Resizable BAR couldn't be set", problem.Text);
             Assert.Contains("administrator prompt was declined", problem.Detail);
+        }
+        finally { ActivityService.Current = null; }
+    }
+
+    /// <summary>
+    /// A step that started and had not finished when the wait ended may still make its change, so its record stays: the change
+    /// would otherwise sit on the driver with nothing to put it back from. The game still starts, and Activity says it is not known.
+    /// </summary>
+    [Fact]
+    public void ResizableBar_WhenTheElevatedStepIsStillRunning_KeepsItsRecord_AndTheGameStillStarts()
+    {
+        var activity = new ActivityService(Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N")), readOnly: false);
+        ActivityService.Current = activity;
+        try
+        {
+            var driver = new FakeDrsBackend();
+            _backend.NvidiaUnfinished = true;
+            var service = WithDriver(driver);
+
+            Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+
+            Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == Rebar);
+            var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
+            Assert.Contains("not known", problem.Detail);
+
+            // The step did not write anything in the end: the record is simply settled when the game ends.
+            _backend.NvidiaUnfinished = false;
+            Assert.True(service.EndGameSession("g"));
+            Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+            Assert.Null(_store.OnDisk);
         }
         finally { ActivityService.Current = null; }
     }

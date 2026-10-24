@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -63,23 +65,28 @@ public readonly record struct NvidiaAdminOp(uint SettingId, NvidiaAdminAction Ac
 }
 
 /// <summary>
-/// What an elevated step did. <paramref name="Problem"/> says why the NVIDIA part failed, for the player: the prompt was
-/// declined, or the change was refused even with administrator rights.
+/// What an elevated step did. <paramref name="Problem"/> says why the NVIDIA part failed, for the player.
+/// <paramref name="Unfinished"/>: the elevated step started but did not finish in time, so what it did is not known and it may
+/// still make its changes; a caller must keep whatever record it needs to put them back.
 /// </summary>
-public readonly record struct ElevatedResult(bool RegistryOk, bool NvidiaOk, string? Problem = null)
+public readonly record struct ElevatedResult(bool RegistryOk, bool NvidiaOk, string? Problem = null, bool Unfinished = false)
 {
     public static readonly ElevatedResult Nothing = new(true, true);
 }
+
+/// <summary>How an elevated process ended: not started (the prompt was declined, or it could not be started), started but still running, or its exit code.</summary>
+internal readonly record struct ElevatedExit(bool Started, int? Code);
 
 /// <summary>
 /// The one administrator prompt a Performance Profile asks for. Registry changes go through Windows' own
 /// <c>reg.exe</c> as before; NVIDIA settings the driver only lets an administrator change need TrayTrigger itself, so
 /// when there are any, a single elevated run of TrayTrigger (<see cref="Switch"/>) does both, under the same prompt.
 ///
-/// <para>The request is fixed before the prompt and is not read from anywhere else after it: the registry changes are in
-/// the guarded temporary .reg file the registry import already used, the NVIDIA changes are arguments, and the helper
-/// accepts only the <see cref="NvidiaAdminOp.Allowed"/> settings and values and a .reg file in the temp folder with
-/// the name TrayTrigger gives it.</para>
+/// <para>The request is fixed before the prompt and is not read from anywhere else after it. The NVIDIA changes are
+/// arguments; the registry changes are in the guarded temporary .reg file the registry import already used. The helper
+/// accepts only the <see cref="NvidiaAdminOp.Allowed"/> NVIDIA settings and values, and reads the .reg file once,
+/// checks every line of it against the two Windows scheduler values a profile writes (<see cref="TryReadRegistryChanges"/>),
+/// and applies exactly what it read: the file's name and place decide nothing.</para>
 /// </summary>
 internal static class ElevatedHelper
 {
@@ -94,6 +101,9 @@ internal static class ElevatedHelper
     internal const int BadRequestBit = 4;
 
     private static readonly Regex TempRegFileName = new(@"^TrayTrigger-[0-9a-f]{32}\.reg$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    /// <summary>A .reg file of the two values is a few hundred bytes; anything near this size is not one.</summary>
+    private const long MaxRegFileBytes = 16 * 1024;
 
     /// <summary>
     /// Makes the changes under one administrator prompt (none, when TrayTrigger is elevated already). Never throws.
@@ -121,20 +131,34 @@ internal static class ElevatedHelper
                 return new ElevatedResult(regOk, nvOk, nvOk ? null : error);
             }
 
-            int? exit = SystemTweaksService.RunElevatedWithRegFile(registry, regPath => BuildHelperStart(regPath, nvidia));
-            if (exit is not int code)
-            {
-                return new ElevatedResult(registry.Count == 0, false, "The administrator prompt was declined, or the elevated step did not finish.");
-            }
-            bool registryOk = (code & (RegistryFailedBit | BadRequestBit)) == 0;
-            bool nvidiaOk = (code & (NvidiaFailedBit | BadRequestBit)) == 0;
-            return new ElevatedResult(registryOk, nvidiaOk, nvidiaOk ? null : "The NVIDIA driver refused the change, even with administrator rights.");
+            var run = SystemTweaksService.RunElevatedWithRegFile(registry, regPath => BuildHelperStart(regPath, nvidia));
+            return Interpret(registry.Count, run);
         }
         catch (Exception ex)
         {
             LoggingService.Warn("Elevated", $"The elevated step failed: {ex.Message}");
             return new ElevatedResult(false, false, "The elevated step could not be run.");
         }
+    }
+
+    /// <summary>What an elevated run's end means for the registry part and the NVIDIA part, in words a player can read.</summary>
+    internal static ElevatedResult Interpret(int registryCount, ElevatedExit run)
+    {
+        if (!run.Started)
+            return new ElevatedResult(registryCount == 0, false, "The administrator prompt was declined, or the elevated step could not be started.");
+        if (run.Code is not int code)
+        {
+            // Started and still running when the wait ended: it may yet make its changes, so nothing is known.
+            return new ElevatedResult(registryCount == 0, false,
+                "The elevated step did not finish in time, so it is not known what it changed.", Unfinished: true);
+        }
+
+        bool registryOk = (code & (RegistryFailedBit | BadRequestBit)) == 0;
+        bool nvidiaOk = (code & (NvidiaFailedBit | BadRequestBit)) == 0;
+        string? problem = nvidiaOk ? null
+            : (code & BadRequestBit) != 0 ? "The elevated step refused the request; the log says why."
+            : "The NVIDIA driver refused the change, even with administrator rights.";
+        return new ElevatedResult(registryOk, nvidiaOk, problem);
     }
 
     private static ProcessStartInfo BuildHelperStart(string? regPath, IReadOnlyList<NvidiaAdminOp> nvidia)
@@ -189,14 +213,17 @@ internal static class ElevatedHelper
                 LoggingService.Error("Elevated", "The elevated step was started without administrator rights; nothing was done.");
                 return BadRequestBit;
             }
-            if (regPath != null && !IsOurTempRegFile(regPath))
+
+            // Read and checked before anything is changed, so a request that is not entirely what TrayTrigger asks for does nothing at all.
+            List<SystemTweaksService.RegFileEntry> registry = [];
+            if (regPath != null && !TryReadRegFile(regPath, out registry, out string? why))
             {
-                LoggingService.Error("Elevated", "The elevated step was asked to import a file that is not one TrayTrigger made; nothing was done.");
+                LoggingService.Error("Elevated", $"The elevated step was asked to import a file it does not accept ({why}); nothing was done.");
                 return BadRequestBit;
             }
 
             int exit = 0;
-            if (regPath != null && !ImportRegFile(regPath)) exit |= RegistryFailedBit;
+            if (registry.Count > 0 && !SystemTweaksService.ApplyHklmEntries(registry)) exit |= RegistryFailedBit;
             if (ops.Count > 0 && !ApplyNvidiaOps(ops, new NvApiDrsBackend(), out _)) exit |= NvidiaFailedBit;
             return exit;
         }
@@ -207,35 +234,98 @@ internal static class ElevatedHelper
         }
     }
 
-    /// <summary>A .reg file directly in the temp folder, named the way TrayTrigger names its own.</summary>
-    internal static bool IsOurTempRegFile(string path)
+    /// <summary>
+    /// Reads the .reg file the elevated step was pointed at, once, and returns what it holds if every line is one the step accepts.
+    /// The name is TrayTrigger's own and the file is small; neither says what is in it, so the content is what is checked.
+    /// </summary>
+    internal static bool TryReadRegFile(string path, out List<SystemTweaksService.RegFileEntry> entries, out string? error)
     {
+        entries = [];
+        error = null;
         try
         {
             string full = Path.GetFullPath(path);
-            string temp = Path.GetFullPath(Path.GetTempPath()).TrimEnd('\\', '/');
-            return string.Equals(Path.GetDirectoryName(full), temp, StringComparison.OrdinalIgnoreCase)
-                   && TempRegFileName.IsMatch(Path.GetFileName(full))
-                   && File.Exists(full);
+            if (!TempRegFileName.IsMatch(Path.GetFileName(full))) { error = "not named the way TrayTrigger names its files"; return false; }
+
+            // Shared for reading only, as the guard TrayTrigger holds on it is: nothing can change it while it is read.
+            using var stream = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (stream.Length > MaxRegFileBytes) { error = "too large"; return false; }
+            using var reader = new StreamReader(stream, Encoding.Unicode, detectEncodingFromByteOrderMarks: true);
+            return TryReadRegistryChanges(reader.ReadToEnd(), out entries, out error);
         }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            LoggingService.Swallowed("Elevated", ex, "checking the path of the .reg file; it is refused");
+            LoggingService.Swallowed("Elevated", ex, "reading the .reg file; the step refuses it");
+            error = "could not be read";
             return false;
         }
     }
 
-    private static bool ImportRegFile(string regPath)
+    /// <summary>
+    /// The registry changes a profile makes in the elevated step: two Windows scheduler values, each with the values Windows defines and
+    /// nothing else. A line that is anything other than the file header, a blank line, one of the two keys or one of the two values
+    /// makes the whole file refused, and nothing is applied.
+    /// </summary>
+    internal static bool TryReadRegistryChanges(string content, out List<SystemTweaksService.RegFileEntry> entries, out string? error)
     {
-        // Already elevated, so this child needs no prompt of its own.
-        var psi = new ProcessStartInfo { FileName = SystemExecutables.Reg, UseShellExecute = false, CreateNoWindow = true };
-        psi.ArgumentList.Add("import");
-        psi.ArgumentList.Add(regPath);
-        using var proc = Process.Start(psi);
-        if (proc == null) return false;
-        proc.WaitForExit(120000);
-        return proc.HasExited && proc.ExitCode == 0;
+        entries = [];
+        error = null;
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var lines = content.Split("\r\n");
+        if (lines.Length == 0 || lines[0] != "Windows Registry Editor Version 5.00") { error = "not a registry file TrayTrigger writes"; return false; }
+
+        const string KeyPrefix = @"[HKEY_LOCAL_MACHINE\";
+        string? key = null;
+        foreach (string line in lines.Skip(1))
+        {
+            if (line.Length == 0) continue;
+            if (line.StartsWith(KeyPrefix, StringComparison.Ordinal) && line.EndsWith(']'))
+            {
+                string candidate = line[KeyPrefix.Length..^1];
+                key = KnownKey(candidate);
+                if (key == null) { entries = []; error = $"a key it does not change ({candidate})"; return false; }
+                continue;
+            }
+
+            var m = RegistryLine.Match(line);
+            if (key == null || !m.Success) { entries = []; error = "a line that is not one of its own"; return false; }
+            string name = m.Groups["name"].Value;
+            string value = m.Groups["value"].Value;
+
+            SystemTweaksService.RegFileEntry entry;
+            if (key == PerformanceProfileService.SystemResponsivenessPath && name == "SystemResponsiveness" && value.StartsWith("dword:", StringComparison.Ordinal))
+            {
+                int number = Convert.ToInt32(value["dword:".Length..], 16);
+                if (!ProfileSnapshotValidator.IsValidSystemResponsiveness(number)) { entries = []; error = $"a System Responsiveness of {number}"; return false; }
+                entry = new SystemTweaksService.RegFileEntry(key, name, number, RegistryValueKind.DWord, Delete: false);
+            }
+            else if (key == SystemTweaksService.MmcssGamesTaskPath && name == "Scheduling Category" && value.StartsWith('"'))
+            {
+                string category = value[1..^1];
+                if (!ProfileSnapshotValidator.IsValidSchedulingCategory(category)) { entries = []; error = $"a Scheduling Category of '{category}'"; return false; }
+                entry = new SystemTweaksService.RegFileEntry(key, name, category, RegistryValueKind.String, Delete: false);
+            }
+            else
+            {
+                entries = [];
+                error = $"a value it does not change ({name})";
+                return false;
+            }
+
+            if (!seen.Add(key + "|" + name)) { entries = []; error = $"{name} twice"; return false; }
+            entries.Add(entry);
+        }
+        return true;
     }
+
+    /// <summary>One value line of a .reg file as TrayTrigger writes it: a plain name, and a number or a plain quoted word.</summary>
+    private static readonly Regex RegistryLine = new(
+        "^\"(?<name>[A-Za-z ]+)\"=(?<value>dword:[0-9a-f]{8}|\"[A-Za-z ]*\")$", RegexOptions.CultureInvariant);
+
+    private static string? KnownKey(string candidate) =>
+        string.Equals(candidate, PerformanceProfileService.SystemResponsivenessPath, StringComparison.OrdinalIgnoreCase) ? PerformanceProfileService.SystemResponsivenessPath
+        : string.Equals(candidate, SystemTweaksService.MmcssGamesTaskPath, StringComparison.OrdinalIgnoreCase) ? SystemTweaksService.MmcssGamesTaskPath
+        : null;
 
     /// <summary>
     /// Makes the changes on the driver's Global profile in one session and one save, then reads each back through a second

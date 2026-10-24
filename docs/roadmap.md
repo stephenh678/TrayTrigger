@@ -88,6 +88,11 @@ Built 2026-10-24 (option 2): `ElevatedHelper`. TrayTrigger runs itself elevated 
 import together, so it is still one prompt each way. It accepts only the settings and values in `NvidiaAdminOp.Allowed` (Resizable BAR, 0/1,
 delete, restore default) and a .reg file TrayTrigger made in the temp folder. Tested end to end with real UAC runs (`--test-elevated`): set,
 read back, removed, driver left as it was. A future setting that needs administrator rights is a new entry in `Allowed` plus its own checks.
+Code review (max) of the helper, 2026-10-24: the helper now reads the .reg file once and checks every line against the two Windows scheduler values
+(`TryReadRegistryChanges`), applying what it read, instead of trusting the file's name and place; a step that started and was still running when
+the wait ended keeps its record (`Unfinished`); the exit code's meaning is one tested function (`Interpret`). Known and left: the helper is
+TrayTrigger.exe itself, which sits in a folder the user can write to and is not code-signed, so a process that can replace it gets administrator
+rights at the next prompt; signing the release, or installing under Program Files, is what would close that.
 
 Still to settle:
 

@@ -2287,14 +2287,15 @@ public partial class SystemTweaksService
             psi.ArgumentList.Add("import");
             psi.ArgumentList.Add(tempFile!);
             return psi;
-        }) == 0;
+        }) is { Started: true, Code: 0 };
 
     /// <summary>
     /// Runs one elevated process (one UAC prompt) that is given a guarded temporary .reg file of <paramref name="entries"/>
-    /// (none, when there are no entries) and returns its exit code; null when it did not start or finish, most commonly
-    /// because the prompt was declined. <paramref name="buildStart"/> makes the process's start info from the file's path.
+    /// (none, when there are no entries). Says whether it started (not, most commonly, because the prompt was declined),
+    /// and its exit code, which is null when it was still running when the wait ended.
+    /// <paramref name="buildStart"/> makes the process's start info from the file's path.
     /// </summary>
-    internal static int? RunElevatedWithRegFile(IReadOnlyList<RegFileEntry> entries, Func<string?, ProcessStartInfo> buildStart)
+    internal static ElevatedExit RunElevatedWithRegFile(IReadOnlyList<RegFileEntry> entries, Func<string?, ProcessStartInfo> buildStart)
     {
         string? tempFile = null;
         try
@@ -2319,7 +2320,7 @@ public partial class SystemTweaksService
                     {
                         LoggingService.Error("SystemTweaks", "Elevated registry import refused: the temporary .reg file changed after it was written.");
                         guard.Dispose();
-                        return null;
+                        return new ElevatedExit(false, null);
                     }
                 }
             }
@@ -2327,21 +2328,21 @@ public partial class SystemTweaksService
             using (guard)
             {
                 using var proc = Process.Start(buildStart(tempFile));
-                if (proc == null) return null;
+                if (proc == null) return new ElevatedExit(false, null);
 
                 // A generous timeout: WaitForExit(5000) used to return while the user was still
                 // looking at the UAC prompt, after which reading ExitCode on a still-running
                 // process threw and got swallowed by the catch below as a false "failed".
+                // One still running after it has started, and may yet do its work: that is not the same as one that never started.
                 proc.WaitForExit(120000);
-                if (!proc.HasExited) return null;
-                return proc.ExitCode;
+                return proc.HasExited ? new ElevatedExit(true, proc.ExitCode) : new ElevatedExit(true, null);
             }
         }
         catch (Exception ex)
         {
             // Most commonly the user cancelled the UAC prompt (Win32Exception 1223).
             LoggingService.Warn("SystemTweaks", $"Elevated registry import failed: {ex.Message}");
-            return null;
+            return new ElevatedExit(false, null);
         }
         finally
         {
