@@ -520,9 +520,12 @@ public class GameEditViewModel : ViewModelBase
     }
 
     /// <summary>One choice in the Refresh rate list.</summary>
-    public sealed record RateOption(int Hz, string Label);
+    public sealed record RateOption(int Hz, string Label)
+    {
+        public bool IsNone => Hz == 0;
+    }
 
-    internal const string NoDisplayChangeLabel = "Don't change the display";
+    internal const string DefaultLabel = "Default";
 
     /// <summary>
     /// The Resolution list: no change, then each resolution the main display offers, largest first. A
@@ -531,13 +534,13 @@ public class GameEditViewModel : ViewModelBase
     /// </summary>
     internal static IReadOnlyList<ResolutionOption> BuildResolutionOptions(IReadOnlyList<DisplayMode> available, DisplayMode? saved)
     {
-        var options = new List<ResolutionOption> { new(0, 0, NoDisplayChangeLabel) };
+        var options = new List<ResolutionOption> { new(0, 0, DefaultLabel) };
         foreach (var m in available)
         {
             if (!options.Any(o => o.Width == m.Width && o.Height == m.Height))
                 options.Add(new ResolutionOption(m.Width, m.Height, $"{m.Width} × {m.Height}"));
         }
-        if (saved is { } kept && !options.Any(o => o.Width == kept.Width && o.Height == kept.Height))
+        if (saved is { Width: > 0, Height: > 0 } kept && !options.Any(o => o.Width == kept.Width && o.Height == kept.Height))
         {
             options.Add(new ResolutionOption(kept.Width, kept.Height, $"{kept.Width} × {kept.Height} (this display doesn't list it)"));
         }
@@ -545,16 +548,19 @@ public class GameEditViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// The refresh rates the display offers at a resolution, fastest first. The game's saved rate stays,
-    /// labelled, if the display doesn't offer it there.
+    /// The Refresh rate list: Default, then the rates the display offers at the chosen resolution, fastest first, or, with
+    /// the resolution left at Default, at the resolution the desktop runs now (every resolution's when that can't be read).
+    /// The game's saved rate stays, labelled, if the display doesn't offer it there.
     /// </summary>
-    internal static IReadOnlyList<RateOption> BuildRateOptions(IReadOnlyList<DisplayMode> available, ResolutionOption resolution, DisplayMode? saved)
+    internal static IReadOnlyList<RateOption> BuildRateOptions(IReadOnlyList<DisplayMode> available, ResolutionOption resolution, DisplayMode? saved, DisplayMode? desktop = null)
     {
-        if (resolution.IsNone) return [];
-        var rates = available.Where(m => m.Width == resolution.Width && m.Height == resolution.Height)
-            .Select(m => m.RefreshHz).Distinct().OrderByDescending(hz => hz).ToList();
-        var options = rates.Select(hz => new RateOption(hz, $"{hz} Hz")).ToList();
-        if (saved is { } kept && kept.Width == resolution.Width && kept.Height == resolution.Height && !rates.Contains(kept.RefreshHz))
+        IEnumerable<DisplayMode> at = available;
+        if (!resolution.IsNone) at = available.Where(m => m.Width == resolution.Width && m.Height == resolution.Height);
+        else if (desktop is { } now) at = available.Where(m => m.Width == now.Width && m.Height == now.Height);
+        var rates = at.Select(m => m.RefreshHz).Distinct().OrderByDescending(hz => hz).ToList();
+        var options = new List<RateOption> { new(0, DefaultLabel) };
+        options.AddRange(rates.Select(hz => new RateOption(hz, $"{hz} Hz")));
+        if (saved is { RefreshHz: > 0 } kept && !rates.Contains(kept.RefreshHz))
         {
             options.Add(new RateOption(kept.RefreshHz, $"{kept.RefreshHz} Hz (this display doesn't list it)"));
         }
@@ -563,6 +569,7 @@ public class GameEditViewModel : ViewModelBase
 
     private IReadOnlyList<DisplayMode> _availableModes = [];
     private DisplayMode? _savedMode;
+    private DisplayMode? _desktopMode;
 
     public IReadOnlyList<ResolutionOption> ResolutionOptions { get; private set; } = [];
 
@@ -573,7 +580,7 @@ public class GameEditViewModel : ViewModelBase
         private set { _rateOptions = value; OnPropertyChanged(); }
     }
 
-    private ResolutionOption _selectedResolution = new(0, 0, NoDisplayChangeLabel);
+    private ResolutionOption _selectedResolution = new(0, 0, DefaultLabel);
     public ResolutionOption SelectedResolution
     {
         get => _selectedResolution;
@@ -581,11 +588,10 @@ public class GameEditViewModel : ViewModelBase
         {
             var previousRate = _selectedRate?.Hz;
             _selectedResolution = value ?? ResolutionOptions[0];
-            RateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode);
-            // The same rate if the new resolution offers it, else the fastest it does.
-            SelectedRate = RateOptions.FirstOrDefault(r => r.Hz == previousRate) ?? RateOptions.FirstOrDefault();
+            RateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode, _desktopMode);
+            // The same rate if the new resolution offers it, else Default.
+            SelectedRate = RateOptions.FirstOrDefault(r => r.Hz == previousRate) ?? RateOptions[0];
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ShowRate));
             OnPropertyChanged(nameof(DisplayHint));
         }
     }
@@ -602,12 +608,11 @@ public class GameEditViewModel : ViewModelBase
         }
     }
 
-    /// <summary>The refresh rate list shows once a resolution is chosen.</summary>
-    public bool ShowRate => !SelectedResolution.IsNone;
-
-    /// <summary>What the two lists add up to, or null for no change.</summary>
+    /// <summary>What the two lists add up to, or null when both are Default. A part left at Default is 0.</summary>
     private DisplayMode? SelectedDisplayMode =>
-        SelectedResolution.IsNone || SelectedRate == null ? null : new DisplayMode(SelectedResolution.Width, SelectedResolution.Height, SelectedRate.Hz);
+        SelectedResolution.IsNone && (SelectedRate == null || SelectedRate.IsNone)
+            ? null
+            : new DisplayMode(SelectedResolution.Width, SelectedResolution.Height, SelectedRate?.Hz ?? 0);
 
     /// <summary>Shown when the display lists modes, or the game already has one.</summary>
     public bool ShowDisplay { get; private set; }
@@ -637,7 +642,7 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>One choice in the Sound output list: no change (empty id), or a playback device.</summary>
     public sealed record AudioOption(string Id, string Label);
 
-    internal const string NoAudioChangeLabel = "Don't change the sound output";
+    internal const string NoAudioChangeLabel = "Default (Windows' choice)";
 
     internal static IReadOnlyList<AudioOption> BuildAudioOptions(IReadOnlyList<AudioDevice> devices, string savedId)
     {
@@ -665,10 +670,11 @@ public class GameEditViewModel : ViewModelBase
             var chosen = SelectedDisplayMode;
             _savedMode = chosen;
             _availableModes = DisplayModeService.Shared.AvailableModes(_selectedMonitor.Id);
+            _desktopMode = DisplayModeService.Shared.CurrentMode(_selectedMonitor.Id);
             var resolutions = BuildResolutionOptions(_availableModes, chosen);
-            var resolution = resolutions.FirstOrDefault(o => chosen is { } s && o.Width == s.Width && o.Height == s.Height) ?? resolutions[0];
-            var rates = BuildRateOptions(_availableModes, resolution, chosen);
-            var rate = rates.FirstOrDefault(r => r.Hz == chosen?.RefreshHz) ?? rates.FirstOrDefault();
+            var resolution = resolutions.FirstOrDefault(o => chosen is { Width: > 0 } s && o.Width == s.Width && o.Height == s.Height) ?? resolutions[0];
+            var rates = BuildRateOptions(_availableModes, resolution, chosen, _desktopMode);
+            var rate = rates.FirstOrDefault(r => r.Hz == chosen?.RefreshHz) ?? rates[0];
 
             // The lists first and the choices after: replacing a ComboBox's items clears its selection and writes that back here.
             ResolutionOptions = resolutions;
@@ -679,7 +685,6 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedResolution));
             OnPropertyChanged(nameof(SelectedRate));
-            OnPropertyChanged(nameof(ShowRate));
             OnPropertyChanged(nameof(ShowMakeMainDisplay));
             OnPropertyChanged(nameof(DisplayHint));
         }
@@ -744,12 +749,23 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>The Display and sound card shows on the All tab and on its own Display tab.</summary>
     public bool ShowDisplayCard => (IsAllSection || IsDisplaySection) && HasDisplayParts;
 
-    public string DisplayHint => (SelectedDisplayMode, MakeMainDisplay && ShowMakeMainDisplay) switch
+    public string DisplayHint
     {
-        (null, false) => "The display is left as it is.",
-        (null, true) => "The monitor is made the main display before the game starts and put back when it ends.",
-        _ => "The monitor is set to this before the game starts and put back when it ends. A game that sets its own resolution overrides it while it runs. A different resolution may rearrange open windows and desktop icons.",
-    };
+        get
+        {
+            bool main = MakeMainDisplay && ShowMakeMainDisplay;
+            string layout = "The monitor is made the main display before the game starts and put back when it ends.";
+            return SelectedDisplayMode switch
+            {
+                null => main ? layout : "The display is left as it is.",
+                { Width: > 0, RefreshHz: > 0 } m => $"Runs at {m.Width} × {m.Height} and {m.RefreshHz} Hz. {ModeNote}",
+                { Width: > 0 } m => $"Runs at {m.Width} × {m.Height}, at the refresh rate the display has now if it offers it there, otherwise the fastest it does. {ModeNote}",
+                var m => $"Runs at the resolution the display has now, at {m!.Value.RefreshHz} Hz. {ModeNote}",
+            };
+        }
+    }
+
+    private const string ModeNote = "It is set before the game starts and put back when it ends. A game that sets its own resolution overrides it while it runs. A different resolution may rearrange open windows and desktop icons.";
 
     private void LoadDisplay(GameEntry game)
     {
@@ -763,10 +779,11 @@ public class GameEditViewModel : ViewModelBase
         _initialDim = game.DimOtherScreens;
 
         _availableModes = DisplayModeService.Shared.AvailableModes(_selectedMonitor.Id);
+        _desktopMode = DisplayModeService.Shared.CurrentMode(_selectedMonitor.Id);
         ResolutionOptions = BuildResolutionOptions(_availableModes, _savedMode);
-        _selectedResolution = ResolutionOptions.FirstOrDefault(o => _savedMode is { } s && o.Width == s.Width && o.Height == s.Height) ?? ResolutionOptions[0];
-        _rateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode);
-        _selectedRate = _rateOptions.FirstOrDefault(r => r.Hz == _savedMode?.RefreshHz) ?? _rateOptions.FirstOrDefault();
+        _selectedResolution = ResolutionOptions.FirstOrDefault(o => _savedMode is { Width: > 0 } s && o.Width == s.Width && o.Height == s.Height) ?? ResolutionOptions[0];
+        _rateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode, _desktopMode);
+        _selectedRate = _rateOptions.FirstOrDefault(r => r.Hz == _savedMode?.RefreshHz) ?? _rateOptions[0];
         ShowDisplay = _availableModes.Count > 0 || _savedMode != null;
 
         var devices = AudioOutputService.Shared.AvailableDevices();

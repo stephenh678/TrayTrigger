@@ -15,7 +15,14 @@ Everything is off until you choose it, set just before the game starts, and put 
 
 The resolution and refresh rate the monitor runs at while the game does. It's for a game that has no refresh rate or resolution setting of its own, or a monitor that starts a game at the wrong rate.
 
-There are two lists. **Resolution** shows the resolutions the monitor offers, the largest first; **Don't change the display** is how every game starts out. Once you pick a resolution, **Refresh rate** shows only the rates the monitor offers at that resolution, the fastest first. To change only the refresh rate, pick the current resolution and the rate you want.
+There are two lists, and both start at **Default**, which leaves that part of the display as it is. **Resolution** shows the resolutions the monitor offers, the largest first. **Refresh rate** shows the rates the monitor offers at the chosen resolution, the fastest first, or, with Resolution on Default, at the resolution Windows is using now. So the two together mean:
+
+- **Both Default:** the display is left alone.
+- **Only a refresh rate:** the monitor's current resolution at that rate. This is the quick way to run one game at the monitor's fastest rate.
+- **Only a resolution:** that resolution, at the rate the monitor has now if it offers it there, otherwise at the fastest rate it does.
+- **Both chosen:** exactly that.
+
+A rate or resolution the monitor doesn't list is never asked for; the game starts with the display as it is, and Activity & History says so.
 
 ## Monitor
 

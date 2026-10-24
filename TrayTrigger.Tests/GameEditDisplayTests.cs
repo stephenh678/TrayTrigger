@@ -198,7 +198,6 @@ public sealed class GameEditDisplayTests : IDisposable
         vm.SelectedMonitor = vm.MonitorOptions.Single(o => o.Id == "MON2");
 
         Assert.True(vm.SelectedResolution.IsNone);
-        Assert.False(vm.ShowRate);
     });
 
     [Fact]

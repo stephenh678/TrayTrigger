@@ -10,7 +10,14 @@ namespace TrayTrigger.Services;
 /// <summary>One resolution and refresh rate of a display.</summary>
 public readonly record struct DisplayMode(int Width, int Height, int RefreshHz)
 {
-    public override string ToString() => $"{Width} × {Height} @ {RefreshHz} Hz";
+    /// <summary>A zero width and height, or a zero rate, is the part left at Default.</summary>
+    public override string ToString() => (Width > 0 && Height > 0, RefreshHz > 0) switch
+    {
+        (true, true) => $"{Width} × {Height} @ {RefreshHz} Hz",
+        (true, false) => $"{Width} × {Height}, default refresh rate",
+        (false, true) => $"default resolution @ {RefreshHz} Hz",
+        _ => "default",
+    };
 }
 
 /// <summary>One attached monitor.</summary>
@@ -190,15 +197,39 @@ internal sealed class DisplayModeService
         _snapshotPath = snapshotPath;
     }
 
-    /// <summary>The game asks for a display mode: all three numbers are set.</summary>
-    public static bool Wants(GameEntry game) => game.DisplayWidth > 0 && game.DisplayHeight > 0 && game.DisplayRefreshHz > 0;
+    /// <summary>The game asks for a resolution, a refresh rate or both; a part left at 0 stays as the desktop has it.</summary>
+    public static bool Wants(GameEntry game) => (game.DisplayWidth > 0 && game.DisplayHeight > 0) || game.DisplayRefreshHz > 0;
 
     /// <summary>The game asks for the monitor to be made the main display, or for a mode.</summary>
     public static bool WantsAnyChange(GameEntry game) => Wants(game) || game.MakeMainDisplay;
 
-    /// <summary>The mode a game asks for, or null.</summary>
-    public static DisplayMode? RequestedMode(GameEntry game) =>
-        Wants(game) ? new DisplayMode(game.DisplayWidth, game.DisplayHeight, game.DisplayRefreshHz) : null;
+    /// <summary>What a game asks for, or null. A part left at Default is 0: see <see cref="Resolve"/>.</summary>
+    public static DisplayMode? RequestedMode(GameEntry game)
+    {
+        if (!Wants(game)) return null;
+        bool resolution = game.DisplayWidth > 0 && game.DisplayHeight > 0;
+        return new DisplayMode(resolution ? game.DisplayWidth : 0, resolution ? game.DisplayHeight : 0, Math.Max(0, game.DisplayRefreshHz));
+    }
+
+    /// <summary>
+    /// The whole mode a request comes to. A resolution with no rate keeps the desktop's rate when that resolution offers it,
+    /// otherwise takes the fastest it does; a rate with no resolution keeps the desktop's resolution. Null when the desktop's
+    /// own mode is needed and can't be read, or the display lists nothing at that resolution.
+    /// </summary>
+    internal static DisplayMode? Resolve(DisplayMode requested, DisplayMode? current, IReadOnlyList<DisplayMode> modes)
+    {
+        bool resolution = requested.Width > 0 && requested.Height > 0;
+        bool rate = requested.RefreshHz > 0;
+        if (resolution && rate) return requested;
+        if (resolution)
+        {
+            if (current is { } now && modes.Contains(new DisplayMode(requested.Width, requested.Height, now.RefreshHz)))
+                return new DisplayMode(requested.Width, requested.Height, now.RefreshHz);
+            var fastest = modes.Where(m => m.Width == requested.Width && m.Height == requested.Height).Select(m => m.RefreshHz).DefaultIfEmpty(0).Max();
+            return fastest > 0 ? new DisplayMode(requested.Width, requested.Height, fastest) : null;
+        }
+        return rate && current is { } desktop ? new DisplayMode(desktop.Width, desktop.Height, requested.RefreshHz) : null;
+    }
 
     /// <summary>The attached monitors, the main display first; empty in a remote session or when they can't be read.</summary>
     public IReadOnlyList<MonitorInfo> AvailableMonitors()
@@ -233,6 +264,22 @@ internal sealed class DisplayModeService
         }
     }
 
+    /// <summary>The mode a monitor (the main display when <paramref name="monitorId"/> is empty) runs now, for Edit Game's Refresh rate list; null when it can't be read.</summary>
+    public DisplayMode? CurrentMode(string? monitorId = null)
+    {
+        try
+        {
+            if (_backend.IsRemoteSession) return null;
+            string? device = string.IsNullOrEmpty(monitorId) ? _backend.PrimaryDevice() : FindDevice(monitorId);
+            return device == null ? null : _backend.Current(device);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Swallowed("Display", ex, "reading the display's current mode; Edit Game lists the rates of every resolution");
+            return null;
+        }
+    }
+
     /// <summary>
     /// The refresh rate the main display will have once this game's display settings are applied, or null when they leave it
     /// as it is (nothing asked, a remote session, a monitor that isn't connected, or one that stays a secondary display).
@@ -250,7 +297,8 @@ internal sealed class DisplayModeService
             if (device == null) return null;
             // A monitor that stays a secondary display leaves the main display's rate alone.
             if (!game.MakeMainDisplay && !string.Equals(device, primary, StringComparison.OrdinalIgnoreCase)) return null;
-            if (RequestedMode(game) is { } wanted && _backend.Modes(device).Contains(wanted)) return wanted.RefreshHz;
+            var modes = _backend.Modes(device);
+            if (RequestedMode(game) is { } asked && Resolve(asked, _backend.Current(device), modes) is { } wanted && modes.Contains(wanted)) return wanted.RefreshHz;
             return _backend.Current(device)?.RefreshHz;
         }
         catch (Exception ex)
@@ -331,10 +379,18 @@ internal sealed class DisplayModeService
                 }
             }
 
-            var wantedMode = RequestedMode(game);
+            var requestedMode = RequestedMode(game);
+            var wantedMode = requestedMode is { } asked ? Resolve(asked, _backend.Current(device), _backend.Modes(device)) : null;
             bool setMode = false;
-            if (wantedMode is { } wanted)
+            if (requestedMode is { } requested)
             {
+                if (wantedMode is not { } wanted)
+                {
+                    Skip(game, $"the display doesn't support {requested}");
+                    Problem(game, $"{game.Name}: the display doesn't support {requested}",
+                        "The game starts with the display as it is. Pick another mode in Edit Game > Display.");
+                    return DisplayApply.Unsupported;
+                }
                 if (_backend.Current(device) == wanted)
                 {
                     LoggingService.Verbose("Display", $"'{game.Name}': the display already runs {wanted}.");

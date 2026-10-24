@@ -96,7 +96,7 @@ public sealed class DisplayModeServiceTests : System.IDisposable
         var (service, display) = Make();
 
         Assert.Equal(DisplayApply.NotRequested, service.Begin(new GameEntry { Id = "a", Name = "A" }));
-        Assert.Equal(DisplayApply.NotRequested, service.Begin(Game("b", hz: 0)));
+        Assert.Equal(DisplayApply.NotRequested, service.Begin(Game("b", 0, 0, 0)));
         Assert.Empty(display.Calls);
     }
 
@@ -402,29 +402,104 @@ public sealed class DisplayModeServiceTests : System.IDisposable
     ];
 
     [Fact]
-    public void TheResolutionList_StartsWithNoChange_ThenEachResolutionOnce_LargestFirst()
+    public void TheResolutionList_StartsWithDefault_ThenEachResolutionOnce_LargestFirst()
     {
         var options = ViewModels.GameEditViewModel.BuildResolutionOptions(Sample, null);
 
-        Assert.Equal([ViewModels.GameEditViewModel.NoDisplayChangeLabel, "3840 × 2160", "2560 × 1440", "1920 × 1080"], options.Select(o => o.Label).ToList());
+        Assert.Equal([ViewModels.GameEditViewModel.DefaultLabel, "3840 × 2160", "2560 × 1440", "1920 × 1080"], options.Select(o => o.Label).ToList());
         Assert.True(options[0].IsNone);
     }
 
     [Fact]
-    public void TheRefreshRateList_ShowsOnlyWhatThatResolutionOffers_FastestFirst()
+    public void TheRefreshRateList_StartsWithDefault_ThenWhatThatResolutionOffers_FastestFirst()
     {
         var qhd = new ViewModels.GameEditViewModel.ResolutionOption(2560, 1440, "2560 × 1440");
 
         var rates = ViewModels.GameEditViewModel.BuildRateOptions(Sample, qhd, null);
 
-        Assert.Equal(["144 Hz", "60 Hz"], rates.Select(r => r.Label).ToList());
-        Assert.Equal(["60 Hz"], ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(3840, 2160, "4K"), null).Select(r => r.Label).ToList());
+        Assert.Equal(["Default", "144 Hz", "60 Hz"], rates.Select(r => r.Label).ToList());
+        Assert.True(rates[0].IsNone);
+        Assert.Equal(["Default", "60 Hz"], ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(3840, 2160, "4K"), null).Select(r => r.Label).ToList());
     }
 
     [Fact]
-    public void NoResolutionChosen_MeansNoRefreshRateList()
+    public void WithTheResolutionOnDefault_TheRatesAreThoseOfTheDesktopsResolution()
     {
-        Assert.Empty(ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(0, 0, "none"), null));
+        var none = new ViewModels.GameEditViewModel.ResolutionOption(0, 0, "Default");
+
+        var atQhd = ViewModels.GameEditViewModel.BuildRateOptions(Sample, none, null, new DisplayMode(2560, 1440, 60));
+        Assert.Equal(["Default", "144 Hz", "60 Hz"], atQhd.Select(r => r.Label).ToList());
+
+        // Unreadable desktop mode: every resolution's rates, once each.
+        var all = ViewModels.GameEditViewModel.BuildRateOptions(Sample, none, null);
+        Assert.Equal(["Default", "144 Hz", "60 Hz"], all.Select(r => r.Label).ToList());
+        Assert.Equal(["Default", "60 Hz"], ViewModels.GameEditViewModel.BuildRateOptions(Sample, none, null, new DisplayMode(3840, 2160, 60)).Select(r => r.Label).ToList());
+    }
+
+    [Fact]
+    public void ARateWithoutAResolution_IsSetAtTheDesktopsResolution()
+    {
+        var (service, display) = Make();
+        display.Now = new DisplayMode(1920, 1080, 60);
+
+        Assert.Equal(DisplayApply.Applied, service.Begin(Game("a", 0, 0, 144)));
+        Assert.Equal(new DisplayMode(1920, 1080, 144), display.Now);
+        service.End("a");
+        Assert.Equal(display.Desktop, display.Now);
+    }
+
+    [Fact]
+    public void AResolutionWithoutARate_KeepsTheDesktopsRateWhenItIsOffered_ElseTheFastest()
+    {
+        var (service, display) = Make();
+        display.Now = new DisplayMode(3840, 2160, 60);
+        Assert.Equal(DisplayApply.Applied, service.Begin(Game("a", 1920, 1080, 0)));
+        Assert.Equal(new DisplayMode(1920, 1080, 60), display.Now);
+        service.End("a");
+
+        var (service2, display2) = Make();
+        display2.Now = new DisplayMode(3840, 2160, 60);
+        display2.Listed = [new(3840, 2160, 60), new(2560, 1440, 144), new(2560, 1440, 120)];
+        Assert.Equal(DisplayApply.Applied, service2.Begin(Game("b", 2560, 1440, 0)));
+        Assert.Equal(new DisplayMode(2560, 1440, 144), display2.Now);
+    }
+
+    [Fact]
+    public void ADefaultPartThatCannotBeResolved_IsNotAppliedAndTheGameStillLaunches()
+    {
+        var (service, display) = Make();
+
+        // 144 Hz is not listed at the desktop's 3840 × 2160, so the game starts with the display as it is.
+        Assert.Equal(DisplayApply.Unsupported, service.Begin(Game("a", 0, 0, 144)));
+        Assert.Empty(display.Calls);
+    }
+
+    [Theory]
+    [InlineData(0, 0, 144, 1920, 1080, 60, 1920, 1080, 144)]
+    [InlineData(2560, 1440, 0, 1920, 1080, 144, 2560, 1440, 144)]
+    [InlineData(1920, 1080, 60, 3840, 2160, 60, 1920, 1080, 60)]
+    public void Resolve_FillsTheDefaultPartFromTheDesktop(int w, int h, int hz, int cw, int ch, int chz, int ew, int eh, int ehz)
+    {
+        var modes = new[] { new DisplayMode(3840, 2160, 60), new DisplayMode(2560, 1440, 144), new DisplayMode(1920, 1080, 144), new DisplayMode(1920, 1080, 60) };
+
+        var resolved = DisplayModeService.Resolve(new DisplayMode(w, h, hz), new DisplayMode(cw, ch, chz), modes);
+
+        Assert.Equal(new DisplayMode(ew, eh, ehz), resolved);
+    }
+
+    [Fact]
+    public void Resolve_NeedsTheDesktopsModeForARateOnly()
+    {
+        Assert.Null(DisplayModeService.Resolve(new DisplayMode(0, 0, 144), null, [new DisplayMode(1920, 1080, 144)]));
+    }
+
+    [Fact]
+    public void ThePlannedRefreshRate_FollowsAResolvedRate()
+    {
+        var (service, display) = Make();
+        display.Now = new DisplayMode(1920, 1080, 60);
+
+        Assert.Equal(144, service.PlannedMainRefreshHz(Game("a", 0, 0, 144)));
     }
 
     [Fact]
@@ -437,7 +512,7 @@ public sealed class DisplayModeServiceTests : System.IDisposable
         var rates = ViewModels.GameEditViewModel.BuildRateOptions(Sample, kept, saved);
 
         Assert.Contains("this display doesn't list it", kept.Label);
-        Assert.Equal(75, Assert.Single(rates).Hz);
+        Assert.Equal([0, 75], rates.Select(r => r.Hz).ToList());
     }
 
     [Fact]
@@ -448,7 +523,7 @@ public sealed class DisplayModeServiceTests : System.IDisposable
 
         var rates = ViewModels.GameEditViewModel.BuildRateOptions(Sample, qhd, saved);
 
-        Assert.Equal(["144 Hz", "60 Hz", "120 Hz (this display doesn't list it)"], rates.Select(r => r.Label).ToList());
+        Assert.Equal(["Default", "144 Hz", "60 Hz", "120 Hz (this display doesn't list it)"], rates.Select(r => r.Label).ToList());
     }
 
     [Fact]
@@ -457,7 +532,7 @@ public sealed class DisplayModeServiceTests : System.IDisposable
         var saved = new DisplayMode(1920, 1080, 60);
 
         Assert.Equal(4, ViewModels.GameEditViewModel.BuildResolutionOptions(Sample, saved).Count);
-        Assert.Equal(2, ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(1920, 1080, "x"), saved).Count);
+        Assert.Equal(3, ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(1920, 1080, "x"), saved).Count);
     }
 
     [Fact]
