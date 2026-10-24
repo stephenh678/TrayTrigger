@@ -89,6 +89,6 @@ Still to settle:
 1. (Answered above: it needs admin.)
 2. It needs admin: mark it ADMIN and write it in an elevated step (the bundled UAC runs PowerShell, not NVAPI, so it is a new
    elevated NVAPI step), or take the tweak out.
-3. Make a failed write visible: a Problem entry in Activity & History, not only the log, and not an ENABLED badge that says nothing.
+3. ~~Make a failed write visible~~ Done: a Problem entry in Activity & History. The ENABLED badge still says nothing about whether it took effect.
 4. Does a Global value reach a game whose own profile lacks it (Hellraiser's profile has 16 settings and no value)? Only a game
    running can show that.

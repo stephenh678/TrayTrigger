@@ -1324,6 +1324,7 @@ public class PerformanceProfileService
                 {
                     LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not set {want.Describe}: {error}");
                     Skipped($"{want.Label} couldn't be set");
+                    NvidiaWriteRefused(game, want, error);
                     continue;
                 }
                 written.Add((new NvidiaSettingSnapshot { SettingId = want.SettingId, Written = want.Value, Previous = NvidiaGlobalSetting.TokenFor(reading) }, want));
@@ -1360,6 +1361,24 @@ public class PerformanceProfileService
             }
         }
         return true;
+    }
+
+    /// <summary>NVAPI_INVALID_USER_PRIVILEGE: the driver wants administrator rights for this change.</summary>
+    internal const string NvidiaNeedsAdminCode = "-137";
+
+    /// <summary>
+    /// A write the driver refused is said in Activity &amp; History, not only in the log: the tweak's switch stays ENABLED, and
+    /// without this nothing on screen says it did not take effect.
+    /// </summary>
+    private static void NvidiaWriteRefused(GameEntry game, NvidiaWanted want, string? error)
+    {
+        bool needsAdmin = error?.Contains(NvidiaNeedsAdminCode, StringComparison.Ordinal) == true;
+        ActivityService.Add(ActivityLevel.Problem, $"{game.Name}: {want.Label} couldn't be set",
+            subject: game.Name,
+            detail: needsAdmin
+                ? $"The NVIDIA driver only lets this setting be changed with administrator rights, and TrayTrigger isn't running as administrator, so it was left as it was. The game started as usual."
+                : $"The NVIDIA driver refused it ({error ?? "no reason given"}), so it was left as it was. The game started as usual.",
+            groupKey: $"nvidia-set|{want.SettingId}");
     }
 
     private NvidiaWanted? FrameCapWanted(GameEntry game)

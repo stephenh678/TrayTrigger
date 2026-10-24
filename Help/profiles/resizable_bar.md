@@ -13,6 +13,7 @@ Turns on NVIDIA's Resizable BAR while an Aggressive game runs, for every game NV
 ## Trade-offs
 
 - Some undecided games may run worse, with lower 1% lows or stutter. This is more likely in older games. That's why it's in Aggressive rather than Optimized. If a game runs worse, move it to Optimized in Edit Game.
+- **The driver only allows this change with administrator rights**, and TrayTrigger normally runs without them. When it doesn't, the driver refuses, the game starts as usual with nothing changed, and Activity & History shows a Problem entry saying so. Until that is solved, this tweak takes effect only when TrayTrigger itself is run as administrator.
 - Needs Resizable BAR on in the BIOS (Above 4G Decoding and Re-Size BAR Support). System > Hardware Specs shows whether it's on. If it's off, nothing is changed.
 - NVIDIA GPUs only. AMD's Smart Access Memory and Intel Arc already use Resizable BAR for every game.
 

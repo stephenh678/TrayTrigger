@@ -1186,6 +1186,56 @@ public partial class App
                 ExitApplication();
                 return;
             }
+            // --test-rebar-profile <out.txt>: like --test-rebar-write, but on a throwaway per-game profile for a made-up
+            // executable (created, written, saved, read back, deleted, saved), to see whether that write needs administrator rights.
+            if (e.Args[i].Equals("--test-rebar-profile", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                const uint id = 0x000F00BA;
+                var lines = new List<string>();
+                try
+                {
+                    bool elevated = new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
+                        .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                    lines.Add($"this process is elevated: {elevated}");
+                    using var session = NvApi.Session.TryOpen(out string? error);
+                    if (session == null) lines.Add("could not open the driver's settings: " + error);
+                    else
+                    {
+                        IntPtr profile = session.CreateProfileForExecutable("TrayTrigger rebar test", "tt-rebar-test.exe", out error);
+                        lines.Add($"create a throwaway profile: {(profile != IntPtr.Zero ? "ok" : "REFUSED: " + error)}");
+                        if (profile != IntPtr.Zero)
+                        {
+                            bool set = session.SetSetting(profile, id, 1, out error);
+                            lines.Add($"SetSetting 0x{id:X8} = 1 on it: {(set ? "ok" : "REFUSED: " + error)}");
+                            bool saved = false;
+                            if (set)
+                            {
+                                var v = session.GetSetting(profile, id, out _);
+                                lines.Add($"read back: {(v == null ? "absent" : "0x" + v.CurrentValue.ToString("X8"))}");
+                                saved = session.Save(out error);
+                                lines.Add($"Save: {(saved ? "ok" : "REFUSED: " + error)}");
+                            }
+                            bool deleted = session.DeleteProfile(profile, out error);
+                            lines.Add($"delete the throwaway profile: {(deleted ? "ok" : "FAILED: " + error)}");
+                            if (deleted || saved)
+                            {
+                                bool saved2 = session.Save(out error);
+                                lines.Add($"Save after deleting: {(saved2 ? "ok" : "FAILED: " + error)}");
+                            }
+                        }
+                        var check = session.FindProfileForExecutable("tt-rebar-test.exe", out _, out _);
+                        lines.Add($"throwaway profile still there afterwards: {(check != null ? "YES (" + check.ProfileName + ")" : "no")}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
             // --test-cursor <info|clip|free|service> <out.txt> [seconds]: checks the mouse confinement on this PC.
             // info reads the current confinement. clip confines the mouse to the left half of the main monitor and
             // waits [seconds], so a harness can kill the process and see whether Windows frees the mouse. free

@@ -11,6 +11,7 @@ namespace TrayTrigger.Tests;
 /// first-wins for machine-wide tweaks, per-game restore, duplicate Begin, untracked End, deferred
 /// elevated restore at Windows shutdown, and validation on crash recovery.
 /// </summary>
+[Collection(ActivityCurrentCollection.Name)]
 public class PerformanceProfileServiceTests : IDisposable
 {
     private sealed class FakeStore : IProfileSnapshotStore
@@ -1281,6 +1282,27 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
         Assert.True(service.EndGameSession("g"));
         Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
+    }
+
+    /// <summary>The driver refuses the write: nothing is changed, the game still starts, and Activity says so.</summary>
+    [Fact]
+    public void ResizableBar_RefusedByTheDriver_IsAProblemInActivity_AndTheGameStillStarts()
+    {
+        var activity = new ActivityService(Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N")), readOnly: false);
+        ActivityService.Current = activity;
+        try
+        {
+            var driver = new FakeDrsBackend();
+            driver.RefusedWrites[Rebar] = "NVAPI_INVALID_USER_PRIVILEGE (-137)";
+
+            Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+
+            Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+            var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
+            Assert.Contains("Resizable BAR couldn't be set", problem.Text);
+            Assert.Contains("administrator rights", problem.Detail);
+        }
+        finally { ActivityService.Current = null; }
     }
 
     /// <summary>
