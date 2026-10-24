@@ -34,8 +34,7 @@ public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyLi
 
 /// <summary>
 /// Activity &amp; History: the plain-language record of what TrayTrigger did and what went wrong,
-/// kept in activity.json beside games.json, and the live list of what needs attention now. See
-/// docs/archive/roadmap-2026-10-05.md, "Notifications and Activity &amp; History".
+/// kept in activity.json beside games.json, and the live list of what needs attention now.
 ///
 /// <para>Events are chosen, never promoted from the log: each is an explicit
 /// <see cref="Record(ActivityLevel, string, string?, string?, string?)"/> at a place in the code
@@ -339,6 +338,17 @@ public sealed class ActivityService
             .Select(g => $"{g.Latest.TimeUtc.ToLocalTime():yyyy-MM-dd HH:mm}  {g.Latest.Level}: {g.Latest.Text}"
                          + (g.Count > 1 ? $" ({g.Count} times)" : string.Empty)
                          + (g.Fixed ? " - fixed with Restore Previous" : string.Empty))
+            .ToList();
+    }
+
+    /// <summary>The "Recent changes" section of a diagnostic report: Change entries from the last
+    /// <paramref name="days"/> days, grouped, newest first, one line each.</summary>
+    public IReadOnlyList<string> RecentChangeLines(int days = 30)
+    {
+        DateTime since = _utcNow().AddDays(-days);
+        var changes = Entries.Where(e => e.Level == ActivityLevel.Change && e.TimeUtc >= since);
+        return Group(changes)
+            .Select(g => $"{g.Latest.TimeUtc.ToLocalTime():yyyy-MM-dd HH:mm}  {g.Latest.Text}" + (g.Count > 1 ? $" ({g.Count} times)" : string.Empty))
             .ToList();
     }
 

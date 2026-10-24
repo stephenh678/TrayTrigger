@@ -82,15 +82,20 @@ public class GameEditSectionsTests : IDisposable
     });
 
     [Fact]
-    public void ScriptsOff_HidesTheScriptsTab() => Sta(() =>
+    public void ScriptsOff_KeepsTheScriptsTab_AndPutsTheNoteInIt() => Sta(() =>
     {
         var vm = Create(scriptsEnabled: false);
-        Assert.DoesNotContain(GameEditSection.Scripts, vm.AvailableSections);
-        vm.SelectedSection = GameEditSection.Scripts;
-        Assert.Equal(GameEditSection.All, vm.SelectedSection);
+        Assert.Contains(GameEditSection.Scripts, vm.AvailableSections);
+        Assert.False(vm.ShowScriptsCard);
+        // On All the note comes last, after the cards.
         Assert.True(vm.ShowScriptsStubOnTab);
-        vm.MoveSection(-1);
-        Assert.Equal(GameEditSection.Performance, vm.SelectedSection);
+
+        vm.SelectedSection = GameEditSection.Scripts;
+        Assert.Equal(GameEditSection.Scripts, vm.SelectedSection);
+        Assert.True(vm.ShowScriptsStubOnTab);
+        Assert.False(vm.ShowScriptsCardOnTab);
+
+        vm.SelectedSection = GameEditSection.Launch;
         Assert.False(vm.ShowScriptsStubOnTab);
     });
 

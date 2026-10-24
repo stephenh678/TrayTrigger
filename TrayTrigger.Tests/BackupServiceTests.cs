@@ -453,4 +453,60 @@ public class BackupServiceTests : IDisposable
         // Steam's own library folders are found again by Steam integration, not moved here.
         Assert.Equal(@"D:\SteamLibrary", settings.ScanLocations[1].Path);
     }
+
+    // ------------------------------------------------------------------ Activity & History
+
+    private StorageService PcWithHistory(string name, string history)
+    {
+        var pc = Storage(name);
+        pc.SaveGames([new GameEntry { Id = "g1", Name = "Hades" }]);
+        pc.SaveSettings(new AppSettings());
+        File.WriteAllText(Path.Combine(pc.BaseDirectory, ActivityService.FileName), history);
+        return pc;
+    }
+
+    private void Restore(StorageService pc, string zip)
+    {
+        var service = new BackupService(pc);
+        service.StageRestore(zip, service.CreateSafetyBackup());
+        var result = new BackupService(new StorageService(pc.BaseDirectory, pc.LocalCacheDirectory)).ApplyPendingRestore(() => NoLaunchers);
+        Assert.True(result.Succeeded, result.Error);
+    }
+
+    [Fact]
+    public void ActivityAndHistory_IsLeftOutUnlessAskedFor()
+    {
+        var pc = PcWithHistory("pc", "mine");
+        var without = new BackupService(pc).Create(Path.Combine(_root, "without.zip"));
+        var with = new BackupService(pc).Create(Path.Combine(_root, "with.zip"), includeActivity: true);
+
+        Assert.False(without.HasActivity);
+        Assert.True(with.HasActivity);
+        using var zip = ZipFile.OpenRead(Path.Combine(_root, "without.zip"));
+        Assert.Null(zip.GetEntry("data/activity.json"));
+    }
+
+    [Fact]
+    public void ARestore_FromABackupWithHistory_PutsTheHistoryBack_AndOneWithoutLeavesItAlone()
+    {
+        var pc = PcWithHistory("pc", "old history");
+        var service = new BackupService(pc);
+        service.Create(Path.Combine(_root, "with.zip"), includeActivity: true);
+        service.Create(Path.Combine(_root, "without.zip"));
+        string activity = Path.Combine(pc.BaseDirectory, ActivityService.FileName);
+
+        File.WriteAllText(activity, "newer history");
+        Restore(pc, Path.Combine(_root, "without.zip"));
+        Assert.Equal("newer history", File.ReadAllText(activity));
+
+        Restore(pc, Path.Combine(_root, "with.zip"));
+        Assert.Equal("old history", File.ReadAllText(activity));
+    }
+
+    [Fact]
+    public void TheSafetyBackupBeforeARestore_AlwaysHoldsTheHistory()
+    {
+        var pc = PcWithHistory("pc", "mine");
+        Assert.True(BackupService.ReadManifest(new BackupService(pc).CreateSafetyBackup()).HasActivity);
+    }
 }

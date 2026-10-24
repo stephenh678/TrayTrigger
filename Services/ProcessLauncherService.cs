@@ -588,7 +588,16 @@ public partial class ProcessLauncherService
         // state, not a session tweak, so they apply even when the performance profile is Off.
         ReapplyDlssSettings(game);
 
+        // Before the profile, which goes by the default playback device: its Unmute audio has to act on the device the
+        // game will play through, and put the mute back on that same one. FinishSession ends the profile first and this last.
+        AudioOutputService.Shared.Begin(game);
+        AudioOutputService.SharedInput.Begin(game);
+
         _performanceProfileService.BeginGameSession(game);
+
+        // The game's own display mode, if it has one: set before the game exists, put back in FinishSession. After the
+        // profile, whose HDR change comes first; the profile's frame cap asks the display setting for the refresh rate to expect.
+        DisplayModeService.Shared.Begin(game);
 
         var scriptResult = _scriptService.RunPreLaunch(game);
         if (!scriptResult.ProceedWithLaunch)
@@ -851,6 +860,12 @@ public partial class ProcessLauncherService
         {
             LoggingService.Error("Launcher", $"Error restoring profile for '{game.Name}': {ex.Message}", ex);
         }
+        // Never throws; a game that set no display mode is ignored.
+        DisplayModeService.Shared.End(game.Id);
+        AudioOutputService.SharedInput.End(game.Id);
+        AudioOutputService.Shared.End(game.Id);
+        CursorLockService.Shared.Untrack(game.Id);
+        ScreenDimService.Shared.Untrack(game.Id);
         if (gameRan)
         {
             _scriptService.RunPostExit(game, minutes);
@@ -1458,6 +1473,7 @@ public partial class ProcessLauncherService
                         session.Process = proc;
                         LoggingService.Verbose("Launcher", $"Found Steam game process for '{game.Name}' (PID {proc.Id}).");
                         _performanceProfileService.OnGameProcessStarted(game, proc);
+                        TrackGameWindow(session, proc.Id);
                         CpuTopologyService.ApplyCpuCores(proc, game);
                         WaitForWindowAndActivate(session, proc);
                         StartDlssObservation(session, proc);
@@ -1621,6 +1637,7 @@ public partial class ProcessLauncherService
         try
         {
             _performanceProfileService.OnGameProcessStarted(game, process);
+            TrackGameWindow(session, process.Id);
             // Only a direct launch hands over the process it started (allowStubHandoff); a process
             // found under the install folder was opened by id, and has no launch handle.
             CpuTopologyService.ApplyCpuCores(process, game, startedByTrayTrigger: allowStubHandoff);
@@ -1661,6 +1678,22 @@ public partial class ProcessLauncherService
                 // leaving a Performance Profile applied with no way to know when to undo it.
                 FinishSession(session, gameRan: true, "could not watch the process");
             }
+        }
+    }
+
+    /// <summary>
+    /// The game's process is known: the mouse is held to its screen and the other screens dimmed (for a game that has
+    /// either on) whenever its window is in front. If the session ended while this ran, FinishSession has already looked
+    /// and found nothing to lift, so it is lifted here: nothing else would.
+    /// </summary>
+    private static void TrackGameWindow(ActiveGameSession session, int processId)
+    {
+        CursorLockService.Shared.Track(session.Game, processId);
+        ScreenDimService.Shared.Track(session.Game, processId);
+        if (Volatile.Read(ref session.Finished) != 0)
+        {
+            CursorLockService.Shared.Untrack(session.Game.Id);
+            ScreenDimService.Shared.Untrack(session.Game.Id);
         }
     }
 

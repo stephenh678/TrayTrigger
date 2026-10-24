@@ -38,6 +38,9 @@ public sealed class FakeDrsBackend : IDrsBackend
     /// <summary>When set, Save fails with this message - the unelevated-write case.</summary>
     public string? SaveError { get; set; }
 
+    /// <summary>Settings the driver refuses to write, with the reason it gives.</summary>
+    public Dictionary<uint, string> RefusedWrites { get; } = new();
+
     /// <summary>How many times Save actually reached "disk". Nothing should persist without it.</summary>
     public int SaveCount { get; private set; }
 
@@ -189,6 +192,7 @@ public sealed class FakeDrsBackend : IDrsBackend
             error = null;
             var p = Resolve(profile);
             if (p == null) { error = "no such profile"; return false; }
+            if (_owner.RefusedWrites.TryGetValue(settingId, out var refusal)) { error = refusal; return false; }
             // A user write hides NVIDIA's value rather than destroying it.
             if (p.Settings.TryGetValue(settingId, out var held) && held.IsPredefined)
                 p.HiddenPredefined[settingId] = held.Value;

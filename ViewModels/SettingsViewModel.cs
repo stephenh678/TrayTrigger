@@ -314,8 +314,7 @@ public class SettingsViewModel : ViewModelBase
         {
             SteamMetadataService.ClearCache();
             RawgService.ClearCache();
-            PcGamingWikiService.Shared.ClearCache();
-            LoggingService.Info("Settings", "Cleared the cached Steam, RAWG and PCGamingWiki game info.");
+            LoggingService.Info("Settings", "Cleared the cached Steam and RAWG game info.");
             StatusMessage = "Cached game info cleared. Each game fetches fresh details the next time you open it.";
         });
         OpenScanForGamesCommand = new RelayCommand(() => _onRequestOpenScanForGames?.Invoke());
@@ -1160,6 +1159,140 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public bool BackupIncludesActivity
+    {
+        get => _settings.BackupIncludesActivity;
+        set
+        {
+            if (_settings.BackupIncludesActivity != value)
+            {
+                _settings.BackupIncludesActivity = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ Automatic backups
+
+    public ObservableCollection<string> AutoBackupEveryOptions { get; } = new() { "Every week", "Every 2 weeks", "Every month" };
+    public IReadOnlyList<int> AutoBackupKeepOptions => AutoBackupService.KeepChoices;
+
+    public bool AutoBackupEnabled
+    {
+        get => _settings.AutoBackupEnabled;
+        set
+        {
+            if (_settings.AutoBackupEnabled == value) return;
+            _settings.AutoBackupEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(AutoBackupStatus));
+            AutoSaveSettings();
+            // Turning it on makes the first backup now, so the card shows it working.
+            if (value) RunAutoBackupIfDue();
+        }
+    }
+
+    public string AutoBackupEveryOption
+    {
+        get => _settings.AutoBackupEveryDays switch { >= 30 => "Every month", >= 14 => "Every 2 weeks", _ => "Every week" };
+        set
+        {
+            int days = value switch { "Every month" => 30, "Every 2 weeks" => 14, _ => 7 };
+            if (_settings.AutoBackupEveryDays == days) return;
+            _settings.AutoBackupEveryDays = days;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(AutoBackupStatus));
+            AutoSaveSettings();
+        }
+    }
+
+    public int AutoBackupKeep
+    {
+        get => _settings.AutoBackupKeep;
+        set
+        {
+            if (_settings.AutoBackupKeep == value) return;
+            _settings.AutoBackupKeep = value;
+            OnPropertyChanged();
+            AutoSaveSettings();
+        }
+    }
+
+    /// <summary>When the last backup was made, when the next is due, and why the last automatic one failed.</summary>
+    public string AutoBackupStatus
+    {
+        get
+        {
+            var lines = new List<string>();
+            if (_settings.LastBackupUtc is { } last)
+            {
+                bool byHand = _settings.LastAutoBackupUtc is not { } auto || last > auto;
+                lines.Add($"Last backup: {last.ToLocalTime():MMM d, h:mm tt}{(byHand ? " (made by hand)" : "")}");
+            }
+            else
+            {
+                lines.Add("No backup made yet.");
+            }
+            if (!string.IsNullOrEmpty(_settings.AutoBackupLastError))
+            {
+                lines.Add($"The last automatic backup failed: {_settings.AutoBackupLastError}");
+            }
+            else if (_settings.AutoBackupEnabled && AutoBackupService.NextDueLocal(_settings) is { } next)
+            {
+                lines.Add($"Next: the first start or daily check after {next:MMM d}");
+            }
+            return string.Join("\n", lines);
+        }
+    }
+
+    public ICommand OpenAutoBackupFolderCommand => _openAutoBackupFolderCommand ??= new RelayCommand(() =>
+    {
+        try
+        {
+            string folder = new AutoBackupService(_storageService).BackupFolder;
+            Directory.CreateDirectory(folder);
+            Process.Start(SystemExecutables.Explorer, folder);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Backup", $"Failed to open the automatic backups folder: {ex.Message}");
+        }
+    });
+    private ICommand? _openAutoBackupFolderCommand;
+
+    /// <summary>
+    /// Takes an automatic backup when one is due: at startup, once a day and after the last game exits.
+    /// Waits while a game runs or another backup or restore is going on. Safe to call at any time, on the UI thread.
+    /// </summary>
+    public async void RunAutoBackupIfDue()
+    {
+        try
+        {
+            if (IsBackupBusy || RunningGameName?.Invoke() != null) return;
+            if (BackupService.HasPendingRestore(_storageService.BaseDirectory)) return;
+            if (!AutoBackupService.IsDue(_settings, DateTime.UtcNow)) return;
+
+            IsBackupBusy = true;
+            try
+            {
+                SaveEverything();
+                var service = new AutoBackupService(_storageService);
+                await Task.Run(() => service.Run(_settings, DateTime.UtcNow));
+                _storageService.SaveSettings(_settings);
+            }
+            finally
+            {
+                IsBackupBusy = false;
+                OnPropertyChanged(nameof(AutoBackupStatus));
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Swallowed("Backup", ex, "running the automatic backup");
+        }
+    }
+
     public bool UseRawgMetadata
     {
         get => _settings.UseRawgMetadata;
@@ -1172,20 +1305,6 @@ public class SettingsViewModel : ViewModelBase
                 AutoSaveSettings();
                 if (value)
                     RawgKeyCheck.ScheduleCheck();
-            }
-        }
-    }
-
-    public bool UsePcGamingWikiFacts
-    {
-        get => _settings.UsePcGamingWikiFacts;
-        set
-        {
-            if (_settings.UsePcGamingWikiFacts != value)
-            {
-                _settings.UsePcGamingWikiFacts = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
             }
         }
     }
@@ -2218,8 +2337,11 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamGridDbApiKey));
         OnPropertyChanged(nameof(RawgApiKey));
         OnPropertyChanged(nameof(UseRawgMetadata));
-        OnPropertyChanged(nameof(UsePcGamingWikiFacts));
         OnPropertyChanged(nameof(MetadataRefreshOption));
+        OnPropertyChanged(nameof(AutoBackupEnabled));
+        OnPropertyChanged(nameof(AutoBackupEveryOption));
+        OnPropertyChanged(nameof(AutoBackupKeep));
+        OnPropertyChanged(nameof(AutoBackupStatus));
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(NotifyWhenScanAddsGames));
@@ -2313,8 +2435,13 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             SaveEverything();
-            var manifest = await Task.Run(() => new BackupService(_storageService).Create(path));
-            StatusMessage = $"Backed up {manifest.Games} game(s), {manifest.Tools} tool(s), your settings, {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s) to {path}";
+            bool includeActivity = BackupIncludesActivity;
+            var manifest = await Task.Run(() => new BackupService(_storageService).Create(path, includeActivity));
+            // A backup made by hand counts for the automatic one: its clock starts again from here.
+            _settings.LastBackupUtc = DateTime.UtcNow;
+            _storageService.SaveSettings(_settings);
+            OnPropertyChanged(nameof(AutoBackupStatus));
+            StatusMessage = $"Backed up {manifest.Games} game(s), {manifest.Tools} tool(s), your settings, {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s){(manifest.HasActivity ? ", with Activity & History," : "")} to {path}";
         }
         catch (Exception ex)
         {
@@ -2361,7 +2488,8 @@ public class SettingsViewModel : ViewModelBase
         string from = string.IsNullOrWhiteSpace(manifest.MachineName) ? "" : $" on {manifest.MachineName}";
         bool confirmed = ModernDialog.Confirm(owner, "Restore from Backup",
             $"Replace your library, settings, tools and scripts with the backup made {manifest.CreatedUtc.ToLocalTime():MMM d, yyyy h:mm tt}{from}?",
-            $"It holds {manifest.Games} game(s), {manifest.Tools} tool(s), {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s), from TrayTrigger {manifest.AppVersion}. "
+            $"It holds {manifest.Games} game(s), {manifest.Tools} tool(s), {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s), from TrayTrigger {manifest.AppVersion}"
+                + (manifest.HasActivity ? ", and its Activity & History, which replaces yours. " : ". ")
                 + $"What you have now is backed up first, to the Backups folder in {_storageService.BaseDirectory}, so you can go back. "
                 + "TrayTrigger restarts to finish. Game saves aren't touched.",
             confirmText: "Restore and Restart",

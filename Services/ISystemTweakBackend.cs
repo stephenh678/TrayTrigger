@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
 
@@ -43,6 +44,12 @@ public interface ISystemTweakBackend
     /// </summary>
     bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries);
 
+    /// <summary>
+    /// The registry changes and the NVIDIA changes that need administrator rights, together, under one administrator prompt
+    /// (none when TrayTrigger is elevated already). With no NVIDIA changes this is <see cref="ApplyHklmChanges"/>.
+    /// </summary>
+    ElevatedResult ApplyAdminChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> registry, IReadOnlyList<NvidiaAdminOp> nvidia);
+
     List<HdrControlService.DisplayColorState> GetHdrDisplayStates();
     bool SetDisplayHdrEnabled(HdrControlService.LUID adapterId, uint targetId, bool enable);
 
@@ -65,6 +72,12 @@ public interface ISystemTweakBackend
 
     /// <summary>The primary display's refresh rate, or null when it can't be read.</summary>
     int? GetPrimaryRefreshHz();
+
+    /// <summary>
+    /// The refresh rate the primary display will have once the game's own display settings are applied, which is done after
+    /// the profile: null when they leave the primary display as it is. A tweak that goes by the refresh rate asks this first.
+    /// </summary>
+    int? GetPlannedPrimaryRefreshHz(GameEntry game) => null;
 
     /// <summary>Whether Resizable BAR is on for the NVIDIA card, from its memory windows; null when it can't be told.</summary>
     bool? IsResizableBarEnabled();
@@ -130,6 +143,9 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
     public bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries) =>
         SystemTweaksService.ApplyHklmEntries(entries as List<SystemTweaksService.RegFileEntry> ?? entries.ToList());
 
+    public ElevatedResult ApplyAdminChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> registry, IReadOnlyList<NvidiaAdminOp> nvidia) =>
+        ElevatedHelper.Run(registry, nvidia);
+
     public bool WriteHklmDword(string subKey, string valueName, int value) => SystemTweaksService.SetHklmDword(subKey, valueName, value);
 
     public bool WriteHklmString(string subKey, string valueName, string value) =>
@@ -180,6 +196,8 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
     public void SetProcessPriority(Process process, ProcessPriorityClass priority) => process.PriorityClass = priority;
 
     public int? GetPrimaryRefreshHz() => SystemInfoService.PrimaryRefreshHz();
+
+    public int? GetPlannedPrimaryRefreshHz(GameEntry game) => DisplayModeService.Shared.PlannedMainRefreshHz(game);
 
     public bool? IsResizableBarEnabled() => SystemInfoService.NvidiaResizableBarEnabled();
 

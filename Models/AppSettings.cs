@@ -134,10 +134,24 @@ public class AppSettings
     /// default, matching <see cref="UseSteamGridDbArt"/>: both are third-party services the user
     /// supplies their own key for, so neither is on until the user asks for it.</summary>
     public bool UseRawgMetadata { get; set; } = false;
-    /// <summary>Shows PCGamingWiki's facts about a game (ultrawide, controller support, save folder...) as a
-    /// card in Game Details. Off by default, like the other third-party sources: turning it on is what lets
-    /// a game's Steam App ID or name be sent to the wiki when its details open. No key is needed.</summary>
-    public bool UsePcGamingWikiFacts { get; set; } = false;
+    /// <summary>Back Up also saves Activity &amp; History. On by default; the tick beside Back Up changes it.</summary>
+    public bool BackupIncludesActivity { get; set; } = true;
+    /// <summary>Backs up on its own into Backups\Automatic in the data folder. Off until the player turns it on.</summary>
+    public bool AutoBackupEnabled { get; set; } = false;
+    /// <summary>Days between backups: 7, 14 or 30.</summary>
+    public int AutoBackupEveryDays { get; set; } = 7;
+    /// <summary>How many automatic backups are kept; older ones are deleted.</summary>
+    public int AutoBackupKeep { get; set; } = 4;
+    /// <summary>When the last backup of any kind finished (a manual one counts), so a manual backup resets the clock. Describes this PC.</summary>
+    public DateTime? LastBackupUtc { get; set; }
+    /// <summary>When the last automatic backup finished. Describes this PC.</summary>
+    public DateTime? LastAutoBackupUtc { get; set; }
+    /// <summary>Why the last automatic backup failed; empty after a success. Describes this PC.</summary>
+    public string AutoBackupLastError { get; set; } = string.Empty;
+    /// <summary>The local day (yyyy-MM-dd) the attempts below were counted on. Describes this PC.</summary>
+    public string AutoBackupAttemptDay { get; set; } = string.Empty;
+    /// <summary>Failed attempts on that day; three is the most, so a broken folder is not retried in a loop. Describes this PC.</summary>
+    public int AutoBackupAttemptsToday { get; set; }
     /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
     /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
     [JsonConverter(typeof(MetadataRefreshIntervalJsonConverter))]

@@ -239,7 +239,8 @@
             <Border DockPanel.Dock="Top" Margin="14,0,4,10" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" HorizontalAlignment="Left"
                     views:ScrollToTop.Target="{Binding ElementName=EditScroll}">
-                <StackPanel Orientation="Horizontal">
+                <!-- A WrapPanel: six tabs outgrow the dialog at a large text size, and a second row beats a clipped last tab. -->
+                <WrapPanel Orientation="Horizontal">
                     <Button Content="All" Command="{Binding SelectSectionCommand}" CommandParameter="All"
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllSection}"/>
                     <Button Content="Identity &amp; Library" Command="{Binding SelectSectionCommand}" CommandParameter="Identity" Margin="2,0,0,0"
@@ -248,10 +249,11 @@
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLaunchSection}"/>
                     <Button Content="Performance" Command="{Binding SelectSectionCommand}" CommandParameter="Performance" Margin="2,0,0,0"
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsPerformanceSection}"/>
+                    <Button Content="Display &amp; Sound" Command="{Binding SelectSectionCommand}" CommandParameter="Display" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsDisplaySection}"/>
                     <Button Content="Scripts" Command="{Binding SelectSectionCommand}" CommandParameter="Scripts" Margin="2,0,0,0"
-                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsScriptsSection}"
-                            Visibility="{Binding ShowScriptsCard, Converter={StaticResource BoolToVis}}"/>
-                </StackPanel>
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsScriptsSection}"/>
+                </WrapPanel>
             </Border>
             <ScrollViewer x:Name="EditScroll" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0"
                           views:ScrollToTop.ResetOn="{Binding SelectedSection}">
@@ -653,19 +655,113 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Scripts stub: when the scripts feature is off, say so instead of silently
-                         omitting the card, so the feature is discoverable from here. -->
+                    <!-- CARD 3c: DISPLAY AND SOUND - everything to do with the screens and speakers a game runs on, in one card, on its own Display tab and after the Performance cards on All:
+                         which monitor, its resolution and refresh rate, making it the main display, keeping the mouse on it,
+                         dimming the others, the sound output and the microphone. The lists are always there and disabled, with a note
+                         saying why, when there is nothing to choose between; the options that need two monitors show only with two. -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,10" Margin="0,0,0,12"
-                            Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
-                        <DockPanel LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
-                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
-                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
-                                <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                <Run Text=" are hidden. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
-                            </TextBlock>
-                        </DockPanel>
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowDisplayCard, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="Display and sound" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
+
+                            <StackPanel>
+                                <TextBlock Text="Monitor" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <DockPanel Margin="0,0,0,4" IsEnabled="{Binding ShowMonitorChoice}">
+                                    <Button DockPanel.Dock="Right" Content="Identify" Margin="8,0,0,0" Padding="12,4"
+                                            Style="{StaticResource ModernOutlineButton}"
+                                            Command="{Binding IdentifyMonitorsCommand}"
+                                            AutomationProperties.Name="Identify monitors"
+                                            ToolTip="Shows a number on each monitor for a moment"/>
+                                    <ComboBox AutomationProperties.Name="Monitor" ItemsSource="{Binding MonitorOptions}"
+                                              SelectedItem="{Binding SelectedMonitor}" DisplayMemberPath="Label"
+                                              Style="{StaticResource ModernComboBox}"/>
+                                </DockPanel>
+                                <TextBlock Text="{Binding MonitorNote}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           Visibility="{Binding HasMonitorNote, Converter={StaticResource BoolToVis}}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <CheckBox Content="Make this monitor the main display while the game runs" IsChecked="{Binding MakeMainDisplay}"
+                                          Visibility="{Binding ShowMakeMainDisplay, Converter={StaticResource BoolToVis}}"
+                                          AutomationProperties.Name="Make this monitor the main display while the game runs"
+                                          Foreground="{DynamicResource BrushTextPrimary}" Margin="0,6,0,4"/>
+                                <TextBlock Visibility="{Binding ShowMakeMainDisplay, Converter={StaticResource BoolToVis}}"
+                                           Text="The taskbar, open windows and desktop icons move to it, and back when the game ends. It changes Windows' own display layout for the time the game runs, which is why it is off unless you ask for it."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <TextBlock Text="Resolution and refresh rate" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <ComboBox AutomationProperties.Name="Resolution" ItemsSource="{Binding ResolutionOptions}"
+                                          IsEnabled="{Binding ShowDisplay}"
+                                          SelectedItem="{Binding SelectedResolution}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <ComboBox AutomationProperties.Name="Refresh rate" ItemsSource="{Binding RateOptions}"
+                                          IsEnabled="{Binding ShowDisplay}"
+                                          SelectedItem="{Binding SelectedRate}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding DisplayHint}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           Visibility="{Binding ShowDisplay, Converter={StaticResource BoolToVis}}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding DisplayNote}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           Visibility="{Binding HasDisplayNote, Converter={StaticResource BoolToVis}}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <StackPanel Visibility="{Binding ShowMouseLock, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Keep the mouse on the game's screen" IsChecked="{Binding KeepMouseOnGameScreen}"
+                                          AutomationProperties.Name="Keep the mouse on the game's screen"
+                                          Foreground="{DynamicResource BrushTextPrimary}" Margin="0,6,0,4"/>
+                                <TextBlock Text="While this game's window is in front, the mouse can't leave the screen it is on. Alt+Tab, the Windows key or anything else that takes the focus frees it, and it is freed when the game ends."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <StackPanel Visibility="{Binding ShowDim, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Dim the other screens" IsChecked="{Binding DimOtherScreens}"
+                                          AutomationProperties.Name="Dim the other screens"
+                                          Foreground="{DynamicResource BrushTextPrimary}" Margin="0,6,0,4"/>
+                                <TextBlock Text="While this game's window is in front, every other monitor is dimmed. Alt+Tab or the Windows key lifts it at once, and it is lifted when the game ends."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <TextBlock Text="Sound output" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,4"/>
+                                <ComboBox AutomationProperties.Name="Sound output" ItemsSource="{Binding AudioOptions}"
+                                          IsEnabled="{Binding ShowAudio}"
+                                          SelectedItem="{Binding SelectedAudio}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding AudioNote}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           Visibility="{Binding HasAudioNote, Converter={StaticResource BoolToVis}}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <TextBlock Visibility="{Binding ShowAudio, Converter={StaticResource BoolToVis}}" Text="Default leaves Windows' current device in use. Otherwise the game's sound plays through the device you pick while it runs, and goes back when it ends. A sound output chosen for this game in Windows' volume mixer overrides it."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <TextBlock Text="Microphone" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,4"/>
+                                <ComboBox AutomationProperties.Name="Microphone" ItemsSource="{Binding MicrophoneOptions}"
+                                          IsEnabled="{Binding ShowMicrophone}"
+                                          SelectedItem="{Binding SelectedMicrophone}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding MicrophoneNote}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           Visibility="{Binding HasMicrophoneNote, Converter={StaticResource BoolToVis}}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <TextBlock Visibility="{Binding ShowMicrophone, Converter={StaticResource BoolToVis}}" Text="Default leaves Windows' current microphone in use. Otherwise Windows uses the one you pick while the game runs, and goes back when it ends. A program set to use the Communications device, or a microphone chosen inside the game or the chat app, keeps its own."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <Button AutomationProperties.Name="Learn more about the display and sound settings" Style="{StaticResource HelpLinkButton}"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/display_mode"/>
+                        </StackPanel>
                     </Border>
 
                     <!-- CARD 4: PRE-LAUNCH / POST-EXIT SCRIPTS (opt-in via Settings > Launch &
@@ -817,6 +913,21 @@
                                         ToolTip="The TrayTrigger-Scripts catalogue on GitHub: ready-made scripts to drop into the scripts folder, and where to share yours"/>
                             </WrapPanel>
                         </StackPanel>
+                    </Border>
+
+                    <!-- Scripts stub: when the scripts feature is off, say so instead of silently
+                         omitting the card, so the feature is discoverable from here. -->
+                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,10" Margin="0,0,0,12"
+                            Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
+                                <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                <Run Text=" are turned off. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
+                            </TextBlock>
+                        </DockPanel>
                     </Border>
 
                 </StackPanel>

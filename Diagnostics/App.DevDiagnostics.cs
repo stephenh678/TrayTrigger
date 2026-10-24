@@ -20,52 +20,6 @@ namespace TrayTrigger;
 public partial class App
 {
 #if DEBUG
-    /// <summary>A short PCGamingWiki page for the "pcgw" capture: enough of each template to fill the card.</summary>
-    private const string SamplePcGamingWikiPage = """
-        {{Video
-        |ultrawidescreen = hackable
-        |multimonitor = hackable
-        |4k ultra hd = true
-        |hdr = true
-        |120 fps = true
-        |fov = hackable
-        |borderless windowed = true
-        |ray tracing = false
-        |upscaling = true
-        |upscaling tech = DLSS 3, FSR 3
-        |ultrawidescreen notes = See [[#Modifications|Modifications]].
-        |color blind = false
-        }}
-        {{Input
-        |controller support = true
-        |full controller = true
-        |playstation controllers = true
-        |key remap = limited
-        }}
-        {{Audio
-        |subtitles = true
-        |closed captions = false
-        |mute on focus lost = false
-        }}
-        {{Network/Multiplayer
-        |local play = false
-        |lan play = false
-        |online play = true
-        |online play players = 4
-        |crossplay = true
-        }}
-        {{Save game cloud syncing
-        |steam cloud = true
-        }}
-        {{Game data|
-        {{Game data/saves|Windows|{{p|appdata}}\Sample Game\{{p|uid}}\}}
-        }}
-        {{API
-        |direct3d versions = 12
-        |vulkan versions = 1.2
-        }}
-        """;
-
     [DllImport("kernel32.dll")]
     private static extern bool AttachConsole(int dwProcessId);
     private const int ATTACH_PARENT_PROCESS = -1;
@@ -834,6 +788,636 @@ public partial class App
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 700, targetPng);
                 _mainViewModel.SettingsVM.LibraryViewMode = previousMode;
+                ExitApplication();
+                return;
+            }
+
+            // --test-display <info|hold|restore|switch> <out.txt> [seconds]: checks the display calls on this
+            // PC, writing what happened to <out.txt>. info only reads (the modes, and whether Windows
+            // would accept each - nothing is changed). hold sets a temporary mode and keeps it for
+            // [seconds] so a harness can kill the process and check Windows put the display back.
+            // restore asks for the desktop's own mode. switch runs the real service end to end: set,
+            // check, put back, check. The mode used is one Windows has already said it would accept,
+            // with the smallest change from the current one.
+            if ((e.Args[i].Equals("--test-display", StringComparison.OrdinalIgnoreCase)) && i + 2 < e.Args.Length)
+            {
+                string action = e.Args[i + 1].ToLowerInvariant();
+                string outFile = e.Args[i + 2];
+                int seconds = i + 3 < e.Args.Length && int.TryParse(e.Args[i + 3], out int s) ? s : 20;
+                var lines = new List<string>();
+                try
+                {
+                    var backend = new Win32DisplayBackend();
+                    string? device = backend.PrimaryDevice();
+                    var current = device == null ? null : backend.Current(device);
+                    lines.Add($"device={device} remote={backend.IsRemoteSession} current={current}");
+
+                    DisplayMode? Candidate()
+                    {
+                        if (device == null || current is not { } now) return null;
+                        return backend.Modes(device)
+                            .Where(m => m != now && backend.Test(device, m) == DisplayChange.Ok)
+                            .OrderBy(m => m.Width == now.Width && m.Height == now.Height ? 0 : 1)
+                            .ThenBy(m => Math.Abs((long)m.Width * m.Height - (long)now.Width * now.Height))
+                            .ThenBy(m => Math.Abs(m.RefreshHz - now.RefreshHz))
+                            .Cast<DisplayMode?>().FirstOrDefault();
+                    }
+
+                    switch (action)
+                    {
+                        case "info":
+                        {
+                            var modes = device == null ? [] : backend.Modes(device);
+                            int accepted = modes.Count(m => backend.Test(device!, m) == DisplayChange.Ok);
+                            lines.Add($"modes={modes.Count} acceptedByWindows={accepted}");
+                            lines.Add($"candidate={Candidate()}");
+                            lines.Add($"attached={(device != null && backend.IsAttached(device))}");
+                            lines.Add($"dpi awareness={GetAwarenessFromDpiAwarenessContext(GetThreadDpiAwarenessContext())} (0 unaware, 1 system, 2 per-monitor), system dpi={GetDpiForSystem()}");
+                            break;
+                        }
+                        case "hold":
+                        {
+                            var pick = Candidate();
+                            lines.Add($"candidate={pick}");
+                            if (pick is { } mode && device != null)
+                            {
+                                lines.Add($"apply={backend.ApplyTemporary(device, mode)} now={backend.Current(device)}");
+                                File.WriteAllLines(outFile, lines);
+                                PumpDispatcher(TimeSpan.FromSeconds(seconds));
+                                lines.Add($"released={backend.RestoreDefault(device)} now={backend.Current(device)}");
+                            }
+                            break;
+                        }
+                        case "restore":
+                            if (device != null) lines.Add($"restore={backend.RestoreDefault(device)} now={backend.Current(device)}");
+                            break;
+                        case "monitors":
+                            foreach (var m in backend.Monitors()) lines.Add($"monitor {m.Label} primary={m.IsPrimary} bounds={m.Bounds} id={m.Id}");
+                            lines.Add("placements: " + string.Join(", ", backend.Placements().Select(p => $"{p.Device}@{p.X},{p.Y}")));
+                            break;
+                        case "layout-noop":
+                            // The layout call with every monitor where it already is: nothing should move.
+                            var placed = backend.Placements();
+                            lines.Add($"before: {string.Join(", ", placed.Select(p => $"{p.Device}@{p.X},{p.Y}"))}");
+                            lines.Add($"result={backend.SetLayout(placed)}");
+                            lines.Add($"after:  {string.Join(", ", backend.Placements().Select(p => $"{p.Device}@{p.X},{p.Y}"))} current={(device == null ? null : backend.Current(device))}");
+                            break;
+                        case "holdservice":
+                        {
+                            // The real service, then wait: a harness kills this process to test the crash recovery.
+                            var pick = Candidate();
+                            lines.Add($"candidate={pick}");
+                            if (pick is { } mode && device != null)
+                            {
+                                var game = new GameEntry { Id = "display-test", Name = "Display test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz };
+                                lines.Add($"begin={DisplayModeService.Shared.Begin(game)} now={backend.Current(device)}");
+                                File.WriteAllLines(outFile, lines);
+                                PumpDispatcher(TimeSpan.FromSeconds(seconds));
+                                DisplayModeService.Shared.End(game.Id);
+                                lines.Add($"ended now={backend.Current(device)}");
+                            }
+                            break;
+                        }
+                        case "recover":
+                            DisplayModeService.Shared.RecoverIfNeeded();
+                            if (device != null) lines.Add($"recovered now={backend.Current(device)}");
+                            break;
+                        case "switch":
+                        {
+                            var pick = Candidate();
+                            lines.Add($"candidate={pick}");
+                            if (pick is { } mode && device != null && current is { } before)
+                            {
+                                var game = new GameEntry { Id = "display-test", Name = "Display test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz };
+                                var service = DisplayModeService.Shared;
+                                lines.Add($"begin={service.Begin(game)}");
+                                PumpDispatcher(TimeSpan.FromSeconds(2));
+                                lines.Add($"during={backend.Current(device)} ({(backend.Current(device) == mode ? "ok" : "WRONG")})");
+                                service.End(game.Id);
+                                PumpDispatcher(TimeSpan.FromSeconds(2));
+                                lines.Add($"after={backend.Current(device)} ({(backend.Current(device) == before ? "ok" : "WRONG")})");
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+
+            // --test-editgame-monitor <out.txt>: opens Edit Game for a game that has a mode saved, switches the Monitor list
+            // away and back through the real ComboBox, and writes what the Resolution and Refresh rate lists show each time,
+            // to check the lists keep the chosen mode when the monitor changes (WPF clears a ComboBox's selection when its
+            // items are replaced, and writes that back to the view model).
+            if (e.Args[i].Equals("--test-editgame-monitor", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                var lines = new List<string>();
+                try
+                {
+                    var monitors = DisplayModeService.Shared.AvailableMonitors();
+                    var modes = DisplayModeService.Shared.AvailableModes();
+                    var mode = modes[1];
+                    var game = new GameEntry { Id = "t", Name = "Test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz, DisplayMonitorId = monitors[0].Id };
+                    var dialog = new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                    dialog.Show();
+                    dialog.UpdateLayout();
+                    var vm = (ViewModels.GameEditViewModel)dialog.DataContext;
+                    var combo = FindVisualChild<ComboBox>(dialog, c => System.Windows.Automation.AutomationProperties.GetName(c) == "Monitor");
+                    string State(string label) => $"{label}: monitor='{vm.SelectedMonitor.Label}' resolution='{vm.SelectedResolution.Label}' rate='{vm.SelectedRate?.Label}' (saved {mode})";
+                    lines.Add(State("opened"));
+                    combo!.SelectedIndex = 0;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                    lines.Add(State("main display chosen"));
+                    combo.SelectedIndex = 1;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                    lines.Add(State("monitor 1 chosen"));
+                    dialog.Close();
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(e.Args[i + 1], lines);
+                ExitApplication();
+                return;
+            }
+            // --test-overlay <identify|dim> <out.png> <out.txt>: puts the overlay on this PC's screen and checks it: a
+            // picture of the screen with it showing, whether it took the focus, and whether a click at its middle would
+            // go through to what is under it. The dim case covers a block of the monitor, since there is only one.
+            if (e.Args[i].Equals("--test-overlay", StringComparison.OrdinalIgnoreCase) && i + 3 < e.Args.Length)
+            {
+                string kind = e.Args[i + 1].ToLowerInvariant(), png = e.Args[i + 2], report = e.Args[i + 3];
+                var lines = new List<string>();
+                var backend = new Win32CursorBackend();
+                var surface = new OverlayDimSurface();
+                try
+                {
+                    var monitors = DisplayModeService.Shared.AvailableMonitors();
+                    var main = monitors.First();
+                    int? before = backend.Foreground()?.ProcessId;
+                    ScreenRect covered;
+                    if (kind == "identify")
+                    {
+                        MonitorIdentifier.Flash(monitors);
+                        int w = Math.Min(900, main.Bounds.Right - main.Bounds.Left), h = Math.Min(480, main.Bounds.Bottom - main.Bounds.Top);
+                        int l = main.Bounds.Left + (main.Bounds.Right - main.Bounds.Left - w) / 2, tp = main.Bounds.Top + (main.Bounds.Bottom - main.Bounds.Top - h) / 2;
+                        covered = new ScreenRect(l, tp, l + w, tp + h);
+                    }
+                    else
+                    {
+                        covered = new ScreenRect(main.Bounds.Left + 200, main.Bounds.Top + 200, main.Bounds.Left + 1400, main.Bounds.Top + 900);
+                        surface.Show([covered]);
+                    }
+                    PumpDispatcher(TimeSpan.FromMilliseconds(900));
+                    lines.Add($"covering {covered} on {main.Label}");
+                    lines.Add($"focus: foreground before={before} after={backend.Foreground()?.ProcessId} ({(before == backend.Foreground()?.ProcessId ? "not taken" : "CHANGED")})");
+                    var middle = new System.Drawing.Point((covered.Left + covered.Right) / 2, (covered.Top + covered.Bottom) / 2);
+                    var under = WindowFromPoint(middle);
+                    var name = new System.Text.StringBuilder(256);
+                    GetClassName(under, name, name.Capacity);
+                    lines.Add($"window at its middle: class '{name}' ({(name.ToString() == "TrayTriggerOverlay" ? "the overlay would catch a click" : "clicks go through")})");
+                    using (var bmp = new System.Drawing.Bitmap(main.Bounds.Right - main.Bounds.Left, main.Bounds.Bottom - main.Bounds.Top))
+                    using (var g = System.Drawing.Graphics.FromImage(bmp))
+                    {
+                        g.CopyFromScreen(main.Bounds.Left, main.Bounds.Top, 0, 0, bmp.Size);
+                        // Thumbnail: the full screenshot is large.
+                        using var small = new System.Drawing.Bitmap(bmp, new System.Drawing.Size(bmp.Width / 3, bmp.Height / 3));
+                        small.Save(png, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                    lines.Add($"saved {png}");
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                finally
+                {
+                    surface.Hide();
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                }
+                File.WriteAllLines(report, lines);
+                ExitApplication();
+                return;
+            }
+            // --test-audio <info|switch> <out.txt>: checks the sound output calls on this PC. info lists the playback
+            // devices and which has each job. switch sends a test game's sound to another device, checks it took,
+            // puts it back through the real service, checks that, and in any case gives every job back to the device
+            // that had it. The sound moves for about two seconds.
+            if (e.Args[i].Equals("--test-audio", StringComparison.OrdinalIgnoreCase) && i + 2 < e.Args.Length)
+            {
+                string action = e.Args[i + 1].ToLowerInvariant();
+                string outFile = e.Args[i + 2];
+                var lines = new List<string>();
+                var backend = new Win32AudioBackend();
+                var originals = new Dictionary<AudioRole, string?>();
+                foreach (AudioRole role in Enum.GetValues<AudioRole>()) originals[role] = backend.DefaultId(role);
+                try
+                {
+                    var devices = backend.PlaybackDevices();
+                    string NameOf(string? id) => devices.Where(d => d.Id == id).Select(d => d.Name).FirstOrDefault() ?? id ?? "none";
+                    foreach (var d in devices) lines.Add($"device {d.Name} id={d.Id}");
+                    foreach (var (role, id) in originals) lines.Add($"{role} -> {NameOf(id)}");
+                    // "order": does what the service does, one role at a time, and says what every role is after each call, to
+                    // show whether putting back one role moves another. The jobs go back to what they were at the end whatever happens.
+                    if (action == "order")
+                    {
+                        var other = devices.Where(d => d.Id != originals[AudioRole.Console]).Cast<AudioDevice?>().FirstOrDefault();
+                        if (other is not { } target) { lines.Add("only one playback device: nothing to switch to"); }
+                        else
+                        {
+                            void Show(string when) => lines.Add($"{when}: " + string.Join(", ", Enum.GetValues<AudioRole>().Select(r => $"{r}={NameOf(backend.DefaultId(r))}")));
+                            Show("start");
+                            lines.Add($"SetDefault(headset, Console) -> {backend.SetDefault(target.Id, AudioRole.Console)}"); Show("after setting Console to the other device");
+                            lines.Add($"SetDefault(headset, Multimedia) -> {backend.SetDefault(target.Id, AudioRole.Multimedia)}"); Show("after setting Multimedia to the other device");
+                            PumpDispatcher(TimeSpan.FromSeconds(1));
+                            lines.Add($"SetDefault(original, Console) -> {backend.SetDefault(originals[AudioRole.Console]!, AudioRole.Console)}"); Show("after putting Console back");
+                            PumpDispatcher(TimeSpan.FromMilliseconds(500));
+                            Show("half a second later");
+                            if (backend.DefaultId(AudioRole.Multimedia) != originals[AudioRole.Multimedia])
+                            {
+                                lines.Add($"SetDefault(original, Multimedia) -> {backend.SetDefault(originals[AudioRole.Multimedia]!, AudioRole.Multimedia)}"); Show("after putting Multimedia back");
+                            }
+                        }
+                    }
+                    if (action == "switch")
+                    {
+                        var other = devices.Where(d => d.Id != originals[AudioRole.Console]).Cast<AudioDevice?>().FirstOrDefault();
+                        if (other is not { } target) { lines.Add("only one playback device: nothing to switch to"); }
+                        else
+                        {
+                            string path = Path.Combine(Path.GetTempPath(), "audio-test-" + Guid.NewGuid().ToString("N") + ".json");
+                            var service = new AudioOutputService(backend, path);
+                            var game = new GameEntry { Id = "audio-test", Name = "Audio test", AudioOutputDeviceId = target.Id };
+                            lines.Add($"begin={service.Begin(game)} target={target.Name}");
+                            PumpDispatcher(TimeSpan.FromSeconds(2));
+                            foreach (AudioRole role in Enum.GetValues<AudioRole>()) lines.Add($"during {role} -> {NameOf(backend.DefaultId(role))}");
+                            service.End(game.Id);
+                            PumpDispatcher(TimeSpan.FromSeconds(1));
+                            foreach (AudioRole role in Enum.GetValues<AudioRole>())
+                                lines.Add($"after {role} -> {NameOf(backend.DefaultId(role))} ({(backend.DefaultId(role) == originals[role] ? "ok" : "WRONG")})");
+                            lines.Add($"note removed={!File.Exists(path)}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                finally
+                {
+                    // Whatever happened: every job back to the device that had it.
+                    foreach (var (role, id) in originals)
+                    {
+                        if (id != null && backend.DefaultId(role) != id) backend.SetDefault(id, role);
+                    }
+                }
+                foreach (var (role, id) in originals) lines.Add($"final {role} -> {(backend.DefaultId(role) == id ? "unchanged" : "CHANGED")}");
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+            // --test-rebar <out.txt> [exe,exe,...]: READS, never writes, the three NVIDIA Resizable BAR settings
+            // (0x000F00BA, 0x000F00BB, 0x000F00FF) on the Global profile and on the profile NVIDIA has for each
+            // executable, with where each value comes from, and says whether this process is elevated. For settling
+            // what the Resizable BAR tweak has to set.
+            if (e.Args[i].Equals("--test-rebar", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                string[] exes = i + 2 < e.Args.Length
+                    ? e.Args[i + 2].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    : ["Cyberpunk2077.exe", "RDR2.exe", "HorizonZeroDawn.exe", "Gears5.exe", "ACValhalla.exe", "bfv.exe", "Borderlands3.exe",
+                       "HITMAN3.exe", "DeadSpace.exe", "ForzaHorizon4.exe", "HogwartsLegacy.exe", "AlanWake2.exe", "ffxvi.exe",
+                       "DeltaForce-Win64-Shipping.exe", "eldenring.exe", "Hellraiser-Win64-Shipping.exe"];
+                var lines = new List<string>();
+                uint[] ids = [0x000F00BA, 0x000F00BB, 0x000F00FF];
+                try
+                {
+                    bool elevated = new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
+                        .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                    lines.Add($"this process is elevated: {elevated}");
+                    foreach (uint id in ids) lines.Add($"0x{id:X8} is '{NvApi.GetSettingName(id) ?? "(not known to the driver)"}'");
+                    using var session = NvApi.Session.TryOpen(out string? error);
+                    if (session == null)
+                    {
+                        lines.Add("could not open the driver's settings: " + error);
+                    }
+                    else
+                    {
+                        void Report(string label, IntPtr handle, NvApi.DrsProfileInfo info)
+                        {
+                            lines.Add($"{label}: profile '{info.ProfileName}' (NVIDIA's own: {info.IsPredefined}, {info.ApplicationCount} apps, {info.SettingCount} settings)");
+                            foreach (uint id in ids)
+                            {
+                                var v = session.GetSetting(handle, id, out string? err);
+                                lines.Add(v == null
+                                    ? $"    0x{id:X8}: {(err == null ? "absent" : "unreadable: " + err)}"
+                                    : $"    0x{id:X8}: 0x{v.CurrentValue:X8}, from {v.Origin}, NVIDIA's own value: {v.IsCurrentPredefined}");
+                            }
+                        }
+                        var global = session.GetGlobalProfile(out IntPtr globalHandle, out error);
+                        if (global == null) lines.Add("GLOBAL: could not be read: " + error);
+                        else Report("GLOBAL", globalHandle, global);
+                        foreach (string exe in exes)
+                        {
+                            var info = session.FindProfileForExecutable(exe, out IntPtr handle, out error);
+                            if (info == null) lines.Add($"{exe}: no profile ({error ?? "NVIDIA has none"})");
+                            else Report(exe, handle, info);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+            // --test-rebar-write <out.txt>: tries the Resizable BAR write the Aggressive profile makes, on the Global profile
+            // (0x000F00BA = 1), saves it, reads it back, then puts back what was there and checks that. Run it once normally and
+            // once elevated to see which step, if any, the driver refuses without administrator rights.
+            if (e.Args[i].Equals("--test-rebar-write", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                const uint id = 0x000F00BA;
+                var lines = new List<string>();
+                try
+                {
+                    bool elevated = new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
+                        .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                    lines.Add($"this process is elevated: {elevated}");
+                    using var session = NvApi.Session.TryOpen(out string? error);
+                    if (session == null)
+                    {
+                        lines.Add("could not open the driver's settings: " + error);
+                    }
+                    else
+                    {
+                        var global = session.GetGlobalProfile(out IntPtr handle, out error);
+                        if (global == null)
+                        {
+                            lines.Add("could not read the Global profile: " + error);
+                        }
+                        else
+                        {
+                            string Read()
+                            {
+                                var v = session.GetSetting(handle, id, out string? err);
+                                return v == null ? (err == null ? "absent" : "absent or unreadable (" + err + ")") : $"0x{v.CurrentValue:X8} from {v.Origin}";
+                            }
+                            var before = session.GetSetting(handle, id, out _);
+                            lines.Add($"profile '{global.ProfileName}', before: {Read()}");
+
+                            bool set = session.SetSetting(handle, id, 1, out error);
+                            lines.Add($"SetSetting 0x{id:X8} = 1: {(set ? "ok" : "REFUSED: " + error)}");
+                            bool saved = false;
+                            if (set)
+                            {
+                                lines.Add($"read back before saving: {Read()}");
+                                saved = session.Save(out error);
+                                lines.Add($"Save: {(saved ? "ok" : "REFUSED: " + error)}");
+                            }
+
+                            // Put back what was there: the old value, or nothing.
+                            if (set)
+                            {
+                                bool back = before != null
+                                    ? session.SetSetting(handle, id, before.CurrentValue, out error)
+                                    : session.DeleteSetting(handle, id, out error);
+                                lines.Add($"put back ({(before != null ? "old value" : "delete")}): {(back ? "ok" : "FAILED: " + error)}");
+                                if (saved)
+                                {
+                                    bool saved2 = session.Save(out error);
+                                    lines.Add($"Save after putting back: {(saved2 ? "ok" : "FAILED: " + error)}");
+                                }
+                                lines.Add($"after: {Read()}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+            // --test-rebar-profile <out.txt>: like --test-rebar-write, but on a throwaway per-game profile for a made-up
+            // executable (created, written, saved, read back, deleted, saved), to see whether that write needs administrator rights.
+            if (e.Args[i].Equals("--test-rebar-profile", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                const uint id = 0x000F00BA;
+                var lines = new List<string>();
+                try
+                {
+                    bool elevated = new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
+                        .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                    lines.Add($"this process is elevated: {elevated}");
+                    using var session = NvApi.Session.TryOpen(out string? error);
+                    if (session == null) lines.Add("could not open the driver's settings: " + error);
+                    else
+                    {
+                        IntPtr profile = session.CreateProfileForExecutable("TrayTrigger rebar test", "tt-rebar-test.exe", out error);
+                        lines.Add($"create a throwaway profile: {(profile != IntPtr.Zero ? "ok" : "REFUSED: " + error)}");
+                        if (profile != IntPtr.Zero)
+                        {
+                            bool set = session.SetSetting(profile, id, 1, out error);
+                            lines.Add($"SetSetting 0x{id:X8} = 1 on it: {(set ? "ok" : "REFUSED: " + error)}");
+                            bool saved = false;
+                            if (set)
+                            {
+                                var v = session.GetSetting(profile, id, out _);
+                                lines.Add($"read back: {(v == null ? "absent" : "0x" + v.CurrentValue.ToString("X8"))}");
+                                saved = session.Save(out error);
+                                lines.Add($"Save: {(saved ? "ok" : "REFUSED: " + error)}");
+                            }
+                            bool deleted = session.DeleteProfile(profile, out error);
+                            lines.Add($"delete the throwaway profile: {(deleted ? "ok" : "FAILED: " + error)}");
+                            if (deleted || saved)
+                            {
+                                bool saved2 = session.Save(out error);
+                                lines.Add($"Save after deleting: {(saved2 ? "ok" : "FAILED: " + error)}");
+                            }
+                        }
+                        var check = session.FindProfileForExecutable("tt-rebar-test.exe", out _, out _);
+                        lines.Add($"throwaway profile still there afterwards: {(check != null ? "YES (" + check.ProfileName + ")" : "no")}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+            // --test-elevated <out.txt>: the real one-prompt elevated step, end to end. Sends a registry change that changes nothing
+            // (the value System Responsiveness already has) together with Resizable BAR on the Global profile through
+            // ElevatedHelper.Run - one administrator prompt, to be answered - reads it back, then does the same to take it out again
+            // (a second prompt). If anything is left set at the end, one more step removes it.
+            if (e.Args[i].Equals("--test-elevated", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                const uint id = PerformanceProfileService.NvResizableBarSettingId;
+                const string key = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
+                var lines = new List<string>();
+                var drs = new NvApiDrsBackend();
+                string ReadRebar()
+                {
+                    // Straight from a session: NvidiaGlobalSetting.Read asks the driver to name the setting first, and it won't name this one.
+                    using var session = drs.OpenSession(out string? err);
+                    var global = session?.GetGlobalProfile(out err);
+                    if (session == null || global == null) return "unreadable: " + err;
+                    var reading = session.GetSetting(global, id, out err);
+                    return reading != null ? $"{reading.Value} ({reading.Origin})" : err != null ? "absent (" + err + ")" : "absent";
+                }
+                try
+                {
+                    lines.Add($"this process is elevated: {SystemTweaksService.IsElevated}");
+                    var backend = new WindowsTweakBackend();
+                    int? current = backend.ReadHklmDword(key, "SystemResponsiveness");
+                    lines.Add($"SystemResponsiveness now: {current?.ToString() ?? "absent"}");
+                    var noop = current is int v
+                        ? new SystemTweaksService.RegFileEntry(key, "SystemResponsiveness", v, Microsoft.Win32.RegistryValueKind.DWord, Delete: false)
+                        : new SystemTweaksService.RegFileEntry(key, "SystemResponsiveness", null, Microsoft.Win32.RegistryValueKind.None, Delete: true);
+                    lines.Add($"Resizable BAR before: {ReadRebar()}");
+
+                    var on = ElevatedHelper.Run([noop], [new NvidiaAdminOp(id, NvidiaAdminAction.Set, 1)]);
+                    lines.Add($"step 1 (registry no-op + Resizable BAR on): registry ok={on.RegistryOk}, NVIDIA ok={on.NvidiaOk}, problem={on.Problem ?? "none"}");
+                    lines.Add($"Resizable BAR after step 1: {ReadRebar()}");
+
+                    var off = ElevatedHelper.Run([noop], [new NvidiaAdminOp(id, NvidiaAdminAction.Delete)]);
+                    lines.Add($"step 2 (registry no-op + Resizable BAR removed): registry ok={off.RegistryOk}, NVIDIA ok={off.NvidiaOk}, problem={off.Problem ?? "none"}");
+                    lines.Add($"Resizable BAR after step 2: {ReadRebar()}");
+
+                    if (!ReadRebar().StartsWith("absent"))
+                    {
+                        var clean = ElevatedHelper.Run([], [new NvidiaAdminOp(id, NvidiaAdminAction.Delete)]);
+                        lines.Add($"clean-up step: NVIDIA ok={clean.NvidiaOk}; Resizable BAR now: {ReadRebar()}");
+                    }
+                    lines.Add($"SystemResponsiveness at the end: {backend.ReadHklmDword(key, "SystemResponsiveness")?.ToString() ?? "absent"}");
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+            // --test-cursor <info|clip|free|service> <out.txt> [seconds]: checks the mouse confinement on this PC.
+            // info reads the current confinement. clip confines the mouse to the left half of the main monitor and
+            // waits [seconds], so a harness can kill the process and see whether Windows frees the mouse. free
+            // lifts any confinement. service runs the real service end to end with a test window as the game
+            // (the monitor shrunk by 200 pixels, so the confinement shows on a single monitor): in front, another
+            // program in front, back in front, then the end. Whatever happens, the mouse is freed at the end.
+            if (e.Args[i].Equals("--test-cursor", StringComparison.OrdinalIgnoreCase) && i + 2 < e.Args.Length)
+            {
+                string action = e.Args[i + 1].ToLowerInvariant();
+                string outFile = e.Args[i + 2];
+                int seconds = i + 3 < e.Args.Length && int.TryParse(e.Args[i + 3], out int s) ? s : 20;
+                var lines = new List<string>();
+                var backend = new Win32CursorBackend();
+                try
+                {
+                    var front = backend.Foreground();
+                    lines.Add($"clip={backend.CurrentClip()} foreground={front?.ProcessId} monitor={(front is { } f ? backend.MonitorOf(f.Handle) : null)}");
+                    switch (action)
+                    {
+                        case "clip":
+                        {
+                            var monitor = backend.MonitorOf(front!.Value.Handle)!.Value;
+                            var half = new ScreenRect(monitor.Left, monitor.Top, monitor.Left + (monitor.Right - monitor.Left) / 2, monitor.Bottom);
+                            lines.Add($"clipped={backend.Clip(half)} now={backend.CurrentClip()}");
+                            File.WriteAllLines(outFile, lines);
+                            PumpDispatcher(TimeSpan.FromSeconds(seconds));
+                            break;
+                        }
+                        case "free":
+                            lines.Add($"freed={backend.Clip(null)} now={backend.CurrentClip()}");
+                            break;
+                        case "service":
+                        {
+                            // The window in front belongs to someone else, and Windows won't let a background process take the
+                            // front, so the checks use what is already there: the program in front is "the game", then its
+                            // parent is "the game" (a launcher that started it), then an unrelated program is.
+                            var service = new CursorLockService(new ShrunkMonitorCursor(backend));
+                            var fg = backend.Foreground();
+                            if (fg is not { } front2) { lines.Add("no foreground window"); break; }
+                            int frontPid = front2.ProcessId;
+                            int? parent = ParentOf(frontPid);
+                            string Now(string label) => $"{label}: clip={backend.CurrentClip()}";
+                            try
+                            {
+                                service.Track(new GameEntry { Id = "t1", Name = "In front", KeepMouseOnGameScreen = true }, frontPid);
+                                lines.Add(Now("the program in front is the game (expect the monitor less 200 px)"));
+                                service.Untrack("t1");
+                                lines.Add(Now("the game ended (expect the whole monitor)"));
+                                if (parent is { } p)
+                                {
+                                    service.Track(new GameEntry { Id = "t2", Name = "Parent", KeepMouseOnGameScreen = true }, p);
+                                    lines.Add(Now($"its parent {p} is the game, the program in front started by it (expect the monitor less 200 px)"));
+                                    service.Untrack("t2");
+                                }
+                                service.Track(new GameEntry { Id = "t3", Name = "Other", KeepMouseOnGameScreen = true }, Environment.ProcessId);
+                                lines.Add(Now("an unrelated program is the game (expect the whole monitor)"));
+                                service.Untrack("t3");
+                            }
+                            finally
+                            {
+                                service.ReleaseAll();
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                finally
+                {
+                    backend.Clip(null);
+                }
+                lines.Add($"final clip={backend.CurrentClip()}");
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-playing <view mode> <text size %> <out.png>: the library at the given text size with
+            // the first three visible cards marked as playing, to check where the PLAYING tag sits. Nothing
+            // is saved; the text size is only applied to this run.
+            if ((e.Args[i].Equals("--screenshot-playing", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-playing", StringComparison.OrdinalIgnoreCase)) &&
+                i + 3 < e.Args.Length && int.TryParse(e.Args[i + 2], out int playingPercent))
+            {
+                string viewMode = e.Args[i + 1];
+                string targetPng = e.Args[i + 3];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = viewMode;
+                Services.AppTypography.SystemPercent = playingPercent;
+                Services.AppTypography.ApplyForTheme(null);
+                _mainWindow.Show();
+                var heavyState = _mainViewModel.Library.HeavyStateLoad;
+                PumpDispatcher(TimeSpan.FromSeconds(10), () => heavyState.IsCompleted);
+                PumpDispatcher(TimeSpan.FromMilliseconds(500));
+                for (int marked = 0; marked < 3; marked++)
+                {
+                    var next = FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible && b.DataContext is GameCardViewModel { IsPlaying: false });
+                    if (next?.DataContext is GameCardViewModel vm) vm.IsPlaying = true;
+                }
+                _mainWindow.UpdateLayout();
+                PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                CaptureVisual(_mainWindow, 960, 700, targetPng);
                 ExitApplication();
                 return;
             }
@@ -1646,6 +2230,11 @@ public partial class App
                     ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe",
                     WorkingDirectory = @"C:\Games\DOOM Eternal"
                 };
+                // A fourth argument "display" opens it with a display mode already chosen (the second-largest mode), to see both lists.
+                if (e.Args.Skip(i + 3).FirstOrDefault() == "display" && DisplayModeService.Shared.AvailableModes() is { Count: > 1 } shown)
+                {
+                    sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz, KeepMouseOnGameScreen = true, DimOtherScreens = true, DisplayMonitorId = DisplayModeService.Shared.AvailableMonitors().Select(m => m.Id).FirstOrDefault() ?? string.Empty, AudioOutputDeviceId = AudioOutputService.Shared.AvailableDevices().Select(d => d.Id).FirstOrDefault() ?? string.Empty };
+                }
                 var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
                 dlg.Show();
                 dlg.UpdateLayout();
@@ -2982,26 +3571,13 @@ public partial class App
                 vm.Details = sampleDetails;
                 vm.IsLoading = false;
 
-                // "--screenshot-details <out.png> pcgw": with the PCGamingWiki facts card, and a taller picture to hold it.
-                bool withPcgw = e.Args.Any(a => a.Equals("pcgw", StringComparison.OrdinalIgnoreCase));
-                if (withPcgw)
-                {
-                    vm.ApplyPcGamingWikiFacts(new PcGamingWikiFacts
-                    {
-                        PageTitle = "The Blood of Dawnwalker",
-                        PageUrl = "https://www.pcgamingwiki.com/wiki/The_Blood_of_Dawnwalker",
-                        FetchedUtc = DateTime.UtcNow,
-                        Facts = PcGamingWikiParser.Parse(SamplePcGamingWikiPage),
-                    });
-                }
-
                 var dlg = new GameDetailsDialog(vm);
                 // "--screenshot-details <out.png> scroll": scrolled to the end of the details, to see the cards below the fold.
                 if (e.Args.Any(a => a.Equals("scroll", StringComparison.OrdinalIgnoreCase)))
                 {
                     dlg.ContentRendered += (_, _) => (dlg.FindName("DetailsScroll") as ScrollViewer)?.ScrollToEnd();
                 }
-                CaptureVisual(dlg, 820, withPcgw ? 2000 : 680, targetPng);
+                CaptureVisual(dlg, 820, 680, targetPng);
                 ExitApplication();
                 return;
             }
@@ -3982,6 +4558,31 @@ public partial class App
         poll.Start();
     }
 
+    /// <summary>The process that started <paramref name="pid"/>, or null (for the --test-cursor capture).</summary>
+    private static int? ParentOf(int pid)
+    {
+        using var searcher = new System.Management.ManagementObjectSearcher($"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {pid}");
+        foreach (var o in searcher.Get()) return Convert.ToInt32(o["ParentProcessId"]);
+        return null;
+    }
+
+    [DllImport("user32.dll")] private static extern IntPtr GetThreadDpiAwarenessContext();
+    [DllImport("user32.dll")] private static extern int GetAwarenessFromDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll")] private static extern uint GetDpiForSystem();
+
+    [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(System.Drawing.Point point);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int max);
+    [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+
+    /// <summary>For the --test-cursor capture: brings a test window to the front even from a background process (a tap of Alt first, which Windows accepts as input).</summary>
+    private static void ForceForeground(Window window)
+    {
+        const byte VK_MENU = 0x12; const uint KEYEVENTF_KEYUP = 0x2;
+        keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(window).Handle);
+        window.Activate();
+    }
 #endif
 }
 #endif

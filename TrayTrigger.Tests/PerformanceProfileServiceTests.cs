@@ -11,6 +11,7 @@ namespace TrayTrigger.Tests;
 /// first-wins for machine-wide tweaks, per-game restore, duplicate Begin, untracked End, deferred
 /// elevated restore at Windows shutdown, and validation on crash recovery.
 /// </summary>
+[Collection(ActivityCurrentCollection.Name)]
 public class PerformanceProfileServiceTests : IDisposable
 {
     private sealed class FakeStore : IProfileSnapshotStore
@@ -59,10 +60,38 @@ public class PerformanceProfileServiceTests : IDisposable
         public int ElevatedBatches;
         /// <summary>Every change sent in an elevated step, so a test can build the .reg file production would import.</summary>
         public readonly List<SystemTweaksService.RegFileEntry> Applied = new();
+
+        /// <summary>The driver the NVIDIA changes of an elevated step are made on; set by WithDriver.</summary>
+        public FakeDrsBackend? Driver;
+        /// <summary>Makes the NVIDIA part of an elevated step fail, with this reason.</summary>
+        public string? NvidiaProblem;
+        /// <summary>Makes the elevated step "still running" when the wait ends: it reports nothing, and has not written anything yet.</summary>
+        public bool NvidiaUnfinished;
+        /// <summary>The administrator prompt is declined: nothing is written, registry or NVIDIA.</summary>
+        public bool DeclineAdmin;
+        /// <summary>What each elevated step carried: registry changes and NVIDIA changes together.</summary>
+        public readonly List<(int Registry, IReadOnlyList<NvidiaAdminOp> Nvidia)> AdminSteps = new();
+
+        public ElevatedResult ApplyAdminChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> registry, IReadOnlyList<NvidiaAdminOp> nvidia)
+        {
+            if (registry.Count == 0 && nvidia.Count == 0) return ElevatedResult.Nothing;
+            AdminSteps.Add((registry.Count, nvidia.ToList()));
+            // The registry part counts itself; a step of NVIDIA changes alone is a prompt too.
+            if (registry.Count == 0) ElevatedBatches++;
+            if (DeclineAdmin) return new ElevatedResult(false, false, "The administrator prompt was declined, or the elevated step could not be started.");
+            bool regOk = ApplyHklmChanges(registry);
+            if (nvidia.Count == 0) return new ElevatedResult(regOk, true);
+            if (NvidiaUnfinished) return new ElevatedResult(false, false, "The elevated step did not finish in time, so it is not known what it changed.", Unfinished: true);
+            if (NvidiaProblem != null) return new ElevatedResult(regOk, false, NvidiaProblem);
+            bool ok = Driver != null && ElevatedHelper.ApplyNvidiaOps(nvidia, Driver, out _);
+            return new ElevatedResult(regOk, ok);
+        }
+
         public bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries)
         {
             if (entries.Count == 0) return true;
             ElevatedBatches++;
+            if (DeclineAdmin) return false;
             Applied.AddRange(entries);
             foreach (var e in entries)
             {
@@ -104,6 +133,10 @@ public class PerformanceProfileServiceTests : IDisposable
 
         public int? PrimaryRefreshHz = 144;
         public int? GetPrimaryRefreshHz() => PrimaryRefreshHz;
+
+        /// <summary>What the game's own display setting will make the main display run at, once it is applied after the profile; null for none.</summary>
+        public int? PlannedPrimaryRefreshHz;
+        public int? GetPlannedPrimaryRefreshHz(GameEntry game) => PlannedPrimaryRefreshHz;
 
         public bool? ResizableBarOn = true;
         public bool? IsResizableBarEnabled() => ResizableBarOn;
@@ -672,9 +705,15 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.True(_store.OnDisk.PerGameSnapshots[0].DefenderExclusionCaptured);
         Assert.Empty(_service.ActiveSessionGameIds);
 
-        // Next start: recovery finishes the job. It was absent before, so Windows' default goes back.
+        // Next start: it waits to be asked (no prompt at start), and "Put back now" finishes the job. It was absent before,
+        // so Windows' default goes back.
         var next = new PerformanceProfileService(_store, () => _settings, _backend);
         next.RecoverFromCrashIfNeeded();
+        Assert.Equal(10, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Contains(_exeA, _backend.Defender);
+        Assert.Equal(["Windows' multimedia scheduler settings", $"the Defender exclusion for {Path.GetFileName(_exeA)}"], next.UnrestoredItems);
+
+        Assert.True(next.RetryUnrestored());
         Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
         Assert.DoesNotContain(_exeA, _backend.Defender);
         Assert.Null(_store.OnDisk);
@@ -953,10 +992,17 @@ public class PerformanceProfileServiceTests : IDisposable
 
         _service.RecoverFromCrashIfNeeded();
 
+        // What needs no administrator rights is back at once...
         Assert.Equal("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", _backend.ActiveScheme);
+        Assert.Equal("GpuPreference=1;", _backend.GpuPrefs[_exeA]);
+        // ...what does waits to be asked for, rather than prompting at start.
+        Assert.DoesNotContain(_backend.Log, l => l.StartsWith("hklm:"));
+        Assert.Equal(["Windows' multimedia scheduler settings"], _service.UnrestoredItems);
+        Assert.NotNull(_store.OnDisk);
+
+        Assert.True(_service.RetryUnrestored());
         Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
         Assert.Equal("Medium", _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
-        Assert.Equal("GpuPreference=1;", _backend.GpuPrefs[_exeA]);
         Assert.Null(_store.OnDisk);
     }
 
@@ -1015,7 +1061,11 @@ public class PerformanceProfileServiceTests : IDisposable
     private const uint PowerMode = PerformanceProfileService.NvPowerModeSettingId;
     private const uint FrameCap = PerformanceProfileService.NvFrameCapSettingId;
 
-    private PerformanceProfileService WithDriver(FakeDrsBackend driver) => new(_store, () => _settings, _backend, driver);
+    private PerformanceProfileService WithDriver(FakeDrsBackend driver)
+    {
+        _backend.Driver = driver;
+        return new(_store, () => _settings, _backend, driver);
+    }
 
     [Fact]
     public void NvidiaMaxPerformance_IsSetForTheSession_AndRemovedAfter()
@@ -1144,6 +1194,23 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.False(driver.Global.Settings.ContainsKey(FrameCap));
     }
 
+    /// <summary>
+    /// The game's own display setting is applied after the profile, so a cap worked out for the desktop's 60 Hz would hold a
+    /// game set to 144 Hz at 59 fps: the rate that setting will give the main display wins when there is one.
+    /// </summary>
+    [Fact]
+    public void FrameCap_FollowsTheRefreshRateTheGamesDisplaySettingWillGive_NotTheDesktops()
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        _backend.PrimaryRefreshHz = 60;
+        _backend.PlannedPrimaryRefreshHz = 144;
+
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+
+        Assert.Equal((138u, false), driver.Global.Settings[FrameCap]);
+    }
+
     /// <summary>A Max Frame Rate the user set - for power, heat, or a game that misbehaves uncapped - is theirs.</summary>
     [Fact]
     public void FrameCap_LeavesTheUsersOwnCapAlone()
@@ -1262,6 +1329,389 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
     }
 
+    /// <summary>A setting the session itself writes, refused by the driver: nothing is changed, the game still starts, and Activity says so.</summary>
+    [Fact]
+    public void ANvidiaSetting_RefusedByTheDriver_IsAProblemInActivity_AndTheGameStillStarts()
+    {
+        var activity = new ActivityService(Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N")), readOnly: false);
+        ActivityService.Current = activity;
+        try
+        {
+            var driver = new FakeDrsBackend();
+            driver.RefusedWrites[PowerMode] = "NVAPI_INVALID_USER_PRIVILEGE (-137)";
+
+            Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+
+            Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+            var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
+            Assert.Contains("couldn't be set", problem.Text);
+            Assert.Contains("administrator rights", problem.Detail);
+        }
+        finally { ActivityService.Current = null; }
+    }
+
+    /// <summary>The registry changes and Resizable BAR are one elevated step in, and one out: one prompt each way.</summary>
+    [Fact]
+    public void ResizableBar_RidesTheSameElevatedStepAsTheRegistryTweaks()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        var step = Assert.Single(_backend.AdminSteps);
+        Assert.Equal(2, step.Registry);
+        Assert.Equal(new NvidiaAdminOp(Rebar, NvidiaAdminAction.Set, 1), Assert.Single(step.Nvidia));
+        Assert.Equal((1u, false), driver.Global.Settings[Rebar]);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal(2, _backend.AdminSteps.Count);
+        var back = _backend.AdminSteps[1];
+        Assert.Equal(2, back.Registry);
+        Assert.Equal(new NvidiaAdminOp(Rebar, NvidiaAdminAction.Delete), Assert.Single(back.Nvidia));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>With no registry tweaks on, Resizable BAR is the whole prompt.</summary>
+    [Fact]
+    public void ResizableBar_Alone_IsOneElevatedStepEachWay()
+    {
+        _settings.AggressiveProfileTweaks.SystemResponsivenessEnabled = false;
+        _settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled = false;
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.Equal(0, Assert.Single(_backend.AdminSteps).Registry);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+    }
+
+    /// <summary>
+    /// The prompt was declined, or the driver refused even then: nothing was changed, so no record is kept, the game still
+    /// starts and Activity says why.
+    /// </summary>
+    [Fact]
+    public void ResizableBar_WhenTheElevatedStepFails_KeepsNoRecord_AndIsAProblemInActivity()
+    {
+        var activity = new ActivityService(Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N")), readOnly: false);
+        ActivityService.Current = activity;
+        try
+        {
+            var driver = new FakeDrsBackend();
+            _backend.NvidiaProblem = "The administrator prompt was declined, or the elevated step did not finish.";
+
+            Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+
+            Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+            Assert.DoesNotContain(_store.OnDisk!.NvidiaSettings, r => r.SettingId == Rebar);
+            var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
+            Assert.Contains("Resizable BAR couldn't be set", problem.Text);
+            Assert.Contains("administrator prompt was declined", problem.Detail);
+        }
+        finally { ActivityService.Current = null; }
+    }
+
+    /// <summary>
+    /// A step that started and had not finished when the wait ended may still make its change, so its record stays: the change
+    /// would otherwise sit on the driver with nothing to put it back from. The game still starts, and Activity says it is not known.
+    /// </summary>
+    [Fact]
+    public void ResizableBar_WhenTheElevatedStepIsStillRunning_KeepsItsRecord_AndTheGameStillStarts()
+    {
+        var activity = new ActivityService(Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N")), readOnly: false);
+        ActivityService.Current = activity;
+        try
+        {
+            var driver = new FakeDrsBackend();
+            _backend.NvidiaUnfinished = true;
+            var service = WithDriver(driver);
+
+            Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+
+            Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == Rebar);
+            var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
+            Assert.Contains("not known", problem.Detail);
+
+            // The step did not write anything in the end: the record is simply settled when the game ends.
+            _backend.NvidiaUnfinished = false;
+            Assert.True(service.EndGameSession("g"));
+            Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+            Assert.Null(_store.OnDisk);
+        }
+        finally { ActivityService.Current = null; }
+    }
+
+    /// <summary>
+    /// TrayTrigger closing without administrator rights can't put it back: the record stays for the next start, which does,
+    /// and nothing is reported as lost meanwhile.
+    /// </summary>
+    [Fact]
+    public void ResizableBar_AtShutdownWithoutAdminRights_StaysOnRecord_AndIsPutBackAtTheNextStart()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.True(driver.Global.Settings.ContainsKey(Rebar));
+
+        service.RestoreActiveSessionOnShutdown(skipElevated: true);
+
+        Assert.True(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == Rebar);
+
+        // The next start leaves it waiting, with no prompt; "Put back now" does it.
+        var nextStart = WithDriver(driver);
+        int prompts = _backend.AdminSteps.Count;
+        nextStart.RecoverFromCrashIfNeeded();
+        Assert.Equal(prompts, _backend.AdminSteps.Count);
+        Assert.True(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Contains("the NVIDIA Resizable BAR setting", nextStart.UnrestoredItems);
+
+        Assert.True(nextStart.RetryUnrestored());
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>
+    /// The prompt was declined when the game ended: the scheduler values stay on record with Resizable BAR, so the next start puts
+    /// both back in one prompt (they used to be dropped, and stayed at the game's values for good).
+    /// </summary>
+    [Fact]
+    public void DeclinedPutBack_KeepsTheSchedulerValuesOnRecord_AndTheNextStartPutsThemBack()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        _backend.DeclineAdmin = true;
+
+        Assert.True(service.EndGameSession("g"));
+
+        Assert.Equal(10, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.True(_store.OnDisk!.SystemResponsivenessCaptured);
+        Assert.True(_store.OnDisk.SchedulingCategoryCaptured);
+        Assert.Contains(_store.OnDisk.NvidiaSettings, r => r.SettingId == Rebar);
+
+        // The next start asks nothing; "Put back now" puts both back in one prompt.
+        _backend.DeclineAdmin = false;
+        int prompts = _backend.AdminSteps.Count;
+        var next = WithDriver(driver);
+        next.RecoverFromCrashIfNeeded();
+        Assert.Equal(prompts, _backend.AdminSteps.Count);
+        Assert.Equal(["the NVIDIA Resizable BAR setting", "Windows' multimedia scheduler settings"], next.UnrestoredItems);
+
+        Assert.True(next.RetryUnrestored());
+        Assert.Equal(prompts + 1, _backend.AdminSteps.Count);
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>Restore Previous after a declined prompt puts the scheduler values back and drops their record.</summary>
+    [Fact]
+    public void DeclinedPutBack_RestorePrevious_PutsTheSchedulerValuesBack_AndClearsTheRecord()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        _backend.DeclineAdmin = true;
+        Assert.True(service.EndGameSession("g"));
+
+        _backend.DeclineAdmin = false;
+        Assert.True(service.RetryUnrestored());
+
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>
+    /// Closing with no game running only has the leftovers of an earlier failed put-back to deal with: the next start asks for
+    /// them, so closing doesn't raise a second prompt for the same thing.
+    /// </summary>
+    [Fact]
+    public void Exit_WithNoGameRunning_DoesNotAskAgainForALeftoverPutBack()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        _backend.DeclineAdmin = true;
+        Assert.True(service.EndGameSession("g"));
+        int prompts = _backend.AdminSteps.Count;
+
+        service.RestoreActiveSessionOnShutdown();
+
+        Assert.Equal(prompts, _backend.AdminSteps.Count);
+        Assert.True(_store.OnDisk!.SystemResponsivenessCaptured);
+        Assert.Contains(_store.OnDisk.NvidiaSettings, r => r.SettingId == Rebar);
+    }
+
+    /// <summary>What the prompt before closing lists: a running game's changes that need permission, or what an earlier put-back left.</summary>
+    [Fact]
+    public void CheckPutBacks_NamesWhatNeedsPermission_WithAGameRunning_AndWhatWasLeft_WithNone()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.Empty(service.CheckPutBacks().Items);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        var running = service.CheckPutBacks();
+        Assert.True(running.GameRunning);
+        Assert.Contains("the NVIDIA Resizable BAR setting", running.Items);
+        Assert.Contains("Windows' multimedia scheduler settings", running.Items);
+
+        _backend.DeclineAdmin = true;
+        Assert.True(service.EndGameSession("g"));
+        var left = service.CheckPutBacks();
+        Assert.False(left.GameRunning);
+        Assert.Contains("the NVIDIA Resizable BAR setting", left.Items);
+        Assert.Contains("Windows' multimedia scheduler settings", left.Items);
+
+        _backend.DeclineAdmin = false;
+        Assert.True(service.RetryUnrestored());
+        Assert.Empty(service.CheckPutBacks().Items);
+    }
+
+    /// <summary>A put-back declined at the end of a game, then a restart: what is left waits, and a game that has no ADMIN tweaks of its own doesn't ask.</summary>
+    [Fact]
+    public void LeftoverFromADeclinedPutBack_IsNotAskedForAtTheEndOfAGameWithNoAdminTweaks()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        _backend.DeclineAdmin = true;
+        Assert.True(service.EndGameSession("g"));
+
+        var next = WithDriver(driver);
+        _backend.DeclineAdmin = false;
+        next.RecoverFromCrashIfNeeded();
+        int prompts = _backend.AdminSteps.Count;
+
+        Assert.True(next.BeginGameSession(Game("o", _exeA, PerformanceProfileMode.Optimized)));
+        var running = next.CheckPutBacks();
+        Assert.False(running.GameRunning);
+        Assert.Contains("Windows' multimedia scheduler settings", running.Items);
+
+        Assert.True(next.EndGameSession("o"));
+        Assert.Equal(prompts, _backend.AdminSteps.Count);
+        Assert.Equal(10, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.NotNull(_store.OnDisk);
+        Assert.Contains("Windows' multimedia scheduler settings", next.UnrestoredItems);
+
+        Assert.True(next.RetryUnrestored());
+        Assert.Equal(prompts + 1, _backend.AdminSteps.Count);
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>
+    /// What was left waiting is put back when a later Aggressive game ends (it asks for permission anyway), and every entry that
+    /// offered it goes, not only the NVIDIA one: a reminder for something already back would be a false alarm at the next exit.
+    /// </summary>
+    [Fact]
+    public void LeftoverFromADeclinedPutBack_IsSettledByALaterAggressiveGame_WithNoEntryLeft()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        _backend.DeclineAdmin = true;
+        Assert.True(service.EndGameSession("g"));
+
+        var next = WithDriver(driver);
+        _backend.DeclineAdmin = false;
+        next.RecoverFromCrashIfNeeded();
+        Assert.NotEmpty(next.UnrestoredItems);
+
+        Assert.True(next.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.True(next.EndGameSession("a"));
+
+        Assert.Empty(next.UnrestoredItems);
+        Assert.Empty(next.CheckPutBacks().Items);
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>A second session over a waiting put-back keeps what the first recorded as the original, not TrayTrigger's own 10 / High.</summary>
+    [Fact]
+    public void ASessionOverAWaitingPutBack_KeepsTheOriginalValueItRecorded()
+    {
+        _backend.WriteHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness", 14);
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        _backend.DeclineAdmin = true;
+        Assert.True(service.EndGameSession("g"));
+        _backend.DeclineAdmin = false;
+
+        Assert.True(service.BeginGameSession(Game("h", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.True(service.EndGameSession("h"));
+
+        Assert.Equal(14, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+    }
+
+    /// <summary>A retry that fails again keeps the entries it had; it doesn't add a second set.</summary>
+    [Fact]
+    public void ARetryThatFailsAgain_DoesNotAddDuplicateEntries()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        _backend.DeclineAdmin = true;
+        Assert.True(service.EndGameSession("g"));
+        var before = service.UnrestoredItems.ToList();
+
+        Assert.False(service.RetryUnrestored());
+
+        Assert.Equal(before.OrderBy(x => x), service.UnrestoredItems.OrderBy(x => x));
+    }
+
+    /// <summary>
+    /// A Defender exclusion left waiting for the game is not removed (that would be a prompt nobody asked for) when the game is played
+    /// again without one, and the new session's own record is still put back, instead of being left behind the old one.
+    /// </summary>
+    [Fact]
+    public void ADefenderExclusionWaitingForTheGame_StaysWhenItIsPlayedAgainWithoutOne_AndTheNewRecordIsStillPutBack()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        service.RestoreActiveSessionOnShutdown(skipElevated: true);
+        Assert.Contains(_exeA, _backend.Defender);
+
+        var next = WithDriver(driver);
+        next.RecoverFromCrashIfNeeded();
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = false;
+        Assert.True(next.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.True(next.EndGameSession("g"));
+
+        Assert.Contains(_exeA, _backend.Defender);
+        Assert.False(_backend.GpuPrefs.ContainsKey(_exeA));
+        var left = Assert.Single(_store.OnDisk!.PerGameSnapshots);
+        Assert.True(left.DefenderExclusionCaptured);
+
+        Assert.True(next.RetryUnrestored());
+        Assert.DoesNotContain(_exeA, _backend.Defender);
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>A value someone changed since is theirs: no elevated step is made for it.</summary>
+    [Fact]
+    public void ResizableBar_ChangedByTheUserDuringTheGame_IsLeftAlone_WithoutAPrompt()
+    {
+        _settings.AggressiveProfileTweaks.SystemResponsivenessEnabled = false;
+        _settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled = false;
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        driver.Global.Settings[Rebar] = (0, false);
+
+        Assert.True(service.EndGameSession("g"));
+
+        Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
+        Assert.Single(_backend.AdminSteps);
+    }
+
     /// <summary>
     /// The driver won't name its Resizable BAR settings, so a driver is recognised by a setting it
     /// does name - and one without even that is no NVIDIA driver at all.
@@ -1281,8 +1731,8 @@ public class PerformanceProfileServiceTests : IDisposable
     }
 
     /// <summary>
-    /// A session loads the driver's whole database, well over 100 ms, on the way into a game: all
-    /// three settings go on with one save and come off with one.
+    /// A session loads the driver's whole database, well over 100 ms, on the way into a game: the two
+    /// settings a session writes go on with one save and come off with one. Resizable BAR is made in the elevated step.
     /// </summary>
     [Fact]
     public void NvidiaSettings_GoOnWithOneSave_AndComeOffWithOne()
@@ -1292,12 +1742,14 @@ public class PerformanceProfileServiceTests : IDisposable
         var service = WithDriver(driver);
 
         Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
-        Assert.Equal([PowerMode, FrameCap, Rebar], _store.OnDisk!.NvidiaSettings.Select(r => r.SettingId));
-        Assert.Equal(1, driver.SaveCount);
+        // Resizable BAR first: it is planned before the registry step, and written in the elevated step. The other two share a session.
+        Assert.Equal([Rebar, PowerMode, FrameCap], _store.OnDisk!.NvidiaSettings.Select(r => r.SettingId));
+        // One save for the elevated step, one for the session the other two share.
+        Assert.Equal(2, driver.SaveCount);
 
         Assert.True(service.EndGameSession("g"));
         Assert.Empty(driver.Global.Settings);
-        Assert.Equal(2, driver.SaveCount);
+        Assert.Equal(4, driver.SaveCount);
     }
 
     /// <summary>

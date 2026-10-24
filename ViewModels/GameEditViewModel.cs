@@ -22,6 +22,7 @@ public enum GameEditSection
     Identity,
     Launch,
     Performance,
+    Display,
     Scripts
 }
 
@@ -165,6 +166,9 @@ public class GameEditViewModel : ViewModelBase
         _initialHdr = game.Hdr;
         _autoHdr = game.AutoHdr;
         _initialAutoHdr = game.AutoHdr;
+        LoadDisplay(game);
+        _keepMouseOnGameScreen = game.KeepMouseOnGameScreen;
+        _initialKeepMouse = game.KeepMouseOnGameScreen;
         _cpuCoresDelaySeconds = game.CpuCoresDelaySeconds.ToString();
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
@@ -235,7 +239,8 @@ public class GameEditViewModel : ViewModelBase
     {
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
-        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr,
+        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr, SelectedDisplayMode?.ToString(), KeepMouseOnGameScreen,
+        SelectedMonitor.Id, MakeMainDisplay, DimOtherScreens, SelectedAudio.Id, SelectedMicrophone.Id,
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -506,6 +511,364 @@ public class GameEditViewModel : ViewModelBase
         _ => "Follows the Optimized profile's Enable Auto HDR switch on the System page, like every other game on that profile. It needs Windows' HDR and the global Auto HDR switch to be on.",
     };
 
+    // --- Display (per game: a monitor's resolution and refresh rate while it runs) ---
+
+    /// <summary>One choice in the Resolution list: no change (Width 0), or a resolution.</summary>
+    public sealed record ResolutionOption(int Width, int Height, string Label)
+    {
+        public bool IsNone => Width == 0;
+    }
+
+    /// <summary>One choice in the Refresh rate list.</summary>
+    public sealed record RateOption(int Hz, string Label)
+    {
+        public bool IsNone => Hz == 0;
+    }
+
+    internal const string DefaultLabel = "Default";
+
+    /// <summary>
+    /// The Resolution list: no change, then each resolution the main display offers, largest first. A
+    /// resolution the game has saved that this display doesn't offer (another monitor, a remote session)
+    /// stays at the end, labelled, so opening and saving Edit Game doesn't quietly drop it.
+    /// </summary>
+    internal static IReadOnlyList<ResolutionOption> BuildResolutionOptions(IReadOnlyList<DisplayMode> available, DisplayMode? saved)
+    {
+        var options = new List<ResolutionOption> { new(0, 0, DefaultLabel) };
+        foreach (var m in available)
+        {
+            if (!options.Any(o => o.Width == m.Width && o.Height == m.Height))
+                options.Add(new ResolutionOption(m.Width, m.Height, $"{m.Width} × {m.Height}"));
+        }
+        if (saved is { Width: > 0, Height: > 0 } kept && !options.Any(o => o.Width == kept.Width && o.Height == kept.Height))
+        {
+            options.Add(new ResolutionOption(kept.Width, kept.Height, $"{kept.Width} × {kept.Height} (this display doesn't list it)"));
+        }
+        return options;
+    }
+
+    /// <summary>
+    /// The Refresh rate list: Default, then the rates the display offers at the chosen resolution, fastest first, or, with
+    /// the resolution left at Default, at the resolution the desktop runs now (every resolution's when that can't be read).
+    /// The game's saved rate stays, labelled, if the display doesn't offer it there.
+    /// </summary>
+    internal static IReadOnlyList<RateOption> BuildRateOptions(IReadOnlyList<DisplayMode> available, ResolutionOption resolution, DisplayMode? saved, DisplayMode? desktop = null)
+    {
+        IEnumerable<DisplayMode> at = available;
+        if (!resolution.IsNone) at = available.Where(m => m.Width == resolution.Width && m.Height == resolution.Height);
+        else if (desktop is { } now) at = available.Where(m => m.Width == now.Width && m.Height == now.Height);
+        var rates = at.Select(m => m.RefreshHz).Distinct().OrderByDescending(hz => hz).ToList();
+        var options = new List<RateOption> { new(0, DefaultLabel) };
+        options.AddRange(rates.Select(hz => new RateOption(hz, $"{hz} Hz")));
+        // Only under the resolution it was saved with (none, for a rate saved on its own): under another one it is not a choice.
+        if (saved is { RefreshHz: > 0 } kept && kept.Width == resolution.Width && kept.Height == resolution.Height && !rates.Contains(kept.RefreshHz))
+        {
+            options.Add(new RateOption(kept.RefreshHz, $"{kept.RefreshHz} Hz (this display doesn't list it)"));
+        }
+        return options;
+    }
+
+    private IReadOnlyList<DisplayMode> _availableModes = [];
+    private DisplayMode? _savedMode;
+    private DisplayMode? _desktopMode;
+
+    /// <summary>The Resolution and Refresh rate lists for one monitor, what is selected in them, and whether they can be used.</summary>
+    private sealed record DisplayLists(
+        IReadOnlyList<DisplayMode> Modes, DisplayMode? Desktop,
+        IReadOnlyList<ResolutionOption> Resolutions, ResolutionOption Resolution,
+        IReadOnlyList<RateOption> Rates, RateOption Rate,
+        bool Usable, string Note);
+
+    /// <summary>
+    /// The lists for a monitor (the main display when <paramref name="monitorId"/> is empty), with <paramref name="chosen"/> selected where
+    /// the monitor offers it. A mode the monitor doesn't list is kept at the end, labelled, so opening and saving Edit Game doesn't
+    /// quietly drop it. Used when the dialog opens and each time the monitor changes, so both work the same way.
+    /// </summary>
+    private DisplayLists BuildDisplayLists(string monitorId, DisplayMode? chosen)
+    {
+        var modes = DisplayModeService.Shared.AvailableModes(monitorId);
+        var desktop = DisplayModeService.Shared.CurrentMode(monitorId);
+        var resolutions = BuildResolutionOptions(modes, chosen);
+        var resolution = resolutions.FirstOrDefault(o => chosen is { Width: > 0 } s && o.Width == s.Width && o.Height == s.Height) ?? resolutions[0];
+        var rates = BuildRateOptions(modes, resolution, chosen, desktop);
+        var rate = rates.FirstOrDefault(r => r.Hz == chosen?.RefreshHz) ?? rates[0];
+
+        bool usable = modes.Count > 0 || chosen != null;
+        bool unplugged = !string.IsNullOrEmpty(monitorId) && !_monitors.Any(m => string.Equals(m.Id, monitorId, StringComparison.OrdinalIgnoreCase));
+        string note = usable ? string.Empty
+            : unplugged ? "That monitor isn't connected, so its resolutions and refresh rates can't be listed. Pick another monitor."
+            : "The display's resolutions and refresh rates can't be read here (a remote session, for example).";
+        return new DisplayLists(modes, desktop, resolutions, resolution, rates, rate, usable, note);
+    }
+
+    public IReadOnlyList<ResolutionOption> ResolutionOptions { get; private set; } = [];
+
+    private IReadOnlyList<RateOption> _rateOptions = [];
+    public IReadOnlyList<RateOption> RateOptions
+    {
+        get => _rateOptions;
+        private set { _rateOptions = value; OnPropertyChanged(); }
+    }
+
+    private ResolutionOption _selectedResolution = new(0, 0, DefaultLabel);
+    public ResolutionOption SelectedResolution
+    {
+        get => _selectedResolution;
+        set
+        {
+            var previousRate = _selectedRate?.Hz;
+            _selectedResolution = value ?? ResolutionOptions[0];
+            RateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode, _desktopMode);
+            // The same rate if the new resolution offers it, else Default.
+            SelectedRate = RateOptions.FirstOrDefault(r => r.Hz == previousRate) ?? RateOptions[0];
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayHint));
+        }
+    }
+
+    private RateOption? _selectedRate;
+    public RateOption? SelectedRate
+    {
+        get => _selectedRate;
+        set
+        {
+            _selectedRate = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayHint));
+        }
+    }
+
+    /// <summary>What the two lists add up to, or null when both are Default. A part left at Default is 0.</summary>
+    private DisplayMode? SelectedDisplayMode =>
+        SelectedResolution.IsNone && (SelectedRate == null || SelectedRate.IsNone)
+            ? null
+            : new DisplayMode(SelectedResolution.Width, SelectedResolution.Height, SelectedRate?.Hz ?? 0);
+
+    /// <summary>The Resolution and Refresh rate lists can be used: the display lists modes, or the game already has one. Otherwise they are shown disabled, with <see cref="DisplayNote"/>.</summary>
+    public bool ShowDisplay { get; private set; }
+
+    /// <summary>Why the Resolution and Refresh rate lists are disabled, or empty.</summary>
+    public string DisplayNote { get; private set; } = string.Empty;
+    public bool HasDisplayNote => DisplayNote.Length > 0;
+
+    /// <summary>Why a list with one device or none is disabled: what is connected, and when it works. Empty with two or more (or when the game already has a choice).</summary>
+    internal static string OnlyOneNote(string kind, IReadOnlyList<string> names, string whenMore)
+    {
+        return names.Count switch
+        {
+            0 => $"No {kind} is connected.",
+            1 => $"Only one {kind} is connected ({names[0]}), so there is nothing to switch to. {whenMore}",
+            _ => string.Empty,
+        };
+    }
+
+    // --- The monitor, the main display, the mouse, the dimming and the sound ---
+
+    /// <summary>One choice in the Monitor list. An empty id is the main display, whichever monitor that is.</summary>
+    public sealed record MonitorOption(string Id, string Label);
+
+    internal const string MainDisplayLabel = "Default (main display)";
+
+    /// <summary>
+    /// The Monitor list: the main display, then each attached monitor by name. A monitor the game was set up for that
+    /// isn't attached stays at the end, labelled, so opening and saving Edit Game doesn't quietly drop it.
+    /// </summary>
+    internal static IReadOnlyList<MonitorOption> BuildMonitorOptions(IReadOnlyList<MonitorInfo> monitors, string savedId)
+    {
+        var options = new List<MonitorOption> { new(string.Empty, MainDisplayLabel) };
+        options.AddRange(monitors.Select(m => new MonitorOption(m.Id, m.IsPrimary ? $"{m.Label} (main display now)" : m.Label)));
+        if (!string.IsNullOrEmpty(savedId) && !monitors.Any(m => string.Equals(m.Id, savedId, StringComparison.OrdinalIgnoreCase)))
+        {
+            options.Add(new MonitorOption(savedId, "A monitor that isn't connected"));
+        }
+        return options;
+    }
+
+    /// <summary>One choice in the Sound output list: no change (empty id), or a playback device.</summary>
+    public sealed record AudioOption(string Id, string Label);
+
+    internal const string NoAudioChangeLabel = "Default";
+
+    internal static IReadOnlyList<AudioOption> BuildAudioOptions(IReadOnlyList<AudioDevice> devices, string savedId, string missingLabel = "A sound output that isn't connected")
+    {
+        var options = new List<AudioOption> { new(string.Empty, NoAudioChangeLabel) };
+        options.AddRange(devices.Select(d => new AudioOption(d.Id, d.Name)));
+        if (!string.IsNullOrEmpty(savedId) && !devices.Any(d => string.Equals(d.Id, savedId, StringComparison.OrdinalIgnoreCase)))
+        {
+            options.Add(new AudioOption(savedId, missingLabel));
+        }
+        return options;
+    }
+
+    private IReadOnlyList<MonitorInfo> _monitors = [];
+    public IReadOnlyList<MonitorOption> MonitorOptions { get; private set; } = [];
+
+    private MonitorOption _selectedMonitor = new(string.Empty, MainDisplayLabel);
+    public MonitorOption SelectedMonitor
+    {
+        get => _selectedMonitor;
+        set
+        {
+            _selectedMonitor = value ?? MonitorOptions[0];
+            // The lists are of this monitor's modes. What is chosen now carries over (nothing chosen stays nothing).
+            var chosen = SelectedDisplayMode;
+            var lists = BuildDisplayLists(_selectedMonitor.Id, chosen);
+            _savedMode = chosen;
+            _availableModes = lists.Modes;
+            _desktopMode = lists.Desktop;
+
+            // The lists first and the choices after: replacing a ComboBox's items clears its selection and writes that back here.
+            ResolutionOptions = lists.Resolutions;
+            OnPropertyChanged(nameof(ResolutionOptions));
+            RateOptions = lists.Rates;
+            _selectedResolution = lists.Resolution;
+            _selectedRate = lists.Rate;
+            ShowDisplay = lists.Usable;
+            DisplayNote = lists.Note;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedResolution));
+            OnPropertyChanged(nameof(SelectedRate));
+            OnPropertyChanged(nameof(ShowDisplay));
+            OnPropertyChanged(nameof(DisplayNote));
+            OnPropertyChanged(nameof(HasDisplayNote));
+            OnPropertyChanged(nameof(ShowMakeMainDisplay));
+            OnPropertyChanged(nameof(DisplayHint));
+        }
+    }
+
+    /// <summary>The Monitor list can be used: more than one monitor, or the game already names one. Otherwise it is shown disabled, with <see cref="MonitorNote"/>.</summary>
+    public bool ShowMonitorChoice { get; private set; }
+
+    public string MonitorNote { get; private set; } = string.Empty;
+    public bool HasMonitorNote => MonitorNote.Length > 0;
+
+    private bool _makeMainDisplay;
+    public bool MakeMainDisplay
+    {
+        get => _makeMainDisplay;
+        set { _makeMainDisplay = value; OnPropertyChanged(); OnPropertyChanged(nameof(DisplayHint)); }
+    }
+
+    /// <summary>Making a monitor the main display needs a monitor chosen that isn't the main one already.</summary>
+    public bool ShowMakeMainDisplay => ShowMonitorChoice && !string.IsNullOrEmpty(SelectedMonitor.Id)
+        && !_monitors.Any(m => string.Equals(m.Id, SelectedMonitor.Id, StringComparison.OrdinalIgnoreCase) && m.IsPrimary);
+
+    /// <summary>Flashes a large number on every monitor, as Windows' own Identify does, to tell which is which.</summary>
+    public ICommand IdentifyMonitorsCommand => _identifyMonitorsCommand ??= new RelayCommand(() => MonitorIdentifier.Flash(_monitors));
+    private ICommand? _identifyMonitorsCommand;
+
+    private bool _dimOtherScreens;
+    public bool DimOtherScreens
+    {
+        get => _dimOtherScreens;
+        set { _dimOtherScreens = value; OnPropertyChanged(); }
+    }
+    private bool _initialDim;
+
+    public IReadOnlyList<AudioOption> AudioOptions { get; private set; } = [];
+    private AudioOption _selectedAudio = new(string.Empty, NoAudioChangeLabel);
+    public AudioOption SelectedAudio
+    {
+        get => _selectedAudio;
+        set { _selectedAudio = value ?? AudioOptions[0]; OnPropertyChanged(); }
+    }
+
+    /// <summary>The Sound output list can be used: more than one playback device, or the game already has one. Otherwise it is shown disabled, with <see cref="AudioNote"/>.</summary>
+    public bool ShowAudio { get; private set; }
+
+    public string AudioNote { get; private set; } = string.Empty;
+    public bool HasAudioNote => AudioNote.Length > 0;
+
+    internal const string MissingMicrophoneLabel = "A microphone that isn't connected";
+
+    public IReadOnlyList<AudioOption> MicrophoneOptions { get; private set; } = [];
+    private AudioOption _selectedMicrophone = new(string.Empty, NoAudioChangeLabel);
+    public AudioOption SelectedMicrophone
+    {
+        get => _selectedMicrophone;
+        set { _selectedMicrophone = value ?? MicrophoneOptions[0]; OnPropertyChanged(); }
+    }
+
+    /// <summary>The Microphone list can be used: more than one recording device, or the game already has one. Otherwise it is shown disabled, with <see cref="MicrophoneNote"/>.</summary>
+    public bool ShowMicrophone { get; private set; }
+
+    public string MicrophoneNote { get; private set; } = string.Empty;
+    public bool HasMicrophoneNote => MicrophoneNote.Length > 0;
+
+    private bool _keepMouseOnGameScreen;
+    public bool KeepMouseOnGameScreen
+    {
+        get => _keepMouseOnGameScreen;
+        set { _keepMouseOnGameScreen = value; OnPropertyChanged(); }
+    }
+
+    private bool _initialKeepMouse;
+
+    /// <summary>How many monitors are attached; a test stands in its own answer.</summary>
+    internal Func<int> MonitorCount { get; init; } = Win32DisplayBackend.MonitorCount;
+
+    /// <summary>The mouse and dimming options only do something with more than one monitor, so they show then, or when the game already has them on.</summary>
+    public bool ShowMouseLock => _initialKeepMouse || MonitorCount() > 1;
+    public bool ShowDim => _initialDim || MonitorCount() > 1;
+
+    /// <summary>The Display and sound card shows on the All tab and on its own Display tab.</summary>
+    public bool ShowDisplayCard => IsAllSection || IsDisplaySection;
+
+    public string DisplayHint
+    {
+        get
+        {
+            bool main = MakeMainDisplay && ShowMakeMainDisplay;
+            string layout = "The monitor is made the main display before the game starts and put back when it ends.";
+            return SelectedDisplayMode switch
+            {
+                null => main ? layout : "The display is left as it is.",
+                { Width: > 0, RefreshHz: > 0 } m => $"Runs at {m.Width} × {m.Height} and {m.RefreshHz} Hz. {ModeNote}",
+                { Width: > 0 } m => $"Runs at {m.Width} × {m.Height}, at the refresh rate the display has now if it offers it there, otherwise the fastest it does. {ModeNote}",
+                var m => $"Runs at the resolution the display has now, at {m!.Value.RefreshHz} Hz. {ModeNote}",
+            };
+        }
+    }
+
+    private const string ModeNote = "It is set before the game starts and put back when it ends. A game that sets its own resolution overrides it while it runs. A different resolution may rearrange open windows and desktop icons.";
+
+    private void LoadDisplay(GameEntry game)
+    {
+        _savedMode = DisplayModeService.RequestedMode(game);
+        _monitors = DisplayModeService.Shared.AvailableMonitors();
+        MonitorOptions = BuildMonitorOptions(_monitors, game.DisplayMonitorId);
+        _selectedMonitor = MonitorOptions.FirstOrDefault(o => string.Equals(o.Id, game.DisplayMonitorId, StringComparison.OrdinalIgnoreCase)) ?? MonitorOptions[0];
+        ShowMonitorChoice = _monitors.Count > 1 || !string.IsNullOrEmpty(game.DisplayMonitorId);
+        MonitorNote = ShowMonitorChoice ? string.Empty : _monitors.Count == 0
+            ? "The monitors can't be read here (a remote session, for example)."
+            : $"Only one monitor is connected ({(string.IsNullOrWhiteSpace(_monitors[0].Name) ? "Monitor" : _monitors[0].Name)}, {_monitors[0].Bounds.Right - _monitors[0].Bounds.Left} × {_monitors[0].Bounds.Bottom - _monitors[0].Bounds.Top}). With two or more, this list picks the monitor, and options to make it the main display, keep the mouse on it and dim the others appear.";
+        _makeMainDisplay = game.MakeMainDisplay;
+        _dimOtherScreens = game.DimOtherScreens;
+        _initialDim = game.DimOtherScreens;
+
+        var lists = BuildDisplayLists(_selectedMonitor.Id, _savedMode);
+        _availableModes = lists.Modes;
+        _desktopMode = lists.Desktop;
+        ResolutionOptions = lists.Resolutions;
+        _selectedResolution = lists.Resolution;
+        _rateOptions = lists.Rates;
+        _selectedRate = lists.Rate;
+        ShowDisplay = lists.Usable;
+        DisplayNote = lists.Note;
+
+        var devices = AudioOutputService.Shared.AvailableDevices();
+        AudioOptions = BuildAudioOptions(devices, game.AudioOutputDeviceId);
+        _selectedAudio = AudioOptions.FirstOrDefault(o => string.Equals(o.Id, game.AudioOutputDeviceId, StringComparison.OrdinalIgnoreCase)) ?? AudioOptions[0];
+        ShowAudio = devices.Count > 1 || !string.IsNullOrEmpty(game.AudioOutputDeviceId);
+        AudioNote = ShowAudio ? string.Empty : OnlyOneNote("sound output", devices.Select(d => d.Name).ToList(), "This list works when there are two or more.");
+
+        var microphones = AudioOutputService.SharedInput.AvailableDevices();
+        MicrophoneOptions = BuildAudioOptions(microphones, game.AudioInputDeviceId, MissingMicrophoneLabel);
+        _selectedMicrophone = MicrophoneOptions.FirstOrDefault(o => string.Equals(o.Id, game.AudioInputDeviceId, StringComparison.OrdinalIgnoreCase)) ?? MicrophoneOptions[0];
+        ShowMicrophone = microphones.Count > 1 || !string.IsNullOrEmpty(game.AudioInputDeviceId);
+        MicrophoneNote = ShowMicrophone ? string.Empty : OnlyOneNote("microphone", microphones.Select(d => d.Name).ToList(), "This list works when there are two or more.");
+    }
+
     public sealed record HdrOption(HdrMode Value, string Label);
 
     public IReadOnlyList<HdrOption> HdrOptions { get; } =
@@ -554,7 +917,7 @@ public class GameEditViewModel : ViewModelBase
 
     public bool ShowScriptsCard { get; }
 
-    /// <summary>The one-line "scripts are hidden" stub shown in place of the scripts card, so
+    /// <summary>The one-line "scripts are turned off" note shown in place of the scripts card, so
     /// the feature stays discoverable from Edit Game while the Settings switch is off.</summary>
     public bool ShowScriptsStub => !ShowScriptsCard;
 
@@ -571,18 +934,18 @@ public class GameEditViewModel : ViewModelBase
         get => _selectedSection;
         set
         {
-            // The Scripts tab exists only while the scripts card does.
-            if (value == GameEditSection.Scripts && !ShowScriptsCard) value = GameEditSection.All;
             if (SetProperty(ref _selectedSection, value))
             {
                 OnPropertyChanged(nameof(IsAllSection));
                 OnPropertyChanged(nameof(IsIdentitySection));
                 OnPropertyChanged(nameof(IsLaunchSection));
                 OnPropertyChanged(nameof(IsPerformanceSection));
+                OnPropertyChanged(nameof(IsDisplaySection));
                 OnPropertyChanged(nameof(IsScriptsSection));
                 OnPropertyChanged(nameof(ShowIdentityCard));
                 OnPropertyChanged(nameof(ShowLaunchCard));
                 OnPropertyChanged(nameof(ShowPerformanceCard));
+                OnPropertyChanged(nameof(ShowDisplayCard));
                 // The DLSS card shares the Performance tab; it owns its own visibility so the
                 // XAML needs one binding rather than a multi-binding across two view models.
                 Dlss.IsOnTab = IsAllSection || IsPerformanceSection;
@@ -596,14 +959,15 @@ public class GameEditViewModel : ViewModelBase
     public bool IsIdentitySection => SelectedSection == GameEditSection.Identity;
     public bool IsLaunchSection => SelectedSection == GameEditSection.Launch;
     public bool IsPerformanceSection => SelectedSection == GameEditSection.Performance;
+    public bool IsDisplaySection => SelectedSection == GameEditSection.Display;
     public bool IsScriptsSection => SelectedSection == GameEditSection.Scripts;
 
     public bool ShowIdentityCard => IsAllSection || IsIdentitySection;
     public bool ShowLaunchCard => IsAllSection || IsLaunchSection;
     public bool ShowPerformanceCard => IsAllSection || IsPerformanceSection;
     public bool ShowScriptsCardOnTab => ShowScriptsCard && (IsAllSection || IsScriptsSection);
-    /// <summary>The "scripts are hidden" stub has no tab of its own; it shows on All, as it always did.</summary>
-    public bool ShowScriptsStubOnTab => ShowScriptsStub && IsAllSection;
+    /// <summary>The "scripts are turned off" note shows on the Scripts tab, and last on All.</summary>
+    public bool ShowScriptsStubOnTab => ShowScriptsStub && (IsAllSection || IsScriptsSection);
 
     public ICommand SelectSectionCommand { get; }
 
@@ -618,10 +982,9 @@ public class GameEditViewModel : ViewModelBase
         set => SetProperty(ref _showAdvancedLaunchOptions, value);
     }
 
-    /// <summary>The tabs in strip order, without Scripts while its card is hidden.</summary>
-    public IReadOnlyList<GameEditSection> AvailableSections => ShowScriptsCard
-        ? new[] { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Scripts }
-        : new[] { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance };
+    /// <summary>The tabs in strip order. Scripts is always there: while scripts are off it holds the note about turning them on.</summary>
+    public IReadOnlyList<GameEditSection> AvailableSections { get; } =
+        [GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts];
 
     /// <summary>Ctrl+Tab and Ctrl+Shift+Tab: the next or previous tab, wrapping at the ends.</summary>
     public void MoveSection(int step)
@@ -1738,6 +2101,9 @@ public class GameEditViewModel : ViewModelBase
             }
         }
 
+        var settingsBefore = LibraryChanges.Capture(SourceGame);
+        string platformBefore = PlatformName;
+
         SourceGame.Name = Name.Trim();
         SourceGame.ExecutablePath = ExecutablePath.Trim();
         SourceGame.Arguments = Arguments?.Trim() ?? string.Empty;
@@ -1790,6 +2156,16 @@ public class GameEditViewModel : ViewModelBase
             PerformanceActivity.AutoHdrGameChanged(SourceGame, SourceGame.AutoHdr, AutoHdr);
         }
         SourceGame.AutoHdr = AutoHdr;
+        var displayMode = SelectedDisplayMode;
+        SourceGame.DisplayWidth = displayMode?.Width ?? 0;
+        SourceGame.DisplayHeight = displayMode?.Height ?? 0;
+        SourceGame.DisplayRefreshHz = displayMode?.RefreshHz ?? 0;
+        SourceGame.KeepMouseOnGameScreen = KeepMouseOnGameScreen;
+        SourceGame.DisplayMonitorId = SelectedMonitor.Id;
+        SourceGame.MakeMainDisplay = ShowMakeMainDisplay && MakeMainDisplay;
+        SourceGame.DimOtherScreens = DimOtherScreens;
+        SourceGame.AudioOutputDeviceId = SelectedAudio.Id;
+        SourceGame.AudioInputDeviceId = SelectedMicrophone.Id;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.
         if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;
@@ -1804,6 +2180,17 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.PreLaunchScriptTimeoutSeconds = timeoutSeconds;
         SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
         SourceGame.IsHidden = IsHidden;
+
+        var edit = LibraryChanges.DescribeEdit(settingsBefore, LibraryChanges.Capture(SourceGame));
+        if (edit != null)
+        {
+            ActivityService.Add(ActivityLevel.Change, edit.Value.Text, subject: SourceGame.Name, detail: edit.Value.Detail);
+        }
+        if (_convertToLocal)
+        {
+            ActivityService.Add(ActivityLevel.Change, $"{SourceGame.Name} is now a Local game", subject: SourceGame.Name,
+                detail: $"It was linked to {platformBefore}; it no longer is, and launches the way a Local game does.");
+        }
 
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))

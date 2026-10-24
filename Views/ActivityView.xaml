@@ -10,7 +10,7 @@
          Tools and System & Performance: header with status top right, segmented tabs, the library's
          search box, blue uppercase section labels, rows inside cards. Quiet on purpose: one card with
          one row when something is wrong, plain rows for the history, tags only where a row needs
-         flagging (CRITICAL, "7 TIMES"), as sparingly as MISSING. See docs/roadmap.md. -->
+         flagging (CRITICAL, "7 TIMES"), as sparingly as MISSING. -->
     <UserControl.Resources>
         <Style x:Key="ActivityCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>

@@ -150,6 +150,42 @@ public class GameEntry
     /// </summary>
     public HdrMode AutoHdr { get; set; } = HdrMode.ProfileDefault;
 
+    /// <summary>
+    /// The resolution and refresh rate of the game's monitor while this game runs (Edit Game, Display & Sound tab);
+    /// 0 for width, height or rate leaves the display alone. Applied as a temporary mode just before
+    /// launch and put back when the session ends. See <see cref="Services.DisplayModeService"/>.
+    /// </summary>
+    public int DisplayWidth { get; set; }
+    public int DisplayHeight { get; set; }
+    public int DisplayRefreshHz { get; set; }
+
+    /// <summary>
+    /// The monitor the display settings apply to, by its own interface path (Edit Game, Display & Sound tab); empty is the main
+    /// display, whichever it is. See <see cref="Services.MonitorInfo"/>.
+    /// </summary>
+    public string DisplayMonitorId { get; set; } = string.Empty;
+
+    /// <summary>Makes the game's monitor the main display while the game runs, and puts the old one back after. See <see cref="Services.DisplayModeService"/>.</summary>
+    public bool MakeMainDisplay { get; set; }
+
+    /// <summary>While this game's window is in front, every other monitor is dimmed. See <see cref="Services.ScreenDimService"/>.</summary>
+    public bool DimOtherScreens { get; set; }
+
+    /// <summary>The sound output device (a playback device id) the game plays through while it runs; empty leaves the sound as it is. See <see cref="Services.AudioOutputService"/>.</summary>
+    public string AudioOutputDeviceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The recording device (microphone) Windows uses while this game runs (Edit Game, Display &amp; Sound tab); empty leaves it alone.
+    /// Set before launch like <see cref="AudioOutputDeviceId"/> and put back when the session ends.
+    /// </summary>
+    public string AudioInputDeviceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// While this game's window is in front, the mouse is confined to the monitor it is on, and freed
+    /// the moment the focus moves (Edit Game, Display & Sound tab). See <see cref="Services.CursorLockService"/>.
+    /// </summary>
+    public bool KeepMouseOnGameScreen { get; set; }
+
     /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
     public string PreLaunchScriptPath { get; set; } = string.Empty;
     /// <summary>

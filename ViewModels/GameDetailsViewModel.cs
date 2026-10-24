@@ -26,9 +26,6 @@ public class GameDetailsViewModel : ViewModelBase
     private readonly Action<GameEntry>? _forceCloseAction;
 
     private readonly RawgService _rawgService = new();
-    /// <summary>Null when PCGamingWiki facts are off in Settings: then nothing is asked and the card never shows.</summary>
-    private readonly PcGamingWikiService? _pcGamingWikiService;
-    private PcGamingWikiFacts? _pcgwFacts;
     private readonly string? _rawgApiKey;
     private readonly double _minConfidenceForRawg;
     private readonly Action<GameEntry>? _saveGame;
@@ -249,11 +246,6 @@ public class GameDetailsViewModel : ViewModelBase
     {
         if (IsRefreshingNow)
             return;
-
-        if (_pcGamingWikiService != null)
-        {
-            _ = LoadPcGamingWikiFactsAsync(forceRefresh: true);
-        }
 
         if (IsRawgActive)
         {
@@ -559,61 +551,6 @@ public class GameDetailsViewModel : ViewModelBase
 
     public ICommand OpenPcGamingWikiCommand { get; }
 
-    // ------------------------------------------------------------------ PCGamingWiki facts card
-
-    /// <summary>The facts, grouped for the card. Empty until a lookup finds some, and always empty when the setting is off.</summary>
-    public IReadOnlyList<PcGamingWikiGroupViewModel> PcgwGroups { get; private set; } = Array.Empty<PcGamingWikiGroupViewModel>();
-    public bool ShowPcgwCard => PcgwGroups.Count > 0;
-    public string PcgwPageTitle => _pcgwFacts?.PageTitle ?? string.Empty;
-    public ICommand OpenPcgwFactsPageCommand { get; }
-
-    private int _pcgwLookups;
-
-    /// <summary>A lookup is running and there is no card yet: shows a one-line "loading" so the cards below do not jump when it lands.</summary>
-    public bool ShowPcgwLoading => _pcgwLookups > 0 && !ShowPcgwCard;
-
-    private async Task LoadPcGamingWikiFactsAsync(bool forceRefresh)
-    {
-        var service = _pcGamingWikiService;
-        if (service == null)
-            return;
-
-        _pcgwLookups++;
-        OnPropertyChanged(nameof(ShowPcgwLoading));
-        try
-        {
-            // GetAsync only throws for the caller's own cancellation, and none is passed.
-            var result = await service.GetAsync(Game.SteamAppId, Game.Name, forceRefresh).ConfigureAwait(true);
-            ApplyPcGamingWikiFacts(FactsAfter(result, _pcgwFacts));
-        }
-        finally
-        {
-            _pcgwLookups--;
-            OnPropertyChanged(nameof(ShowPcgwLoading));
-        }
-    }
-
-    /// <summary>
-    /// What the card shows once a lookup has answered. A lookup that failed (offline, or the wiki asked for a
-    /// pause) says nothing about the game, so a refresh that fails leaves the facts already on the card alone.
-    /// </summary>
-    internal static PcGamingWikiFacts? FactsAfter(PcGamingWikiResult result, PcGamingWikiFacts? showing) => result.Status switch
-    {
-        PcGamingWikiStatus.Found => result.Facts,
-        PcGamingWikiStatus.NoFacts => null,
-        _ => showing,
-    };
-
-    /// <summary>Puts a game's facts on the card, or takes the card away when there are none. Also how a capture shows a sample card.</summary>
-    internal void ApplyPcGamingWikiFacts(PcGamingWikiFacts? facts)
-    {
-        _pcgwFacts = facts;
-        PcgwGroups = facts == null ? Array.Empty<PcGamingWikiGroupViewModel>() : PcGamingWikiGroupViewModel.From(facts.Facts);
-        OnPropertyChanged(nameof(PcgwGroups));
-        OnPropertyChanged(nameof(ShowPcgwCard));
-        OnPropertyChanged(nameof(ShowPcgwLoading));
-        OnPropertyChanged(nameof(PcgwPageTitle));
-    }
     public ICommand LaunchGameCommand { get; }
     public ICommand EditGameCommand { get; }
     public ICommand DeleteGameCommand { get; }
@@ -659,12 +596,9 @@ public class GameDetailsViewModel : ViewModelBase
         MetadataRefreshInterval refreshInterval = MetadataRefreshInterval.Every3Days,
         bool isPlaying = false,
         Action<GameEntry>? closeGameAction = null,
-        Action<GameEntry>? forceCloseAction = null,
-        bool showPcGamingWikiFacts = false,
-        PcGamingWikiService? pcGamingWikiService = null)
+        Action<GameEntry>? forceCloseAction = null)
     {
         IsPlaying = isPlaying;
-        _pcGamingWikiService = showPcGamingWikiFacts ? pcGamingWikiService ?? PcGamingWikiService.Shared : null;
         _closeGameAction = closeGameAction;
         _forceCloseAction = forceCloseAction;
         _autoCategorize = autoCategorize;
@@ -703,7 +637,6 @@ public class GameDetailsViewModel : ViewModelBase
         ForceCloseCommand = new RelayCommand(() => { RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
         OpenPcGamingWikiCommand = new RelayCommand(() => ExecuteOpenUrl(PcGamingWikiUrl), () => HasPcGamingWikiPage);
-        OpenPcgwFactsPageCommand = new RelayCommand(() => ExecuteOpenUrl(_pcgwFacts?.PageUrl), () => _pcgwFacts != null);
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
         OpenNewsHubCommand = new RelayCommand(() => ExecuteOpenUrl(NewsHubUrl), () => HasNewsHub);
         ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);
@@ -712,14 +645,6 @@ public class GameDetailsViewModel : ViewModelBase
         // Paint from the cache (above), then re-fetch behind it only when the entry is older
         // than the configured refresh interval (or missing).
         _ = LoadDetailsAsync();
-
-        // PCGamingWiki's facts, when the player has turned them on: from the saved copy at once, else a lookup behind it.
-        if (_pcGamingWikiService != null)
-        {
-            // A copy that has gone stale still shows while the newer one is fetched; a failed fetch then leaves it.
-            ApplyPcGamingWikiFacts(_pcGamingWikiService.PeekCached(Game.SteamAppId, Game.Name));
-            _ = LoadPcGamingWikiFactsAsync(forceRefresh: false);
-        }
 
         // When RAWG is the active source on open (a non-Steam game preferring it), fetch it too.
         if (IsRawgActive)

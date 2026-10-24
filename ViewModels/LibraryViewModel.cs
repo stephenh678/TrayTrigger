@@ -1125,8 +1125,7 @@ public class LibraryViewModel : ViewModelBase
             refreshInterval: _settings.MetadataRefreshInterval,
             isPlaying: card.IsPlaying,
             closeGameAction: _ => requestedCloseGame = true,
-            forceCloseAction: _ => requestedForceClose = true,
-            showPcGamingWikiFacts: _settings.UsePcGamingWikiFacts);
+            forceCloseAction: _ => requestedForceClose = true);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
@@ -1859,6 +1858,8 @@ public class LibraryViewModel : ViewModelBase
 
         string what = cards.Count == 1 ? $"\"{cards[0].Name}\"" : $"{cards.Count} games";
         LoggingService.Info("Library", $"Removed {what} from library (undoable for {UndoCountdown.DefaultWindow.TotalSeconds:0}s).");
+        var removedLine = LibraryChanges.DescribeRemoved(cards.Select(c => c.Name).ToList(), undoable: true);
+        ActivityService.Add(ActivityLevel.Change, removedLine.Text, subject: cards.Count == 1 ? cards[0].Name : null, detail: removedLine.Detail);
 
         UndoToastMessage = $"Removed {what}";
         IsUndoToastVisible = true;
@@ -1992,6 +1993,9 @@ public class LibraryViewModel : ViewModelBase
         DeleteRemovedGameData(toRemove.Select(c => c.Game).ToList());
         _storageService.DeletePendingRemoval();
         LoggingService.Info("Library", $"Removed {toRemove.Count} {launcher} game(s) from the library after the {launcher} integration was turned off.");
+        var removedLine = LibraryChanges.DescribeRemoved(toRemove.Select(c => c.Name).ToList(), undoable: false);
+        ActivityService.Add(ActivityLevel.Change, removedLine.Text, subject: toRemove.Count == 1 ? toRemove[0].Name : null,
+            detail: $"{removedLine.Detail} {(toRemove.Count == 1 ? "It was" : "They were")} removed with the {launcher} integration.");
         return toRemove.Count;
     }
 
@@ -2071,6 +2075,8 @@ public class LibraryViewModel : ViewModelBase
 
         string what = restored.Count == 1 ? $"\"{restored[0].Name}\"" : $"{restored.Count} games";
         LoggingService.Info("Library", $"Undid removal of {what}.");
+        ActivityService.Add(ActivityLevel.Change, LibraryChanges.DescribeRestored(restored.Select(c => c.Name).ToList()),
+            subject: restored.Count == 1 ? restored[0].Name : null);
         StatusMessage = $"Restored {what} to library.";
         NotifyGameCountChanged();
     }

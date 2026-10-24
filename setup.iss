@@ -409,6 +409,8 @@ end;
 
 var
   DeleteUserData: Boolean;
+  DeleteBackups: Boolean;
+  DeleteBackupsCheckBox: TNewCheckBox;
 
 // DelTree gives up on the first file it cannot delete and reports nothing but a Boolean, so a
 // single handle still open on one cached cover used to leave the rest of the library on disk
@@ -435,6 +437,41 @@ begin
   Log('Gave up removing user data folder: ' + Dir + ' - files are still in use.');
 end;
 
+// The data folder's Backups folder (the automatic backups and the ones made before a restore) is
+// kept unless the player asks for it to go too: a backup is what they would reach for after a reinstall.
+procedure DeleteDataFolderExceptBackups(const Dir: string);
+var
+  FindRec: TFindRec;
+  Path: string;
+begin
+  if not DirExists(Dir) then Exit;
+  if FindFirst(Dir + '\*', FindRec) then
+  begin
+    try
+      repeat
+        if (FindRec.Name <> '.') and (FindRec.Name <> '..') and (CompareText(FindRec.Name, 'Backups') <> 0) then
+        begin
+          Path := Dir + '\' + FindRec.Name;
+          if FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0 then
+            DelTree(Path, True, True, True)
+          else
+            DeleteFile(Path);
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+  Log('Removed user data except the Backups folder: ' + Dir);
+end;
+
+procedure DeleteDataCheckBoxClick(Sender: TObject);
+begin
+  // Deleting backups only means something when the data is being deleted.
+  DeleteBackupsCheckBox.Enabled := TNewCheckBox(Sender).Checked;
+  if not DeleteBackupsCheckBox.Enabled then DeleteBackupsCheckBox.Checked := False;
+end;
+
 function InitializeUninstall(): Boolean;
 var
   UninstallForm: TSetupForm;
@@ -444,16 +481,18 @@ var
 begin
   Result := True;
   DeleteUserData := False;
+  DeleteBackups := False;
 
   // A silent uninstall has no one to answer the prompt, and ShowModal would hang the process
   // forever waiting. Keep user data unless the caller asked for it with /DELETEDATA.
   if UninstallSilent() then
   begin
     DeleteUserData := CmdLineParamExists('/DELETEDATA');
+    DeleteBackups := DeleteUserData and CmdLineParamExists('/DELETEBACKUPS');
     Exit;
   end;
 
-  UninstallForm := CreateCustomForm(ScaleX(420), ScaleY(160), False, True);
+  UninstallForm := CreateCustomForm(ScaleX(420), ScaleY(190), False, True);
   try
     UninstallForm.Caption := 'Uninstall TrayTrigger';
 
@@ -474,6 +513,16 @@ begin
     DeleteDataCheckBox.Width := UninstallForm.ClientWidth - ScaleX(32);
     DeleteDataCheckBox.Caption := 'Also delete my settings, game library, and cached artwork';
     DeleteDataCheckBox.Checked := False;
+    DeleteDataCheckBox.OnClick := @DeleteDataCheckBoxClick;
+
+    DeleteBackupsCheckBox := TNewCheckBox.Create(UninstallForm);
+    DeleteBackupsCheckBox.Parent := UninstallForm;
+    DeleteBackupsCheckBox.Left := ScaleX(32);
+    DeleteBackupsCheckBox.Top := DeleteDataCheckBox.Top + DeleteDataCheckBox.Height + ScaleY(6);
+    DeleteBackupsCheckBox.Width := UninstallForm.ClientWidth - ScaleX(48);
+    DeleteBackupsCheckBox.Caption := 'Also delete my backups (otherwise they are kept)';
+    DeleteBackupsCheckBox.Checked := False;
+    DeleteBackupsCheckBox.Enabled := False;
 
     OKButton := TNewButton.Create(UninstallForm);
     OKButton.Parent := UninstallForm;
@@ -498,7 +547,10 @@ begin
     if UninstallForm.ShowModal() = mrCancel then
       Result := False
     else
+    begin
       DeleteUserData := DeleteDataCheckBox.Checked;
+      DeleteBackups := DeleteUserData and DeleteBackupsCheckBox.Checked;
+    end;
   finally
     UninstallForm.Free();
   end;
@@ -533,7 +585,10 @@ begin
     // what the checkbox promised.
     LegacyDataDir := ExpandConstant('{userdocs}\TrayTrigger');
 
-    DeleteDataFolder(AppDataDir);
+    if DeleteBackups then
+      DeleteDataFolder(AppDataDir)
+    else
+      DeleteDataFolderExceptBackups(AppDataDir);
     DeleteDataFolder(LocalAppDataDir);
     DeleteDataFolder(LegacyDataDir);
   end;

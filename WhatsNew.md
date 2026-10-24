@@ -6,11 +6,15 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 1.7.1
 
-- **PC facts from PCGamingWiki** - An optional card in Game Details with what PCGamingWiki says about a game: ultrawide, HDR, controller support, online play and where it keeps its saves. It's off until you tick Show PC facts from PCGamingWiki in Settings > Library & Art.
+- **Activity & History in a backup** - Back Up has a tick, on by default, to include your history, so it comes back after a restore.
+- **Automatic backups** - Tick Back up automatically beside Back Up and TrayTrigger backs up every week (or 2 weeks, or month) and keeps the last few. Off until you turn it on.
 - **Stutter Check spots a single memory stick** - If your PC has one stick of memory and room for another, Stutter Check now says so and what to do about it.
 - **Stutter Check has its own tab** - On the System page, between Hardware Specs and Performance Tweaks. The All tab still shows it.
 - **Launch problems are recorded** - A game that didn't launch, or that was started but never seen running, now leaves an entry in Activity & History with the reason.
-- **Favorite star at large text sizes** - On poster cards with a long category, the star and the PLAYING tag are no longer pushed off the card.
+- **Resizable BAR in Aggressive now works** - It needs administrator rights, so it joins the Aggressive profile's one Windows prompt at the start and end of a game. If you decline the prompt that puts things back, TrayTrigger asks "Put back now?" when you close it or next start it, instead of a Windows prompt out of nowhere.
+- **Display and sound per game** - In Edit Game's new Display & Sound tab, pick a resolution, a refresh rate or both, and with two monitors the monitor, whether it becomes the main display, whether the mouse stays on the game's screen, whether the other screens dim, where the sound plays and which microphone is used. It all goes back when the game ends.
+- **Edits and removals are recorded** - Activity & History now notes when you change a game's launch settings in Edit Game, with the old and new values, and when you remove a game or undo it.
+- **Favorite star at large text sizes** - On poster cards with a long category, the star is no longer pushed off the card, and the PLAYING tag moves below the middle of the poster so it always has room.
 - **Update window fix** - At a large text size, the Download & Install button no longer runs off the edge of the update window.
 
 ## 1.7.0

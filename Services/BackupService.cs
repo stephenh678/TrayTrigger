@@ -20,7 +20,7 @@ public sealed record RestoreResult(
 /// <summary>
 /// Settings › Diagnostics &amp; Storage › Backup &amp; Restore: TrayTrigger's own data in one .zip -
 /// the library, settings, tools, scripts, themes and cached art - to move to a new PC or undo a mistake.
-/// Game saves are deliberately not part of it.
+/// Game saves are deliberately not part of it. Activity &amp; History is an option when backing up.
 ///
 /// <para><b>Backing up</b> reads the files as they are on disk; the caller saves first, so they
 /// hold what is on screen.</para>
@@ -43,6 +43,7 @@ public sealed class BackupService
     internal const string StagingFolderName = "restore-pending";
     internal const string ReadyMarkerName = "ready.txt";
     private const string DataPrefix = "data/";
+    private const string ActivityEntry = DataPrefix + ActivityService.FileName;
     private const string ScriptsPrefix = "data/Scripts/";
     private const string ThemesPrefix = "data/Themes/";
     private const string IconsPrefix = "cache/Icons/";
@@ -72,8 +73,11 @@ public sealed class BackupService
 
     // ------------------------------------------------------------------ back up
 
-    /// <summary>Writes a backup of what is on disk now to <paramref name="zipPath"/>, replacing any file there.</summary>
-    public BackupManifest Create(string zipPath)
+    /// <summary>
+    /// Writes a backup of what is on disk now to <paramref name="zipPath"/>, replacing any file there.
+    /// Activity &amp; History goes in only when asked for: it describes this PC, so it is the player's call.
+    /// </summary>
+    public BackupManifest Create(string zipPath, bool includeActivity = false)
     {
         // Counts: what a file adds to the summary, so one left out of the backup is left out of the count too.
         var files = new List<(string Entry, string Path, char Counts)>();
@@ -82,6 +86,9 @@ public sealed class BackupService
             string path = Path.Combine(_storage.BaseDirectory, name);
             if (File.Exists(path)) files.Add((DataPrefix + name, path, '-'));
         }
+
+        string activityPath = Path.Combine(_storage.BaseDirectory, ActivityService.FileName);
+        if (includeActivity && File.Exists(activityPath)) files.Add((ActivityEntry, activityPath, '-'));
 
         string scriptsDir = Path.Combine(_storage.BaseDirectory, "Scripts");
         int scripts = 0;
@@ -138,6 +145,7 @@ public sealed class BackupService
             Tools = CountEntries(Path.Combine(_storage.BaseDirectory, "tools.json"), isTools: true),
             Scripts = scripts,
             ArtFiles = art,
+            HasActivity = files.Any(f => f.Entry == ActivityEntry),
         };
 
         string temp = zipPath + ".tmp";
@@ -170,7 +178,8 @@ public sealed class BackupService
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
                         // One unreadable icon must not cost the whole backup; the library is what matters.
-                        if (entryName.StartsWith(DataPrefix, StringComparison.Ordinal) && !entryName.StartsWith(ScriptsPrefix, StringComparison.Ordinal) && !entryName.StartsWith(ThemesPrefix, StringComparison.Ordinal)) throw;
+                        if (entryName == ActivityEntry) manifest.HasActivity = false;
+                        if (entryName.StartsWith(DataPrefix, StringComparison.Ordinal) && entryName != ActivityEntry && !entryName.StartsWith(ScriptsPrefix, StringComparison.Ordinal) && !entryName.StartsWith(ThemesPrefix, StringComparison.Ordinal)) throw;
                         LoggingService.Warn("Backup", $"Left '{path}' out of the backup: {ex.Message}");
                         if (counts == 's') manifest.Scripts--;
                         else if (counts == 'a') manifest.ArtFiles--;
@@ -268,7 +277,7 @@ public sealed class BackupService
     {
         Directory.CreateDirectory(SafetyBackupDirectory);
         string path = Path.Combine(SafetyBackupDirectory, $"Before restore {DateTime.Now:yyyy-MM-dd HHmmss}.zip");
-        Create(path);
+        Create(path, includeActivity: true);
 
         foreach (var old in new DirectoryInfo(SafetyBackupDirectory).GetFiles("Before restore *.zip")
                      .OrderByDescending(f => f.CreationTimeUtc).Skip(SafetyBackupsKept))
@@ -348,6 +357,7 @@ public sealed class BackupService
         {
             if (name.StartsWith(prefix, StringComparison.Ordinal)) return name.Length > prefix.Length && name.IndexOf('/', prefix.Length) < 0;
         }
+        if (name == ActivityEntry) return true;
         return name.StartsWith(DataPrefix, StringComparison.Ordinal)
             && DataFiles.Contains(name[DataPrefix.Length..], StringComparer.Ordinal);
     }
@@ -393,6 +403,10 @@ public sealed class BackupService
                 string staged = Path.Combine(stagedData, name);
                 if (File.Exists(staged)) CopyInto(staged, Path.Combine(_storage.BaseDirectory, name));
             }
+
+            // Only a backup made with the option ticked has it; a restore from any other leaves this PC's history alone.
+            string stagedActivity = Path.Combine(stagedData, ActivityService.FileName);
+            if (File.Exists(stagedActivity)) CopyInto(stagedActivity, Path.Combine(_storage.BaseDirectory, ActivityService.FileName));
 
             int scripts = CopyFolder(Path.Combine(stagedData, "Scripts"), Path.Combine(_storage.BaseDirectory, "Scripts"));
             CopyFolder(Path.Combine(stagedData, "Themes"), Path.Combine(_storage.BaseDirectory, "Themes"));
@@ -448,6 +462,11 @@ public sealed class BackupService
         restored.TweakPriorState = current?.TweakPriorState ?? new Dictionary<string, string>();
         restored.TweaksAppliedByTrayTrigger = current?.TweaksAppliedByTrayTrigger ?? new List<string>();
         restored.LastRunVersion = current?.LastRunVersion ?? string.Empty;
+        restored.LastBackupUtc = current?.LastBackupUtc;
+        restored.LastAutoBackupUtc = current?.LastAutoBackupUtc;
+        restored.AutoBackupLastError = current?.AutoBackupLastError ?? string.Empty;
+        restored.AutoBackupAttemptDay = current?.AutoBackupAttemptDay ?? string.Empty;
+        restored.AutoBackupAttemptsToday = current?.AutoBackupAttemptsToday ?? 0;
         restored.MainWindowLeft = current?.MainWindowLeft;
         restored.MainWindowTop = current?.MainWindowTop;
         restored.MainWindowWidth = current?.MainWindowWidth;

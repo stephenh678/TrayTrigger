@@ -60,6 +60,9 @@ public partial class App : Application
     /// <summary>Re-writes the tooltip's elapsed time while a game is running; stopped when none is.</summary>
     private System.Windows.Threading.DispatcherTimer? _trayToolTipTimer;
 
+    /// <summary>Checks whether an automatic backup is due: shortly after start, then once a day.</summary>
+    private System.Windows.Threading.DispatcherTimer? _autoBackupTimer;
+
     private const int SM_CXSMICON = 49;
     private const int SM_CYSMICON = 50;
 
@@ -117,7 +120,8 @@ public partial class App : Application
         IsReleaseScreenshotRequest(args) || args.Any(a =>
             a.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) || a.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
             a.StartsWith("--test", StringComparison.OrdinalIgnoreCase) || a.StartsWith("-test", StringComparison.OrdinalIgnoreCase) ||
-            a.Equals("--restore-dlss", StringComparison.OrdinalIgnoreCase));
+            a.Equals("--restore-dlss", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals(ElevatedHelper.Switch, StringComparison.Ordinal));
 
     private void StartApp(StartupEventArgs e)
     {
@@ -241,6 +245,16 @@ public partial class App : Application
             return;
         }
 
+        // The elevated step of a Performance Profile, started under the one administrator prompt: this same program run
+        // again with administrator rights to make the changes the NVIDIA driver won't take from a normal process (and
+        // to import the registry changes in the same prompt), then it exits. It never gets as far as a window or the
+        // single-instance check. See ElevatedHelper.
+        if (e.Args.Any(a => a.Equals(ElevatedHelper.Switch, StringComparison.Ordinal)))
+        {
+            Shutdown(ElevatedHelper.RunAsHelper(e.Args));
+            return;
+        }
+
 #if DEBUG
         ProcessDevArguments(e);
         if (_isShuttingDown) return;
@@ -361,6 +375,8 @@ public partial class App : Application
         if (!isScreenshot)
         {
             _performanceProfileService.RecoverFromCrashIfNeeded();
+            DisplayModeService.Shared.RecoverIfNeeded();
+            foreach (var audio in AudioOutputService.Both) audio.RecoverIfNeeded();
             // An Ultimate plan made before 1.5.1 still unparks every core on a dual-CCD Ryzen X3D;
             // a plan left on all the time may not be applied again for months. Returns at once elsewhere.
             _ = Task.Run(SystemTweaksService.KeepX3dCoreParkingInExistingPlans);
@@ -542,6 +558,10 @@ public partial class App : Application
             {
                 _launcherService?.ResumeAllOnShutdown();
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
+                DisplayModeService.Shared.ReleaseAll();
+                CursorLockService.Shared.ReleaseAll();
+                ScreenDimService.Shared.ReleaseAll();
+                foreach (var audio in AudioOutputService.Both) audio.ReleaseAll();
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
                 _launcherService?.RecordPlaytimeOnShutdown();
                 FinalizePendingRemovalOnShutdown();
@@ -557,7 +577,7 @@ public partial class App : Application
                 LoggingService.Warn("App", $"Restore during session end failed: {ex.Message}");
             }
         };
-        _mainViewModel.RequestExitApplication += ExitApplication;
+        _mainViewModel.RequestExitApplication += RequestExit;
         _mainViewModel.SettingsVM.RequestRestart += RestartApplication;
         _mainViewModel.RequestTrayNotification += (title, message) => ShowTrayNotification(title, message);
 
@@ -565,6 +585,7 @@ public partial class App : Application
         Log("Initializing Tray Icon...");
         InitializeTrayIcon();
         InitializeActivityNotifications();
+        if (!isScreenshot) StartAutoBackupChecks();
 
         // Explorer only re-reads an icon's NotifyIconSettings entry when the icon is registered,
         // so a freshly written "always show" flag takes effect only after the icon is re-added.
@@ -579,6 +600,7 @@ public partial class App : Application
         }
 
         // Show window if not started with --minimized
+        if (!isScreenshot) NotePutBackWaitingAtStart(windowWillShow: !startMinimized);
         if (!startMinimized)
         {
             Log("Showing MainWindow...");
@@ -593,6 +615,21 @@ public partial class App : Application
         }
 
         Log("OnStartup completed successfully.");
+    }
+
+    private void StartAutoBackupChecks()
+    {
+        var settingsVm = _mainViewModel.SettingsVM;
+        // A moment after start, so the backup doesn't compete with the library loading; then once a day.
+        _autoBackupTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
+        _autoBackupTimer.Tick += (_, _) =>
+        {
+            _autoBackupTimer!.Interval = TimeSpan.FromHours(24);
+            settingsVm.RunAutoBackupIfDue();
+        };
+        _autoBackupTimer.Start();
+        // A backup that waited for a game is taken when the last one exits.
+        _launcherService.SessionEnded += _ => Dispatcher.BeginInvoke(() => settingsVm.RunAutoBackupIfDue(), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>Every script path something could run: each game's, the defaults, and each tool's
@@ -1077,7 +1114,7 @@ public partial class App : Application
             menu.Items.Add(new Separator());
 
             var exitBrush = (Brush)FindResource("BrushDanger");
-            var exitItem = CreateNavMenuItem("Exit TrayTrigger", "\uE7E8", ExitApplication, exitBrush, exitBrush);
+            var exitItem = CreateNavMenuItem("Exit TrayTrigger", "\uE7E8", RequestExit, exitBrush, exitBrush);
             menu.Items.Add(exitItem);
 
             // The optional search row at the very top (UX-16); with the setting off the menu is
@@ -1382,6 +1419,7 @@ public partial class App : Application
     public void ShowMainWindow()
     {
         if (_isShuttingDown) return;
+        ShowPutBackPromptIfPending();
 
         try
         {
@@ -1513,6 +1551,10 @@ public partial class App : Application
             // First: a game left frozen would stay frozen, with no tray icon left to resume it.
             _launcherService?.ResumeAllOnShutdown();
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
+            DisplayModeService.Shared.ReleaseAll();
+            CursorLockService.Shared.ReleaseAll();
+            ScreenDimService.Shared.ReleaseAll();
+            foreach (var audio in AudioOutputService.Both) audio.ReleaseAll();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
             _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();

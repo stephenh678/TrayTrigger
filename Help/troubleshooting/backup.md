@@ -9,12 +9,23 @@ Settings > Diagnostics & Storage > Backup & Restore saves everything TrayTrigger
 - Your tools, and your scripts folder.
 - The themes you made, with their background pictures. The built-in themes are part of TrayTrigger itself.
 - Cached artwork and icons, so posters don't have to be fetched again.
+- Activity & History, when **Include Activity & History in the backup** is ticked beside Back Up (it is on by default). Untick it to leave this PC's history out, which suits a backup you will restore on a different PC, where the old entries could mislead. A restore from a backup that holds it replaces your history with the backup's; a restore from one that doesn't leaves your history alone. The backup made before a restore always includes it.
 
-Game saves are not in it, and neither is anything in the games' own folders.
+Game saves are not in it, and neither is anything in the games' own folders. Game details fetched from Steam and RAWG are fetched again.
 
 ## Backing up
 
 Press **Back Up...** and choose where to save the file. Somewhere outside the PC - a USB drive, a cloud folder - is what makes it a backup.
+
+## Automatic backups
+
+Tick **Back up automatically** beside Back Up and TrayTrigger makes a backup for you, so you don't have to remember. It is off until you turn it on.
+
+- **How often:** every week (the default), every 2 weeks or every month. **Keep the last** says how many automatic backups stay (4 by default); older ones are deleted.
+- **When:** at the first start and then once a day while TrayTrigger runs, whenever the last backup of any kind is older than the interval. A backup you make by hand counts, so it moves the next automatic one back. It never runs while a game is running; it waits and is made when the last game exits.
+- **Where:** in the Backups\Automatic folder inside TrayTrigger's data folder, named TrayTrigger auto backup with the date. **Open backups folder** shows it. That is on this PC's own disk, so copy a backup somewhere else (a USB drive, a cloud folder) to be safe from a disk failure. Backups you make with Back Up... go wherever you choose.
+- **Activity & History:** each backup is noted there. If one fails (the disk is full, the folder can't be written), it shows under Needs attention with the reason, and TrayTrigger tries again at its next check, up to three times a day.
+- **Uninstalling:** the uninstaller offers to delete your data. Even then it keeps the Backups folder unless you also tick **Also delete my backups**.
 
 ## Restoring
 

@@ -92,7 +92,7 @@ The launch is the trigger. Pick a game, and everything you chose for it happens 
 
 **3. Play.** TrayTrigger stays a tray icon. Suspend a game with Ctrl+Alt+P for a cutscene you can't pause, or close it from the tray.
 
-**4. Put back.** When the game exits, every per-game setting goes back and is checked. Closed tools return, and the launcher closes if you asked. After a crash, it happens on the next start.
+**4. Put back.** When the game exits, every per-game setting goes back and is checked. Closed tools return, and the launcher closes if you asked. After a crash, it happens on the next start; anything that needs your permission asks first.
 
 ### Every launch, on the record
 
@@ -167,10 +167,10 @@ Yes. TrayTrigger launches each game through its own client and changes nothing a
 Only the profiles, tweaks, and scripts you enable. Per-game profile settings restore on exit; system-wide tweaks stay applied until reverted. Scripts require their own cleanup actions. Bulk changes can create a System Restore point first. Scripts are off until you enable them and choose one, and they run as you. See [SECURITY.md](SECURITY.md) for the full breakdown.
 
 **Does it need administrator access?**
-Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the Defender exclusion list) and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.
+Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the Defender exclusion list, NVIDIA's Resizable BAR setting) and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.
 
 **Does it phone home?**
-No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), PCGamingWiki (only if you turn on Show PC facts from PCGamingWiki in Settings), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).
+No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).
 
 **Can changes be reverted?**
 Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Undo Preset. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.

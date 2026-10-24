@@ -73,9 +73,52 @@ public static class DiagnosticReportService
         sb.AppendLine();
         AppendActivityProblems(sb, ActivityService.Current);
         sb.AppendLine();
+        AppendActivityChanges(sb, ActivityService.Current);
+        sb.AppendLine();
         AppendLogTail(sb, inputs.LogPath);
-        return sb.ToString().TrimEnd() + Environment.NewLine;
+        // The whole report, last: it is pasted into a public issue, and the paths in it (install, data
+        // and log folders, a missing game's exe, the log's lines) carry the Windows user name.
+        return RedactUserFolder(sb.ToString().TrimEnd() + Environment.NewLine);
     }
+
+    /// <summary>Replaces the user's profile folder with %USERPROFILE%, wherever it appears, so a report doesn't give out the Windows user name.</summary>
+    internal static string RedactUserFolder(string text, string? userProfile = null)
+    {
+        userProfile ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(userProfile)) return text;
+        var folders = userProfile.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+        if (folders.Length == 0) return text;
+        // Each folder of the path with any run of slashes between them, so a path written with forward slashes (C:/Users/Jo)
+        // or doubled backslashes (C:\\Users\\Jo), as a log line or a quoted value can, is hidden as well as the usual one.
+        // A network profile (\\server\share\...) keeps its leading slashes.
+        int leading = userProfile.TakeWhile(c => c is '\\' or '/').Count();
+        string pattern = (leading > 0 ? $@"[\\/]{{{leading},}}" : "")
+            + string.Join(@"[\\/]+", folders.Select(System.Text.RegularExpressions.Regex.Escape));
+        // Not when more of a name follows: C:\Users\Jo must not eat the start of C:\Users\Joanna.
+        return System.Text.RegularExpressions.Regex.Replace(text, pattern + @"(?![\p{L}\p{N}_\-])",
+            "%USERPROFILE%", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>Activity &amp; History's changes from the last 30 days (Edit Game saves, removals, profile and tweak changes), newest first: what was done before a problem.</summary>
+    internal static void AppendActivityChanges(StringBuilder sb, ActivityService? activity)
+    {
+        sb.AppendLine("**Recent changes** (Activity & History, last 30 days)");
+        var lines = activity == null ? null : Safe(() => activity.RecentChangeLines(30), null);
+        if (lines == null)
+        {
+            sb.AppendLine("- Not available.");
+            return;
+        }
+        if (lines.Count == 0)
+        {
+            sb.AppendLine("- None.");
+            return;
+        }
+        foreach (var line in lines.Take(ChangeLinesListed)) sb.AppendLine($"- {line}");
+        if (lines.Count > ChangeLinesListed) sb.AppendLine($"- ...and {lines.Count - ChangeLinesListed} more.");
+    }
+
+    private const int ChangeLinesListed = 12;
 
     /// <summary>Activity &amp; History's problems from the last 30 days, in its plain words: what the
     /// player saw, beside the log's technical tail below.</summary>
@@ -174,6 +217,11 @@ public static class DiagnosticReportService
         }
         if (marked.Count > MarkedGamesListed) sb.AppendLine($"  - ...and {marked.Count - MarkedGamesListed} more");
 
+        // Counts, not names: which settings the games use, for "this only happens with a profile" reports.
+        sb.AppendLine($"- Per-game settings: Optimized {games.Count(g => g.PerformanceProfile == PerformanceProfileMode.Optimized)}, Aggressive {games.Count(g => g.PerformanceProfile == PerformanceProfileMode.Aggressive)}, "
+            + $"CPU cores set {games.Count(g => g.CpuAffinity != CpuAffinityMode.Default)}, run as administrator {games.Count(g => g.RunAsAdmin)}, "
+            + $"HDR or Auto HDR set {games.Count(g => g.Hdr != HdrMode.ProfileDefault || g.AutoHdr != HdrMode.ProfileDefault)}, close launcher on exit {games.Count(g => g.CloseLauncherOnExit)}");
+
         sb.AppendLine($"- Scan locations: {inputs.Settings.ScanLocations.Count} ({inputs.Settings.ScanLocations.Count(l => l.IsEnabled)} enabled); ignored entries: {inputs.Settings.IgnoredGamePaths.Count}");
     }
 
@@ -192,10 +240,24 @@ public static class DiagnosticReportService
         sb.AppendLine($"- Tray menu: left-click opens menu {OnOff(s.TrayLeftClickOpensMenu)}, icons {OnOff(s.ShowTrayMenuIcons)}, compact {OnOff(s.CompactTrayMenu)}, grouped {OnOff(s.GroupTrayMenuByCategory)}");
         sb.AppendLine($"- Tools: {OnOff(s.EnableTools)}; in tray {OnOff(s.ShowToolsInTray)} (sort {s.ToolsTraySortOption}); page view {s.ToolsViewMode}, sort {s.ToolsSortOption}");
         sb.AppendLine($"- Scan on startup: {OnOff(s.AutoScanForGamesOnStartup)}; online title search: {OnOff(s.SearchOfficialTitleOnline)}; poster art: {OnOff(s.UseVerticalPosterArt)}");
-        sb.AppendLine($"- SteamGridDB: {OnOff(s.UseSteamGridDbArt)}, key {Presence(s.SteamGridDbApiKey)}; RAWG: {OnOff(s.UseRawgMetadata)}, key {Presence(s.RawgApiKey)}; PCGamingWiki facts: {OnOff(s.UsePcGamingWikiFacts)}");
+        sb.AppendLine($"- SteamGridDB: {OnOff(s.UseSteamGridDbArt)}, key {Presence(s.SteamGridDbApiKey)}; RAWG: {OnOff(s.UseRawgMetadata)}, key {Presence(s.RawgApiKey)}");
         sb.AppendLine($"- Restore point before presets: {OnOff(s.CreateRestorePointBeforeTweaks)}; verbose logging: {OnOff(s.VerboseLoggingEnabled)}; beta updates: {OnOff(s.IncludePrereleaseUpdates)}");
         sb.AppendLine($"- Show/hide hotkey: {(string.IsNullOrWhiteSpace(s.GlobalManageHotkey) ? "none" : s.GlobalManageHotkey)}");
         sb.AppendLine($"- Tray menu hotkey: {(string.IsNullOrWhiteSpace(s.TrayMenuHotkey) ? "none" : s.TrayMenuHotkey)}");
+        // What a layout or "looks wrong" report needs.
+        sb.AppendLine($"- Appearance: theme {s.ThemeId}, text size {s.TextSizePercent}%, font {(string.IsNullOrWhiteSpace(s.FontName) ? "default" : s.FontName)}, theme background {OnOff(s.ShowThemeBackground)}");
+        sb.AppendLine($"- Library: view {s.LibraryViewMode}, details on hover {OnOff(s.PosterDetailsOnHover)}, metadata refresh {s.MetadataRefreshInterval}, check for updates {OnOff(s.AutoCheckForUpdates)}");
+        sb.AppendLine($"- Profiles: new games get {s.NewGameProfile}; Optimized tweaks on: {TweaksOn(s.OptimizedProfileTweaks)}; Aggressive tweaks on: {TweaksOn(s.AggressiveProfileTweaks)}");
+    }
+
+    /// <summary>The names of a profile's switches that are on ("PowerPlan, GpuPreference"), read from the config's own bool properties.</summary>
+    private static string TweaksOn(object config)
+    {
+        var on = config.GetType().GetProperties()
+            .Where(p => p.PropertyType == typeof(bool) && p.GetValue(config) is true)
+            .Select(p => p.Name.EndsWith("Enabled", StringComparison.Ordinal) ? p.Name[..^"Enabled".Length] : p.Name)
+            .ToList();
+        return on.Count == 0 ? "none" : string.Join(", ", on);
     }
 
     private static void AppendState(StringBuilder sb, Inputs inputs)
@@ -354,7 +416,16 @@ public static class DiagnosticReportService
             var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(main);
             scale = $", {dpi.DpiScaleX * 100:0}% scale";
         }
-        return $"- Display: primary {w:0}×{h:0} (device-independent px{scale}); virtual desktop {vw:0}×{vh:0}";
+        int monitors = Win32DisplayBackend.MonitorCount();
+        string refresh = PrimaryRefreshRate() is { } hz ? $", {hz} Hz" : "";
+        return $"- Display: {monitors} monitor{(monitors == 1 ? "" : "s")}; primary {w:0}×{h:0} (device-independent px{scale}){refresh}; virtual desktop {vw:0}×{vh:0}";
+    }
+
+    /// <summary>The refresh rate the main display runs at now, or null.</summary>
+    private static int? PrimaryRefreshRate()
+    {
+        var display = new Win32DisplayBackend();
+        return display.PrimaryDevice() is { } device && display.Current(device) is { RefreshHz: > 1 } mode ? mode.RefreshHz : null;
     }
 
     private static string LocaleLine()
