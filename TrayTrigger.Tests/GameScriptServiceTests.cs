@@ -8,9 +8,11 @@ namespace TrayTrigger.Tests;
 /// <summary>
 /// For the test classes that point the static <see cref="ActivityService.Current"/> at their own
 /// service: two classes doing it at once would put back each other's, and record into the wrong one.
-/// xunit runs the members of one collection one after another.
+/// xunit runs the members of one collection one after another, and with DisableParallelization the collection runs
+/// alone: any other class that reaches ActivityService.Add (a launch, a profile, an import) while one of these has
+/// Current set would otherwise record into its service, which is how a test counting Problem entries saw a second one.
 /// </summary>
-[CollectionDefinition(ActivityCurrentCollection.Name)]
+[CollectionDefinition(ActivityCurrentCollection.Name, DisableParallelization = true)]
 public class ActivityCurrentCollection
 {
     public const string Name = "ActivityService.Current";

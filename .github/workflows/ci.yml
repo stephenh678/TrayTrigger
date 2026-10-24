@@ -7,13 +7,25 @@ on:
       - 'site/**'
       - 'docs/**'
       - 'review-notes/**'
-      - '**/*.md'
+      # Not '**/*.md': Help/**/*.md and WhatsNew.md are embedded in the app and checked by tests.
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/**/*.md'
   pull_request:
     paths-ignore:
       - 'site/**'
       - 'docs/**'
       - 'review-notes/**'
-      - '**/*.md'
+      # Not '**/*.md': Help/**/*.md and WhatsNew.md are embedded in the app and checked by tests.
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/**/*.md'
 
 permissions:
   contents: read

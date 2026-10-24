@@ -526,7 +526,7 @@ public class PerformanceProfileService
 
     private static bool IsEmpty(PerformanceProfileSessionSnapshot s) =>
         s.PerGameSnapshots.Count == 0 && !s.PowerPlanCaptured && !s.SystemResponsivenessCaptured
-        && !s.SchedulingCategoryCaptured && !s.HdrCaptured && !s.ToastsCaptured && !s.TimerResolutionRequested
+        && !s.SchedulingCategoryCaptured && !s.HdrCaptured && !s.ToastsCaptured && !s.PlaybackMuteCaptured && !s.TimerResolutionRequested
         && s.NvidiaSettings.Count == 0;
 
     /// <summary>
@@ -2133,7 +2133,10 @@ public class PerformanceProfileService
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"Failed to raise process priority for '{gameName}': {ex.Message}");
-            NoteGame("Above Normal priority couldn't be set");
+            // Access denied is what an elevated game gives a normal TrayTrigger.
+            NoteGame(ex is System.ComponentModel.Win32Exception { NativeErrorCode: 5 } or UnauthorizedAccessException
+                ? "Above Normal priority couldn't be set (the game may run as administrator)"
+                : "Above Normal priority couldn't be set");
         }
     }
 
@@ -2224,9 +2227,12 @@ public static class ProfileSnapshotValidator
     /// <summary>Windows accepts 0-100 (percent of CPU reserved for non-multimedia work).</summary>
     public static bool IsValidSystemResponsiveness(int value) => value is >= 0 and <= 100;
 
-    /// <summary>"GpuPreference=N;" is the only shape the Graphics Settings page writes.</summary>
+    /// <summary>
+    /// The Graphics Settings page writes "Name=value;" tokens: GpuPreference=N; on its own, or with
+    /// AutoHDREnable, AppStatus and others that Windows keeps in the same string.
+    /// </summary>
     public static bool IsValidGpuPreferenceValue(string? value) =>
-        value != null && System.Text.RegularExpressions.Regex.IsMatch(value, @"^GpuPreference=\d;$");
+        value != null && System.Text.RegularExpressions.Regex.IsMatch(value, @"^(?:[A-Za-z][A-Za-z0-9]{0,63}=[0-9A-Za-z]{1,16};){1,16}$");
 
     /// <summary>A rooted local path with no control characters - the exe path tweaks are keyed to.</summary>
     public static bool IsValidLocalExePath(string? path)

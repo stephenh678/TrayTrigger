@@ -12,6 +12,22 @@
          one row when something is wrong, plain rows for the history, tags only where a row needs
          flagging (CRITICAL, "7 TIMES"), as sparingly as MISSING. -->
     <UserControl.Resources>
+        <!-- The right-click menu of a history row, one for every row (as the Library's game menu is): its commands bind to
+             the row it was opened on. Items that don't apply to the row are hidden, not greyed out. -->
+        <ContextMenu x:Key="ActivityRowContextMenu"
+                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+            <MenuItem Header="Copy details" Command="{Binding CopyCommand}"/>
+            <MenuItem Header="Copy this line" Command="{Binding CopyLineCommand}"/>
+            <MenuItem Header="Show only this game" Command="{Binding ShowOnlyThisCommand}"
+                      Visibility="{Binding HasSubject, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="Open this game" Command="{Binding OpenGameCommand}"
+                      Visibility="{Binding CanOpenGame, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="Open the log" Command="{Binding ShowLogCommand}"/>
+            <Separator Visibility="{Binding CanRemove, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="Remove this entry" Command="{Binding RemoveCommand}" Foreground="{DynamicResource BrushDanger}"
+                      Visibility="{Binding CanRemove, Converter={StaticResource BoolToVis}}"/>
+        </ContextMenu>
+
         <Style x:Key="ActivityCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
@@ -236,7 +252,8 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource HistoryRow}" AutomationProperties.Name="{Binding AccessibleName}"
-                                            Focusable="True" KeyboardNavigation.IsTabStop="True">
+                                            Focusable="True" KeyboardNavigation.IsTabStop="True"
+                                            ContextMenu="{StaticResource ActivityRowContextMenu}">
                                         <Border.InputBindings>
                                             <MouseBinding Gesture="LeftClick" Command="{Binding ToggleCommand}"/>
                                             <KeyBinding Key="Enter" Command="{Binding ToggleCommand}"/>

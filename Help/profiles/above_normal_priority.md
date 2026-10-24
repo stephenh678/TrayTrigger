@@ -19,3 +19,4 @@ Sets the game's own process to the Above Normal CPU scheduling class as soon as 
 
 - Applied through the process priority class API after the game starts. Nothing to restore: the priority ends with the process.
 - Aggressive tier only.
+- A game running as administrator can't be changed by TrayTrigger unless TrayTrigger runs as administrator too. The game's Played row in Activity & History then says "Above Normal priority couldn't be set (the game may run as administrator)". The power throttling exemption has the same limit.

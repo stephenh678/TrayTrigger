@@ -329,6 +329,9 @@ public class StutterCheckServiceTests
     [InlineData("Intel(R) Core(TM) Ultra 7 265K", true)]
     [InlineData("Intel(R) Core(TM) i9-14900K", true)]
     [InlineData("Intel(R) Core(TM) i7-14700KF", true)]
+    [InlineData("Intel Core i7-14700K", true)]
+    [InlineData("Intel Core Ultra 7 265K", true)]
+    [InlineData("Intel Core i7-13700K", false)]
     [InlineData("Intel(R) Core(TM) i7-13700K", false)]
     [InlineData("AMD Ryzen 9 9950X3D 16-Core Processor", false)]
     public void IntelApo_AppliesToCoreUltraAnd14thGenK(string cpu, bool applies)

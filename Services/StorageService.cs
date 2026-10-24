@@ -297,8 +297,11 @@ public class StorageService : IProfileSnapshotStore
         bool changed = false;
         foreach (var g in games)
         {
-            // Auto-heal games that have a local executable path on disk but were erroneously marked as IsSteamGame
-            if (g.IsSteamGame && !string.IsNullOrWhiteSpace(g.ExecutablePath) &&
+            // Auto-heal games that have a local executable on disk but were marked as Steam games with
+            // no Steam App Id to go with it. A real Steam game keeps its App Id even when it launches
+            // its own exe directly (LaunchDirectly) or a local game is run through the Steam client.
+            if (g.IsSteamGame && !UrlProtocolHelper.IsValidSteamAppId(g.SteamAppId) &&
+                !string.IsNullOrWhiteSpace(g.ExecutablePath) &&
                 !g.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase) &&
                 File.Exists(g.ExecutablePath))
             {
@@ -567,27 +570,27 @@ public class StorageService : IProfileSnapshotStore
     {
         lock (_settingsLock)
         {
-            // Encrypt the API key for the on-disk representation only; restore the
-            // plaintext on the caller's live object afterward since it's still in active
-            // use (bound to Settings UI, passed to SteamGridDB requests, etc.). See L-06.
-            string plainApiKey = settings.SteamGridDbApiKey;
-            string plainRawgKey = settings.RawgApiKey;
             try
             {
                 EnsureDirectories();
-                settings.SteamGridDbApiKey = StoredApiKey(ApiKeyField.SteamGridDb, plainApiKey);
-                settings.RawgApiKey = StoredApiKey(ApiKeyField.Rawg, plainRawgKey);
+                // Encrypt the API keys in a copy that is written to disk. The caller's object stays
+                // plaintext throughout: it is bound to the Settings UI and read by the metadata
+                // services, which must never see the "dpapi:" form. See L-06.
                 string json = JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings);
+                var onDisk = JsonSerializer.Deserialize(json, AppJsonContext.Default.AppSettings) ?? settings;
+                onDisk.SteamGridDbApiKey = StoredApiKey(ApiKeyField.SteamGridDb, settings.SteamGridDbApiKey);
+                onDisk.RawgApiKey = StoredApiKey(ApiKeyField.Rawg, settings.RawgApiKey);
+                json = JsonSerializer.Serialize(onDisk, AppJsonContext.Default.AppSettings);
                 string tempFile = _settingsFilePath + ".tmp";
                 File.WriteAllText(tempFile, json);
 
                 // Keep rolling .bak copy, unless the primary was found unreadable earlier this
-                // session - in that case it must not overwrite a still-good backup.
+                // session - in that case it must not overwrite a still-good backup, now or by any
+                // later save (as for games.json and tools.json, the flag lasts the whole session).
                 if (File.Exists(_settingsFilePath) && !_settingsPrimaryUnreadableThisSession)
                 {
                     File.Copy(_settingsFilePath, _settingsBakFilePath, overwrite: true);
                 }
-                _settingsPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _settingsFilePath);
                 SettingsSaveCount++;
@@ -596,11 +599,6 @@ public class StorageService : IProfileSnapshotStore
             catch (Exception ex)
             {
                 LoggingService.Error("Storage", $"Error saving settings to '{_settingsFilePath}': {ex.Message}", ex);
-            }
-            finally
-            {
-                settings.SteamGridDbApiKey = plainApiKey;
-                settings.RawgApiKey = plainRawgKey;
             }
         }
     }

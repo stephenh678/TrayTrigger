@@ -65,6 +65,10 @@ public class MainViewModel : ViewModelBase
     /// <summary>Activity &amp; History. Uses <see cref="ActivityService.Current"/>, or a history kept
     /// only in memory when there is none (a capture or test run).</summary>
     public ActivityViewModel ActivityVM { get; }
+
+    /// <summary>The library's card for a game by name (as Activity & History names it), or null if it has gone.</summary>
+    private GameCardViewModel? FindGameCard(string name) =>
+        Library.Games.FirstOrDefault(card => string.Equals(card.Name, name, StringComparison.OrdinalIgnoreCase));
     public SettingsViewModel SettingsVM { get; }
     public UpdateCoordinator Update { get; }
     public LibraryViewModel Library { get; }
@@ -274,6 +278,11 @@ public class MainViewModel : ViewModelBase
             isOnScreen: () => CurrentSection == NavSection.Activity && IsWindowActive?.Invoke() == true,
             settings: _settings,
             saveSettings: () => _storageService.SaveSettings(_settings, source: "ActivityViewModel.Retention"));
+        ActivityVM.CanOpenGameNamed = name => FindGameCard(name) != null;
+        ActivityVM.OpenGameNamed = name =>
+        {
+            if (FindGameCard(name) is { } card) RequestEditGameDialog?.Invoke(card);
+        };
         // A snapshot taken on the UI thread; the per-drive count then runs off it.
         SystemVM.GetLibraryGames = () => Library.Games.Select(card => card.Game).ToList();
 

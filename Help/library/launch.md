@@ -44,7 +44,7 @@ Working Directory and Launch Arguments sit under **Advanced launch options**, a 
 Two jobs:
 
 1. The folder the game is started in, for a direct launch. Blank means the executable's own folder, which is right for almost every game.
-2. **The folder TrayTrigger watches** to know the game is running. Client launches (GOG, EA, Epic, Ubisoft, Battle.net) and prelauncher stubs hand off to a process TrayTrigger never started, so it finds the game by looking for a process running from inside this folder. Close Game and Force Close use the same folder to know what to close or kill when TrayTrigger holds no handle to the game itself; a folder where Windows' own programs run (the Windows folder, a drive root, the top of Program Files) is never used. If a game "never appears" after launching and its profile rolls back after three minutes, this folder is usually the wrong one.
+2. **The folder TrayTrigger watches** to know the game is running. Client launches (GOG, EA, Epic, Ubisoft, Battle.net), prelauncher stubs and scripts hand off to a process TrayTrigger never started, so it finds the game by looking for a process running from inside this folder. Close Game and Force Close use the same folder to know what to close or kill when TrayTrigger holds no handle to the game itself; a folder where Windows' own programs run (the Windows folder, a drive root, the top of Program Files) is never used. If a game "never appears" after launching and its profile rolls back after three minutes, this folder is usually the wrong one.
 
 Steam games are tracked through Steam's own running flag instead, and Battle.net games through the folder Battle.net currently records for them, so a game moved with Battle.net's "Move install" is still found.
 
@@ -60,7 +60,17 @@ Passed exactly as typed. Where they go depends on the route:
 
 ## Run as Administrator
 
-Starts a direct launch through UAC, so you get the prompt each time. It sits with the arguments because it has the same reach: it applies only when TrayTrigger starts the exe itself, and has no effect on a launch that goes through a client, since the client is what starts the game. Turn on "launch this executable directly" (above) for a platform game that needs elevation.
+Starts a direct launch through UAC, so you get the prompt each time. It sits with the arguments because it has the same reach: it applies only when TrayTrigger starts the exe itself, and has no effect on a launch that goes through a client, since the client is what starts the game. Turn on "launch this executable directly" (above) for a platform game that needs elevation. If a `.bat` or `.cmd` asks for administrator rights itself, see Games started by a script, below.
+
+## Games started by a script (.bat or .cmd)
+
+Some games are started by a `.bat` or `.cmd` file that sets things up and then runs the real game. Point Executable / Shortcut Target at the script and TrayTrigger follows the game it starts.
+
+- **The game is found by its folder.** TrayTrigger looks for a program running from inside the Working Directory (blank means the script's own folder) and, once it sees one, gives that program its Above Normal priority, power throttling exemption, CPU cores and the DLSS check. The profile ends when the script ends, which for a script that waits for the game (`start /wait`) is when the game does.
+- **A script that starts the game and then exits** is also handled: TrayTrigger carries on with the game it started, as it does for other launchers.
+- **A script that asks for administrator rights itself** (it starts a second copy of itself through UAC) works without a setting, but the game then runs as administrator and TrayTrigger, which doesn't, cannot change its priority or power throttling. The game's Played row in Activity & History says so. Ticking Run as Administrator for the game makes TrayTrigger start the script with those rights, so the script doesn't ask again and you get one UAC prompt, not two; the game still runs as administrator, so priority and power throttling still can't be changed.
+- **A game running as administrator keeps its profile for the whole session.** TrayTrigger can see such a game but can't be told when it exits, so it checks every couple of seconds whether the game is still running, and puts everything back after you quit.
+- **Windows graphics settings follow the file you pointed at.** GPU Preference and Auto HDR are kept for the script, not for the game it starts, so they don't reach the game.
 
 ## Global Launch Hotkey
 

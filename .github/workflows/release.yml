@@ -55,6 +55,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # The tag may have been pushed from a commit CI never finished on; do not publish untested code.
+      - name: Test
+        run: dotnet test TrayTrigger.Tests/TrayTrigger.Tests.csproj -c Release
+
       - name: Install Inno Setup
         shell: pwsh
         run: |

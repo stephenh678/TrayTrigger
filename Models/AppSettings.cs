@@ -277,6 +277,14 @@ public class AppSettings
     /// </summary>
     public bool HasSeenLauncherDetectionPrompt { get; set; } = false;
     public string? SkippedUpdateVersion { get; set; }
+
+    // The newest NVIDIA driver the user's last "Check for Newer Driver" found, kept so the notice
+    // is still there after a restart. Cleared once that driver (or a newer one) is installed.
+    public string? NvidiaDriverGpu { get; set; }
+    public string? NvidiaDriverVersion { get; set; }
+    public string? NvidiaDriverReleased { get; set; }
+    public string? NvidiaDriverUrl { get; set; }
+    public System.DateTime? NvidiaDriverCheckedUtc { get; set; }
     public System.DateTime? RemindAfterUtc { get; set; }
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
     public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new();

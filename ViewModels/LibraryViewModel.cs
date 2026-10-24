@@ -1171,6 +1171,8 @@ public class LibraryViewModel : ViewModelBase
     /// <summary>How long the in-window launch toast stays up after the launch is dispatched.</summary>
     private static readonly TimeSpan LaunchToastAfterDispatch = TimeSpan.FromSeconds(2);
 
+    private readonly HashSet<string> _launchesInFlight = new(StringComparer.Ordinal);
+
     public void LaunchGame(GameCardViewModel card)
     {
         Window? owner = WindowHelper.ActiveOwner();
@@ -1204,6 +1206,14 @@ public class LibraryViewModel : ViewModelBase
                 }
                 return;
             }
+        }
+
+        // A second Play (a double-click, or the hotkey twice) while this one waits out the delay
+        // would run the pre-launch scripts and start the game again. OnLaunchDispatched clears it.
+        if (!_launchesInFlight.Add(card.Id))
+        {
+            LoggingService.Verbose("Library", $"Launch of '{card.Name}' ignored: one is already on its way.");
+            return;
         }
 
         // Shown before dispatching, then held for LaunchDispatchDelay via a non-blocking timer
@@ -1320,6 +1330,7 @@ public class LibraryViewModel : ViewModelBase
 
     private void OnLaunchDispatched(GameCardViewModel card, Window? owner, bool launched, string? err, bool isMissing)
     {
+        _launchesInFlight.Remove(card.Id);
         if (launched)
         {
             // No RefreshProperties()/SaveLibrary() here: LaunchGame already raised GameUpdated
@@ -1425,6 +1436,8 @@ public class LibraryViewModel : ViewModelBase
             Filter = "Executables (*.exe)|*.exe|All Files (*.*)|*.*",
             CheckFileExists = true
         };
+        // The old path may no longer exist, so this opens at the nearest folder above it that does.
+        DialogStartLocation.ForFile(dialog, card.Game.ExecutablePath, card.Game.WorkingDirectory);
 
         if (FileDialogCloak.Show(dialog) == true)
         {

@@ -1,10 +1,12 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using TrayTrigger.Services;
+using TrayTrigger.Services.Theming;
 
 namespace TrayTrigger.Views;
 
@@ -21,7 +23,14 @@ public partial class HelpDialog : Window
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
-        Closed += (_, _) => { if (ReferenceEquals(_current, this)) _current = null; };
+        Closed += (_, _) =>
+        {
+            PropertyChangedEventManager.RemoveHandler(ThemeState.Instance, OnThemeVersionChanged, nameof(ThemeState.Version));
+            if (ReferenceEquals(_current, this)) _current = null;
+        };
+        // The text colours are looked up as the page is built, so a theme change while the window
+        // is open would leave them as they were; build the page again.
+        PropertyChangedEventManager.AddHandler(ThemeState.Instance, OnThemeVersionChanged, nameof(ThemeState.Version));
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Close(); e.Handled = true; } };
     }
 
@@ -48,8 +57,15 @@ public partial class HelpDialog : Window
         }
     }
 
+    private HelpTopic? _topic;
+    private string _topicId = "";
+
+    private void OnThemeVersionChanged(object? sender, PropertyChangedEventArgs e) => Load(_topic, _topicId);
+
     private void Load(HelpTopic? topic, string topicId)
     {
+        _topic = topic;
+        _topicId = topicId;
         BodyPanel.Children.Clear();
 
         if (topic == null)

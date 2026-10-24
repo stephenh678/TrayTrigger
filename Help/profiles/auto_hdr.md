@@ -25,6 +25,7 @@ A change to a game's Auto HDR choice is recorded in Activity & History.
 - Not every game looks better. A HUD can blow out and whites can clip, which is why this is off by default and why each game can decide for itself.
 - Windows restarts nothing, but a game that is already running keeps the setting it started with. The change takes effect the next time the game starts.
 - A game that Windows has switched off Auto HDR for in Settings > System > Display > Graphics is still changed while it runs, and put back afterwards.
+- Kept for the program file the game's Executable points at. For a game started by a `.bat` or `.cmd`, that is the script, so Auto HDR isn't switched on for the game it starts (see Games started by a script in How a game is launched).
 
 ## Details
 

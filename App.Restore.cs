@@ -48,7 +48,7 @@ public partial class App
         try
         {
             string exe = Environment.ProcessPath ?? throw new InvalidOperationException("TrayTrigger's own path is unknown");
-            Process.Start(new ProcessStartInfo(exe, $"{AfterRestartArgument} {Environment.ProcessId}") { UseShellExecute = false });
+            Process.Start(new ProcessStartInfo(exe, $"{AfterRestartArgument} {Environment.ProcessId}") { UseShellExecute = false })?.Dispose();
             LoggingService.Info("App", "Restarting TrayTrigger to finish restoring from a backup.");
         }
         catch (Exception ex)

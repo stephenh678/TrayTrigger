@@ -21,7 +21,7 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 
 | # | Item | Status |
 |---|---|---|
-| 1 | Activity gaps: Edit Game changes, game removal and undo | **Done** (1.7.1-beta.2, built and tested, not yet tried in the app) |
+| 1 | Activity gaps: Edit Game changes, game removal and undo | **Done** (1.7.1-beta.2; entries seen in Activity during beta 3 testing) |
 | 2 | Per-game display and audio device, with crash-safe restore | **Done** (2026-10-23, 1.7.1-beta.2), in one Display and sound card in Edit Game: resolution and refresh rate, monitor choice, Identify, make a monitor the main display, keep the mouse on the game's screen, dim the other screens, and the sound output device; each put back after the game and after a crash. Tested live on one monitor (resolution and refresh rate, the mouse hold, the sound switch, the overlays, the monitor list and a no-change layout call). **Not tried on two monitors:** changing the main display, the mouse hold across screens, dimming another screen. To try with a second monitor (Preston's) |
 | 3 | Game recipes (export and import a game's setup) | **Skipped** (2026-10-23) |
 | 4 | Companion tool presets, such as Lossless Scaling | **Done** (2026-10-23): companion tools already start with a game and close with it or after it; a Lossless Scaling preset would only save picking the .exe, so it is not built |
@@ -57,11 +57,40 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 10. **Library tiering.** Says which unplayed games to move off the SSD and opens the launcher's own move
     option.
 
+## Done in 1.7.1-beta.3 (2026-10-24)
+
+Not roadmap items: an outside review of the code (Gemini; each claim checked against the code, some wrong or already fixed), the owner's
+testing, and what that turned up. One commit.
+
+- **From the review.** Steam games no longer lose their Steam flag at startup; Play pressed twice launches once; crash recovery accepts GPU
+  values that carry Auto HDR; Intel APO on 14th-gen K names; the mute record is kept; Scan Locations expand a library root; a damaged
+  settings.json no longer lets the next save overwrite the backup; store matching ignores a year in brackets; powercfg and sc.exe calls time
+  out (`BoundedProcess`); Help follows a theme change; the Resizable BAR read retries on a sleeping GPU; the Visual effects tweak restores the
+  Performance Options marker; the CI skips only unembedded markdown and the release runs the tests. Declined: COM `[PreserveSig]` (works, risky
+  to touch), the edit-dialog close guard, the shared cursor backend.
+- **NVIDIA driver notice.** The newest driver Check for Newer Driver found is saved in settings and shown again after a restart (nothing
+  is asked of NVIDIA without a press); one Activity entry per version; a Needs attention item with Get Driver, naming the NVIDIA app;
+  it clears once that driver is installed. No automatic check: it would break the "only when you press" promise in the README and SECURITY.
+- **Browse buttons** open at the path in the box beside them (`DialogStartLocation`), or at the nearest folder above it that exists.
+- **Elevated games and scripts** (from Call of Duty, launched by a .bat that elevates itself, and a second game started by a plain .bat).
+  Found in the log: TrayTrigger found the real game but, not elevated, could not subscribe to its exit, and ended the session at once. Now it
+  polls whether the process is still running (`TryWatchByPolling`). For a .bat or .cmd that stays alive, priority, power throttling, CPU cores,
+  the DLSS check and the window go to the game found under the install folder, not to `cmd` (`StartRealGameDiscovery`). Running TrayTrigger
+  itself elevated would work for the process settings but was rejected: it changes the trust model. **Open, by choice:** GPU Preference,
+  Auto HDR and a Defender exclusion are keyed to the file path and are still set for the script, not the game; Windows reads GPU preference at
+  process start, so the real exe would have to be remembered from the last run (option A, not built). Help says so.
+- **Activity & History row menu**: Copy details, Copy this line, Show only this game, Open this game, Open the log, Remove this entry. Remove
+  takes exactly the entries the row shows; a Critical row is kept only while an item with its key is under Needs attention.
+- **Tests.** The collection that points `ActivityService.Current` at its own service now runs alone; the intermittent Resizable BAR test
+  failures were another class recording to Activity at the same moment.
+
 ## To check at home
 
 The 1.7.1 work has not been run on real games: the layout at 130% text on the Stutter tab, `tools\Audit-Layout.ps1`
 with TrayTrigger closed, the PLAYING tag on poster cards at large text sizes, and the new Edit Game and
-removal entries in Activity.
+removal entries in Activity. Beta 3 was tried on Call of Duty (elevated, through a .bat) and Hellraiser (plain .bat); not tried: the Activity
+row menu after its last change, the saved driver notice across a real driver install, a game protected by an anti-cheat that hides its process,
+and two monitors (the beta 2 note above).
 
 ## Open: Resizable BAR for undecided games (found 2026-10-24)
 

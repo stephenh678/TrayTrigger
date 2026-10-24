@@ -1521,6 +1521,7 @@ public class GameEditViewModel : ViewModelBase
             Filter = "Image & Icon Files (*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe)|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.exe|All Files (*.*)|*.*",
             CheckFileExists = true
         };
+        DialogStartLocation.ForFile(dialog, CustomIconPath, ExecutablePath);
 
         if (FileDialogCloak.Show(dialog) == true)
         {
@@ -1602,6 +1603,7 @@ public class GameEditViewModel : ViewModelBase
             Filter = "Image Files (*.jpg;*.jpeg;*.png;*.webp;*.bmp)|*.jpg;*.jpeg;*.png;*.webp;*.bmp|All Files (*.*)|*.*",
             CheckFileExists = true
         };
+        DialogStartLocation.ForFile(dialog, CustomCoverPath);
 
         if (FileDialogCloak.Show(dialog) == true)
         {
@@ -1922,6 +1924,7 @@ public class GameEditViewModel : ViewModelBase
             Filter = "Executables & Shortcuts (*.exe;*.lnk;*.url)|*.exe;*.lnk;*.url|All Files (*.*)|*.*",
             CheckFileExists = true
         };
+        DialogStartLocation.ForFile(dialog, ExecutablePath, WorkingDirectory);
 
         if (FileDialogCloak.Show(dialog) == true)
         {
@@ -1945,6 +1948,7 @@ public class GameEditViewModel : ViewModelBase
             Title = "Select Working Directory",
             Multiselect = false
         };
+        DialogStartLocation.ForFolder(dialog, WorkingDirectory, ExecutablePath);
 
         if (FileDialogCloak.Show(dialog) == true)
         {

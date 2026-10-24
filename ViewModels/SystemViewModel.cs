@@ -440,7 +440,7 @@ public class SystemViewModel : ViewModelBase
             _report = value;
             GpuCards.Clear();
             foreach (var gpu in value.Gpus)
-                GpuCards.Add(new GpuCardViewModel(gpu, _nvidiaDrivers));
+                GpuCards.Add(new GpuCardViewModel(gpu, _nvidiaDrivers, loadFind: LoadDriverFind, saveFind: SaveDriverFind));
             OnPropertyChanged();
             OnPropertyChanged(nameof(Cpu));
             OnPropertyChanged(nameof(PrimaryGpu));
@@ -481,6 +481,23 @@ public class SystemViewModel : ViewModelBase
     public ObservableCollection<GpuCardViewModel> GpuCards { get; } = new();
 
     private readonly NvidiaDriverService _nvidiaDrivers = new();
+
+    private SavedDriverFind? LoadDriverFind() =>
+        _settings.NvidiaDriverGpu != null && _settings.NvidiaDriverVersion != null && _settings.NvidiaDriverCheckedUtc != null
+            ? new SavedDriverFind(_settings.NvidiaDriverGpu, _settings.NvidiaDriverVersion, _settings.NvidiaDriverReleased,
+                _settings.NvidiaDriverUrl, _settings.NvidiaDriverCheckedUtc.Value)
+            : null;
+
+    private void SaveDriverFind(SavedDriverFind? find)
+    {
+        if (find == null && _settings.NvidiaDriverVersion == null) return;
+        _settings.NvidiaDriverGpu = find?.Gpu;
+        _settings.NvidiaDriverVersion = find?.Version;
+        _settings.NvidiaDriverReleased = find?.Released;
+        _settings.NvidiaDriverUrl = find?.Url;
+        _settings.NvidiaDriverCheckedUtc = find?.CheckedUtc;
+        _storageService.SaveSettings(_settings);
+    }
 
     /// <summary>The library's games, for the Storage card's per-drive counts. Set by the main view model.</summary>
     public Func<IReadOnlyList<GameEntry>>? GetLibraryGames { get; set; }

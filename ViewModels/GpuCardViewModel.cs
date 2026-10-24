@@ -8,6 +8,9 @@ namespace TrayTrigger.ViewModels;
 
 public enum DriverCheckState { None, Checking, UpToDate, NewerAvailable, Problem }
 
+/// <summary>A newer driver an earlier "Check for Newer Driver" found, kept across restarts.</summary>
+public sealed record SavedDriverFind(string Gpu, string Version, string? Released, string? Url, DateTime CheckedUtc);
+
 /// <summary>
 /// One GPU on System > Hardware Specs: what it is, its live load and video memory in use, its
 /// driver, and a way to a newer driver. For NVIDIA the check asks NVIDIA's site and says whether
@@ -23,13 +26,60 @@ public sealed class GpuCardViewModel : ViewModelBase
     private readonly Func<DateTime> _now;
     private string? _latestDriverUrl;
 
-    public GpuCardViewModel(GpuHardwareInfo info, NvidiaDriverService nvidia, Func<DateTime>? now = null)
+    private readonly Func<SavedDriverFind?>? _loadFind;
+    private readonly Action<SavedDriverFind?>? _saveFind;
+
+    public GpuCardViewModel(GpuHardwareInfo info, NvidiaDriverService nvidia, Func<DateTime>? now = null,
+        Func<SavedDriverFind?>? loadFind = null, Action<SavedDriverFind?>? saveFind = null)
     {
         Info = info;
         _nvidia = nvidia;
         _now = now ?? (() => DateTime.Now);
+        _loadFind = loadFind;
+        _saveFind = saveFind;
         CheckDriverCommand = new AsyncRelayCommand(CheckDriverAsync, () => CheckState != DriverCheckState.Checking);
         GetDriverCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute(_latestDriverUrl ?? NvidiaDriverService.DriversPageUrl));
+        ShowSavedFind();
+    }
+
+    /// <summary>The Needs attention item on Activity & History while a newer driver is known and not yet installed.</summary>
+    public const string DriverAttentionKey = "nvidia.driver";
+
+    private void ShowAttention(string version)
+    {
+        string url = _latestDriverUrl ?? NvidiaDriverService.DriversPageUrl;
+        ActivityService.Current?.SetState(new AttentionItem(DriverAttentionKey,
+            $"A newer NVIDIA driver is available: {version}",
+            $"You have {Info.DriverVersion} for {Info.ModelName}. Get Driver opens NVIDIA's page, or install it with the NVIDIA app. This goes away once it is installed.",
+            "Get Driver", () => HelpCommands.OpenUrl.Execute(url), IsCritical: false));
+    }
+
+    private static void ClearAttention() => ActivityService.Current?.ClearState(DriverAttentionKey);
+
+    /// <summary>
+    /// A newer driver found by an earlier check is shown again without asking NVIDIA. It goes away
+    /// for good once that driver (or a newer one) is installed, or if the GPU is not the one it was
+    /// found for. Nothing here touches the network; only the check button does.
+    /// </summary>
+    private void ShowSavedFind()
+    {
+        if (Info.Vendor != GpuVendor.Nvidia || _loadFind == null) return;
+        var find = _loadFind();
+        if (find == null) return;
+
+        bool sameGpu = string.Equals(find.Gpu, Info.ModelName, StringComparison.OrdinalIgnoreCase);
+        if (!sameGpu || NvidiaDriverService.CompareVersions(Info.DriverVersion ?? "", find.Version) >= 0)
+        {
+            _saveFind?.Invoke(null);
+            ClearAttention();
+            return;
+        }
+
+        _latestDriverUrl = find.Url;
+        ShowAttention(find.Version);
+        string released = string.IsNullOrWhiteSpace(find.Released) ? "" : $", released {find.Released}";
+        CheckMessage = $"A newer Game Ready driver was found {Age(find.CheckedUtc.ToLocalTime(), _now())}: {find.Version}{released}. NVIDIA App can install it too.";
+        CheckState = DriverCheckState.NewerAvailable;
     }
 
     public GpuHardwareInfo Info { get; }
@@ -168,6 +218,28 @@ public sealed class GpuCardViewModel : ViewModelBase
 
         var result = await _nvidia.CheckAsync(Info.ModelName, Info.DriverVersion);
         _latestDriverUrl = result.DetailsUrl;
+        // Remember a newer driver; forget it once the GPU is up to date. A failed check changes nothing.
+        if (result.Outcome == DriverCheckOutcome.NewerAvailable && result.LatestVersion != null)
+        {
+            // One Activity entry per driver version: pressing the button again on the same one adds nothing.
+            var before = _loadFind?.Invoke();
+            bool alreadyRecorded = before != null && string.Equals(before.Version, result.LatestVersion, StringComparison.Ordinal)
+                                   && string.Equals(before.Gpu, Info.ModelName, StringComparison.OrdinalIgnoreCase);
+            _saveFind?.Invoke(new SavedDriverFind(Info.ModelName, result.LatestVersion, result.ReleaseDate, result.DetailsUrl, DateTime.UtcNow));
+            ShowAttention(result.LatestVersion);
+            if (!alreadyRecorded)
+            {
+                string when = string.IsNullOrWhiteSpace(result.ReleaseDate) ? "" : $" Released {result.ReleaseDate}.";
+                ActivityService.Add(ActivityLevel.Activity,
+                    $"A newer NVIDIA driver is available: {result.LatestVersion}",
+                    detail: $"You have {Info.DriverVersion} for {Info.ModelName}.{when} You can install it from the NVIDIA app, or use Get Driver here or on the Graphics card in System > Hardware Specs.");
+            }
+        }
+        else if (result.Outcome == DriverCheckOutcome.UpToDate)
+        {
+            _saveFind?.Invoke(null);
+            ClearAttention();
+        }
         string released = string.IsNullOrWhiteSpace(result.ReleaseDate) ? "" : $", released {result.ReleaseDate}";
         (CheckState, CheckMessage) = result.Outcome switch
         {

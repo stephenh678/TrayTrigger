@@ -13,7 +13,7 @@ Opts the game's process out of Windows' power throttling (EcoQoS), and out of Wi
 ## Trade-offs
 
 - None worth noting for a game: it's the process you want running at full speed.
-- A game running as administrator, or protected by some anti-cheat, can refuse it. TrayTrigger logs that and the game runs as normal.
+- A game running as administrator, or protected by some anti-cheat, can refuse it. TrayTrigger logs that, the game runs as normal, and its Played row in Activity & History says "Windows refused the power throttling exemption (the game may run as administrator)".
 
 ## Details
 

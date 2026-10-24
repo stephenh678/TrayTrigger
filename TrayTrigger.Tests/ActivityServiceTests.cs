@@ -804,4 +804,125 @@ public class ActivityServiceTests : IDisposable
         Assert.True(Assert.Single(ActivityService.Group(service.Entries)).Fixed);
         Assert.EndsWith("- fixed with Restore Previous", Assert.Single(service.RecentProblemLines()));
     }
+
+    [Fact]
+    public void RemoveEntries_TakesTheEntriesGiven_AndNothingElse()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Problem, "Elden Ring's script failed", subject: "Elden Ring");
+        service.Record(ActivityLevel.Problem, "Elden Ring's script failed", subject: "Elden Ring");
+        service.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades");
+        var row = ActivityService.Group(service.Entries).Single(g => g.Latest.Text.StartsWith("Elden"));
+
+        Assert.Equal(2, service.RemoveEntries(row.EntryIds!));
+        Assert.Equal("Played Hades · 48m", Assert.Single(service.Entries).Text);
+        Assert.Equal(0, service.RemoveEntries(row.EntryIds!));
+        Assert.Equal(0, service.RemoveEntries([]));
+        Assert.Single(Service().Entries); // kept across a restart
+    }
+
+    [Fact]
+    public void Remove_TakesWhatTheRowShows_NotEntriesTheSearchHidOrOnesRecordedSince()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Problem, "alpha failed", subject: "Hades", groupKey: "k");
+        service.Record(ActivityLevel.Problem, "beta failed", subject: "Hades", groupKey: "k");
+        var page = new ActivityViewModel(service) { ConfirmRemove = _ => true };
+
+        // The search shows one of the row's two entries; Remove takes that one.
+        page.SearchText = "alpha";
+        var row = Assert.Single(page.Groups);
+        Assert.Equal(1, row.Count);
+        // A third entry lands on the row's key while the row is on screen.
+        service.Record(ActivityLevel.Problem, "gamma failed", subject: "Hades", groupKey: "k");
+        row.RemoveCommand.Execute(null);
+
+        Assert.Equal(["beta failed", "gamma failed"], service.Entries.Select(e => e.Text).Order().ToArray());
+    }
+
+    [Fact]
+    public void RowRemove_AsksWithTheCount_AndRemovesTheWholeRow()
+    {
+        var service = Service();
+        for (int i = 0; i < 3; i++) service.Record(ActivityLevel.Problem, "Elden Ring's script failed", subject: "Elden Ring");
+        var page = new ActivityViewModel(service);
+        var row = Assert.Single(page.Groups);
+        Assert.Equal(3, row.Count);
+
+        int asked = 0;
+        page.ConfirmRemove = count => { asked = count; return false; };
+        row.RemoveCommand.Execute(null);
+        Assert.Equal(3, asked);
+        Assert.Equal(3, service.Entries.Count);
+
+        page.ConfirmRemove = _ => true;
+        row.RemoveCommand.Execute(null);
+        Assert.Empty(service.Entries);
+    }
+
+    [Fact]
+    public void RemoveIsOffered_ExceptForACriticalRowWhoseItemIsStillUnderNeedsAttention()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Critical, "The power plan wasn't put back", subject: "Hades", groupKey: "plan");
+        service.Record(ActivityLevel.Problem, "A script failed");
+        service.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades");
+        var page = new ActivityViewModel(service);
+        ActivityGroupViewModel Critical() => page.Groups.Single(g => g.Group.Latest.Level == ActivityLevel.Critical);
+
+        Assert.True(Critical().CanRemove); // nothing is waiting: the PC was put right since, or it is a record to check by hand
+        Assert.True(page.Groups.Single(g => g.Group.Latest.Level == ActivityLevel.Problem).CanRemove);
+        Assert.True(page.Groups.Single(g => g.Group.Latest.Level == ActivityLevel.Activity).CanRemove);
+
+        service.SetState(new AttentionItem("plan", "The power plan wasn't put back", "detail", "Restore Previous", null, IsCritical: true));
+        page.Refresh();
+        Assert.False(Critical().CanRemove);
+        Assert.True(page.Groups.Single(g => g.Group.Latest.Level == ActivityLevel.Problem).CanRemove);
+
+        service.ClearState("plan");
+        page.Refresh();
+        Assert.True(Critical().CanRemove);
+    }
+
+    [Fact]
+    public void ACriticalRow_IsKeptWhenAskedWithoutAnyWayToKnow_AndOnceFixedCanGo()
+    {
+        var service = Service();
+        var critical = service.Record(ActivityLevel.Critical, "The power plan wasn't put back", groupKey: "plan");
+        var group = ActivityService.Group(service.Entries).Single();
+
+        Assert.False(new ActivityGroupViewModel(group, DateTime.Now).CanRemove); // a row built without the page's actions
+
+        service.MarkFixed([critical.Id]);
+        Assert.True(new ActivityGroupViewModel(ActivityService.Group(service.Entries).Single(), DateTime.Now).CanRemove);
+    }
+
+    [Fact]
+    public void RowMenu_ShowOnlyThisGame_FillsTheSearch_AndOpenGameNeedsAGameThatExists()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades");
+        service.Record(ActivityLevel.Problem, "TrayTrigger couldn't do something");
+        var page = new ActivityViewModel(service);
+        var hades = page.Groups.Single(g => g.Subject == "Hades");
+        var general = page.Groups.Single(g => g.Subject.Length == 0);
+
+        Assert.True(hades.HasSubject);
+        Assert.False(general.HasSubject);
+        Assert.False(hades.CanOpenGame); // nothing says which games exist yet
+
+        page.CanOpenGameNamed = name => name == "Hades";
+        page.Refresh();
+        string? opened = null;
+        page.OpenGameNamed = name => opened = name;
+        hades = page.Groups.Single(g => g.Subject == "Hades");
+        Assert.True(hades.CanOpenGame);
+        Assert.False(page.Groups.Single(g => g.Subject.Length == 0).CanOpenGame);
+        hades.OpenGameCommand.Execute(null);
+        Assert.Equal("Hades", opened);
+
+        hades.ShowOnlyThisCommand.Execute(null);
+        Assert.Equal("Hades", page.SearchText);
+        Assert.Equal("Played Hades · 48m", Assert.Single(page.Groups).Text);
+    }
 }

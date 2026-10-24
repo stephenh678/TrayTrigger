@@ -27,7 +27,9 @@ public sealed record AttentionItem(string Key, string Text, string Detail, strin
 /// FIXED badge. One left unfixed - an earlier run's, say - keeps it off, so FIXED never hides it.</param>
 /// <param name="Varied">A setting row whose entries don't all say the same thing: a setting switched on,
 /// off and on again shares one row, so its count is of changes, not of times it was turned on.</param>
-public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyList<DateTime> TimesUtc, bool Fixed = false, bool Varied = false)
+/// <param name="EntryIds">The entries the row stands for, newest first: what Remove takes, so it takes what the row shows.</param>
+public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyList<DateTime> TimesUtc, bool Fixed = false, bool Varied = false,
+    IReadOnlyList<string>? EntryIds = null)
 {
     public int Count => TimesUtc.Count;
 }
@@ -38,10 +40,10 @@ public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyLi
 ///
 /// <para>Events are chosen, never promoted from the log: each is an explicit
 /// <see cref="Record(ActivityLevel, string, string?, string?, string?)"/> at a place in the code
-/// where something meaningful to a player happened. There is no per-entry read state and no
-/// dismiss: opening the page marks everything seen, and entries go by themselves after
-/// <see cref="RetentionDays"/> days (the page's Keep dropdown) or past <see cref="MaxEntries"/>.
-/// Clear history, beside it, empties Recent at once.</para>
+/// where something meaningful to a player happened. There is no per-entry read state: opening
+/// the page marks everything seen, and entries go by themselves after <see cref="RetentionDays"/>
+/// days (the page's Keep dropdown) or past <see cref="MaxEntries"/>. Clear history, beside it,
+/// empties Recent at once, and a row's menu can remove the entries that row shows (<see cref="RemoveEntries"/>).</para>
 /// </summary>
 public sealed class ActivityService
 {
@@ -187,6 +189,27 @@ public sealed class ActivityService
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Removes these entries - the ones a row of Recent shows - and no others: not an entry that shares the row's key
+    /// but is hidden by the search or tab, and not one recorded since the row was built. Returns how many went.
+    /// Nothing is recorded about it, as with Clear. Needs Attention is not touched.
+    /// </summary>
+    public int RemoveEntries(IEnumerable<string> entryIds)
+    {
+        var ids = entryIds.ToHashSet(StringComparer.Ordinal);
+        if (ids.Count == 0) return 0;
+        int removed;
+        lock (_lock)
+        {
+            removed = _entries.RemoveAll(e => ids.Contains(e.Id));
+            if (removed == 0) return 0;
+            LoggingService.Info("Activity", $"Removed {removed} {(removed == 1 ? "entry" : "entries")} from Activity & History.");
+            SaveLocked();
+        }
+        Changed?.Invoke();
+        return removed;
+    }
+
     private readonly bool _readOnly;
 
     /// <summary>Newest first.</summary>
@@ -322,7 +345,7 @@ public sealed class ActivityService
                 var critical = ordered.Where(e => e.Level == ActivityLevel.Critical).ToList();
                 bool isFixed = critical.Count > 0 && critical.All(e => e.FixedUtc != null);
                 bool varied = PerformanceActivity.IsSettingRowKey(g.Key) && ordered.Select(e => e.Text).Distinct(StringComparer.Ordinal).Count() > 1;
-                return new ActivityGroup(g.Key, ordered[0], ordered.Select(e => e.TimeUtc).ToList(), isFixed, varied);
+                return new ActivityGroup(g.Key, ordered[0], ordered.Select(e => e.TimeUtc).ToList(), isFixed, varied, ordered.Select(e => e.Id).ToList());
             })
             .OrderByDescending(g => g.Latest.TimeUtc)
             .ToList();
