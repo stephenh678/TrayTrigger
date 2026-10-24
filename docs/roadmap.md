@@ -62,3 +62,17 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 The 1.7.1 work has not been run on real games: the layout at 130% text on the Stutter tab, `tools\Audit-Layout.ps1`
 with TrayTrigger closed, the PLAYING tag on poster cards at large text sizes, and the new Edit Game and
 removal entries in Activity.
+
+## Open: Resizable BAR for undecided games (found 2026-10-24)
+
+The Aggressive tweak writes one value, `0x000F00BA = 1`, on the driver's **Global** profile. On the owner's PC the driver refused
+it (`NVAPI_INVALID_USER_PRIVILEGE`, -137) and the step was skipped, so the System page showed ENABLED while nothing was set.
+To settle, before changing the tweak or its Help page:
+
+1. Is elevation needed for this write? (The other NVIDIA writes did not warn. No source found says either way.)
+2. Third-party guides set three values on a game's **own** profile: `0x000F00BA`, `0x000F00BB` and `0x000F00FF` (the first to 1, the
+   third to `0x40000000`). Read what the driver holds for a game NVIDIA approved, and whether one Global value is enough.
+3. Then either mark it ADMIN (it would need an elevated step, since the bundled UAC runs PowerShell, not NVAPI), write the full set,
+   or take the tweak out. Until then it may not do what its Help page says.
+4. Make a failed write visible: a Problem entry in Activity & History, not only the log.
+
