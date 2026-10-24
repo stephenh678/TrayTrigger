@@ -66,13 +66,24 @@ removal entries in Activity.
 ## Open: Resizable BAR for undecided games (found 2026-10-24)
 
 The Aggressive tweak writes one value, `0x000F00BA = 1`, on the driver's **Global** profile. On the owner's PC the driver refused
-it (`NVAPI_INVALID_USER_PRIVILEGE`, -137) and the step was skipped, so the System page showed ENABLED while nothing was set.
-To settle, before changing the tweak or its Help page:
+the write (`NVAPI_INVALID_USER_PRIVILEGE`, -137, from SetSetting) and the step was skipped, so the System page showed ENABLED while
+nothing was set.
 
-1. Is elevation needed for this write? (The other NVIDIA writes did not warn. No source found says either way.)
-2. Third-party guides set three values on a game's **own** profile: `0x000F00BA`, `0x000F00BB` and `0x000F00FF` (the first to 1, the
-   third to `0x40000000`). Read what the driver holds for a game NVIDIA approved, and whether one Global value is enough.
-3. Then either mark it ADMIN (it would need an elevated step, since the bundled UAC runs PowerShell, not NVAPI), write the full set,
-   or take the tweak out. Until then it may not do what its Help page says.
-4. Make a failed write visible: a Problem entry in Activity & History, not only the log.
+Read with the debug capture `--test-rebar <out.txt>` (reads only, not elevated):
 
+- NVIDIA's own approved profiles (Cyberpunk 2077, Red Dead 2, Horizon Zero Dawn, Gears 5, AC Valhalla, Battlefield V, Borderlands 3,
+  Hitman 3, Forza Horizon 4) set only `0x000F00BA = 1`. The rejected ones (Hogwarts Legacy, Alan Wake 2, FFXVI) set it to 0.
+  `0x000F00BB` and `0x000F00FF` are absent on all of them except Red Dead 2 (`BB = 1`). So one value is what NVIDIA itself uses; the
+  three-value guides are about forcing it with extra options, and our single value is probably the right one.
+- The Global profile holds none of the three. The driver does not know their names (they are hidden settings), though profiles read fine.
+- Reading needs no elevation. Writing this hidden setting was refused without it. The other NVIDIA writes (power mode, frame cap)
+  gave no warning today.
+
+Still to settle:
+
+1. Does the write succeed elevated? Run `--test-rebar` style write test once with UAC, then once without, and restore.
+2. If it needs admin: mark it ADMIN and write it in an elevated step (the bundled UAC runs PowerShell, not NVAPI, so it is a new
+   elevated NVAPI step), or take the tweak out.
+3. Make a failed write visible: a Problem entry in Activity & History, not only the log, and not an ENABLED badge that says nothing.
+4. Does a Global value reach a game whose own profile lacks it (Hellraiser's profile has 16 settings and no value)? Only a game
+   running can show that.

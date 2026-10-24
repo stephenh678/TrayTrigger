@@ -1059,6 +1059,63 @@ public partial class App
                 ExitApplication();
                 return;
             }
+            // --test-rebar <out.txt> [exe,exe,...]: READS, never writes, the three NVIDIA Resizable BAR settings
+            // (0x000F00BA, 0x000F00BB, 0x000F00FF) on the Global profile and on the profile NVIDIA has for each
+            // executable, with where each value comes from, and says whether this process is elevated. For settling
+            // what the Resizable BAR tweak has to set.
+            if (e.Args[i].Equals("--test-rebar", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                string[] exes = i + 2 < e.Args.Length
+                    ? e.Args[i + 2].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    : ["Cyberpunk2077.exe", "RDR2.exe", "HorizonZeroDawn.exe", "Gears5.exe", "ACValhalla.exe", "bfv.exe", "Borderlands3.exe",
+                       "HITMAN3.exe", "DeadSpace.exe", "ForzaHorizon4.exe", "HogwartsLegacy.exe", "AlanWake2.exe", "ffxvi.exe",
+                       "DeltaForce-Win64-Shipping.exe", "eldenring.exe", "Hellraiser-Win64-Shipping.exe"];
+                var lines = new List<string>();
+                uint[] ids = [0x000F00BA, 0x000F00BB, 0x000F00FF];
+                try
+                {
+                    bool elevated = new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
+                        .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                    lines.Add($"this process is elevated: {elevated}");
+                    foreach (uint id in ids) lines.Add($"0x{id:X8} is '{NvApi.GetSettingName(id) ?? "(not known to the driver)"}'");
+                    using var session = NvApi.Session.TryOpen(out string? error);
+                    if (session == null)
+                    {
+                        lines.Add("could not open the driver's settings: " + error);
+                    }
+                    else
+                    {
+                        void Report(string label, IntPtr handle, NvApi.DrsProfileInfo info)
+                        {
+                            lines.Add($"{label}: profile '{info.ProfileName}' (NVIDIA's own: {info.IsPredefined}, {info.ApplicationCount} apps, {info.SettingCount} settings)");
+                            foreach (uint id in ids)
+                            {
+                                var v = session.GetSetting(handle, id, out string? err);
+                                lines.Add(v == null
+                                    ? $"    0x{id:X8}: {(err == null ? "absent" : "unreadable: " + err)}"
+                                    : $"    0x{id:X8}: 0x{v.CurrentValue:X8}, from {v.Origin}, NVIDIA's own value: {v.IsCurrentPredefined}");
+                            }
+                        }
+                        var global = session.GetGlobalProfile(out IntPtr globalHandle, out error);
+                        if (global == null) lines.Add("GLOBAL: could not be read: " + error);
+                        else Report("GLOBAL", globalHandle, global);
+                        foreach (string exe in exes)
+                        {
+                            var info = session.FindProfileForExecutable(exe, out IntPtr handle, out error);
+                            if (info == null) lines.Add($"{exe}: no profile ({error ?? "NVIDIA has none"})");
+                            else Report(exe, handle, info);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
             // --test-cursor <info|clip|free|service> <out.txt> [seconds]: checks the mouse confinement on this PC.
             // info reads the current confinement. clip confines the mouse to the left half of the main monitor and
             // waits [seconds], so a harness can kill the process and see whether Windows frees the mouse. free
