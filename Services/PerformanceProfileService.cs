@@ -1623,6 +1623,11 @@ public class PerformanceProfileService
                 LoggingService.Warn("PerformanceProfile", $"The elevated step did not put the NVIDIA setting back ({result.Problem}).");
                 failed.AddRange(planned);
             }
+            else
+            {
+                foreach (var record in planned)
+                    LoggingService.Info("PerformanceProfile", $"Restored {NvidiaSessionSettings[record.SettingId].What} (to {record.Previous ?? NvidiaGlobalSetting.AbsentToken}).");
+            }
         }
         return (known.Where(failed.Contains).ToList(), registryOk);
     }

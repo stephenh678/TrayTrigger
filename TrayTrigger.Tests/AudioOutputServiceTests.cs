@@ -22,6 +22,8 @@ internal sealed class FakeAudio : IAudioBackend
     public List<string> Calls = [];
     public bool FailSet;
     public AudioRole? FailOnlyRole;
+    /// <summary>Windows moves the games job and the music-and-video job together: setting one sets the other.</summary>
+    public bool LinkConsoleAndMultimedia;
     public System.Action? DuringSet;
 
     public IReadOnlyList<AudioDevice> PlaybackDevices() => Devices;
@@ -35,8 +37,10 @@ internal sealed class FakeAudio : IAudioBackend
         DuringSet?.Invoke();
         if (FailSet || FailOnlyRole == role) return false;
         // A device id says which side it is on, as it does in Windows.
-        if (Mics.Any(m => m.Id == id)) MicDefaults[role] = id;
-        else Defaults[role] = id;
+        var table = Mics.Any(m => m.Id == id) ? MicDefaults : Defaults;
+        table[role] = id;
+        if (LinkConsoleAndMultimedia && role is AudioRole.Console or AudioRole.Multimedia)
+            table[role == AudioRole.Console ? AudioRole.Multimedia : AudioRole.Console] = id;
         return true;
     }
 }
@@ -54,6 +58,25 @@ public sealed class AudioOutputServiceTests : System.IDisposable
 
     /// <summary>The two jobs a game's sound moves; the communications job is never touched.</summary>
     private static bool AllRolesAre(FakeAudio a, string id) => a.Defaults[AudioRole.Console] == id && a.Defaults[AudioRole.Multimedia] == id;
+
+    /// <summary>
+    /// Windows sets the games job and the music-and-video job together, so putting one back moves the other with it. The result has to be
+    /// the same: both back, the communications job never touched.
+    /// </summary>
+    [Fact]
+    public void WhenWindowsLinksTheTwoJobs_BothAreSetAndBothPutBack()
+    {
+        var (service, audio) = Make();
+        audio.LinkConsoleAndMultimedia = true;
+
+        Assert.Equal(AudioApply.Applied, service.Begin(Game()));
+        Assert.True(AllRolesAre(audio, "headset"));
+
+        service.End("a");
+        Assert.True(AllRolesAre(audio, "speakers"));
+        Assert.Equal("speakers", audio.Defaults[AudioRole.Communications]);
+        Assert.False(System.IO.File.Exists(SnapshotPath));
+    }
 
     [Fact]
     public void AGameWithNoOutput_TouchesNothing()

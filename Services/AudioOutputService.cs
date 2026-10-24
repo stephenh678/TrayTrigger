@@ -307,7 +307,15 @@ internal sealed class AudioOutputService
                  })
         {
             if (string.IsNullOrEmpty(previous)) continue;
-            if (!string.Equals(DefaultOf(role), record.Device, StringComparison.OrdinalIgnoreCase))
+            string? now = DefaultOf(role);
+            // Windows moves the games job and the music-and-video job together (checked on 2026-10-24: setting one set both), so the
+            // job put back first may already have taken the other with it.
+            if (string.Equals(now, previous, StringComparison.OrdinalIgnoreCase))
+            {
+                LoggingService.Verbose("Audio", N($"The {role} sound output is already back after '{name}'."));
+                continue;
+            }
+            if (!string.Equals(now, record.Device, StringComparison.OrdinalIgnoreCase))
             {
                 LoggingService.Info("Audio", N($"The {role} sound output changed since '{name}' set it; left as it is."));
                 continue;

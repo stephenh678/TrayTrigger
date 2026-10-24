@@ -1022,6 +1022,28 @@ public partial class App
                     string NameOf(string? id) => devices.Where(d => d.Id == id).Select(d => d.Name).FirstOrDefault() ?? id ?? "none";
                     foreach (var d in devices) lines.Add($"device {d.Name} id={d.Id}");
                     foreach (var (role, id) in originals) lines.Add($"{role} -> {NameOf(id)}");
+                    // "order": does what the service does, one role at a time, and says what every role is after each call, to
+                    // show whether putting back one role moves another. The jobs go back to what they were at the end whatever happens.
+                    if (action == "order")
+                    {
+                        var other = devices.Where(d => d.Id != originals[AudioRole.Console]).Cast<AudioDevice?>().FirstOrDefault();
+                        if (other is not { } target) { lines.Add("only one playback device: nothing to switch to"); }
+                        else
+                        {
+                            void Show(string when) => lines.Add($"{when}: " + string.Join(", ", Enum.GetValues<AudioRole>().Select(r => $"{r}={NameOf(backend.DefaultId(r))}")));
+                            Show("start");
+                            lines.Add($"SetDefault(headset, Console) -> {backend.SetDefault(target.Id, AudioRole.Console)}"); Show("after setting Console to the other device");
+                            lines.Add($"SetDefault(headset, Multimedia) -> {backend.SetDefault(target.Id, AudioRole.Multimedia)}"); Show("after setting Multimedia to the other device");
+                            PumpDispatcher(TimeSpan.FromSeconds(1));
+                            lines.Add($"SetDefault(original, Console) -> {backend.SetDefault(originals[AudioRole.Console]!, AudioRole.Console)}"); Show("after putting Console back");
+                            PumpDispatcher(TimeSpan.FromMilliseconds(500));
+                            Show("half a second later");
+                            if (backend.DefaultId(AudioRole.Multimedia) != originals[AudioRole.Multimedia])
+                            {
+                                lines.Add($"SetDefault(original, Multimedia) -> {backend.SetDefault(originals[AudioRole.Multimedia]!, AudioRole.Multimedia)}"); Show("after putting Multimedia back");
+                            }
+                        }
+                    }
                     if (action == "switch")
                     {
                         var other = devices.Where(d => d.Id != originals[AudioRole.Console]).Cast<AudioDevice?>().FirstOrDefault();
