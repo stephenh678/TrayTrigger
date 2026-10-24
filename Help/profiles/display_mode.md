@@ -27,7 +27,7 @@ A rate or resolution the monitor doesn't list is never asked for; the game start
 
 ## Monitor
 
-With more than one monitor attached, the **Monitor** list picks which one the resolution, refresh rate and main display choice apply to. **Main display** (the default) means whichever monitor is the main one when the game starts. **Identify** puts a large number on every monitor for a moment, the same number Windows' own Identify shows, with the monitor's name under it.
+With more than one monitor attached, the **Monitor** list picks which one the resolution, refresh rate and main display choice apply to. **Default (main display)** means whichever monitor is the main one when the game starts. **Identify** puts a large number on every monitor for a moment, the same number Windows' own Identify shows, with the monitor's name under it.
 
 A game remembers its monitor by the monitor's own identity, not by the number Windows gives it, which can change when cables are swapped. If that monitor isn't connected when the game starts, the display is left alone and Activity & History says so.
 
@@ -75,7 +75,7 @@ The playback device the game's sound plays through while it runs, put back when 
 The recording device Windows uses while the game runs, put back when it ends, for a game whose voice chat or recording should use a different microphone from the one you normally have, such as a headset's.
 
 - It works exactly like Sound output: it moves the device used by default, not the one a program uses for calls. A program set to the Communications device, or one with its own microphone choice (the game's settings, Discord, OBS), keeps that choice.
-- The list starts at **Default (Windows' choice)**, which changes nothing, and shows only with more than one recording device.
+- The list starts at **Default**, which leaves Windows' current microphone in use, and shows only with more than one recording device.
 - A microphone that isn't connected when the game starts is left alone, the game starts as usual, and Activity & History says so.
 - It is put back only while it still has the job TrayTrigger gave it, and also after a crash, at the next start.
 - TrayTrigger only chooses which microphone Windows uses; it never records or listens to anything.

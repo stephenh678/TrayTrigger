@@ -637,7 +637,7 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>One choice in the Monitor list. An empty id is the main display, whichever monitor that is.</summary>
     public sealed record MonitorOption(string Id, string Label);
 
-    internal const string MainDisplayLabel = "Main display";
+    internal const string MainDisplayLabel = "Default (main display)";
 
     /// <summary>
     /// The Monitor list: the main display, then each attached monitor by name. A monitor the game was set up for that
@@ -657,7 +657,7 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>One choice in the Sound output list: no change (empty id), or a playback device.</summary>
     public sealed record AudioOption(string Id, string Label);
 
-    internal const string NoAudioChangeLabel = "Default (Windows' choice)";
+    internal const string NoAudioChangeLabel = "Default";
 
     internal static IReadOnlyList<AudioOption> BuildAudioOptions(IReadOnlyList<AudioDevice> devices, string savedId, string missingLabel = "A sound output that isn't connected")
     {
@@ -810,7 +810,7 @@ public class GameEditViewModel : ViewModelBase
         ShowMonitorChoice = _monitors.Count > 1 || !string.IsNullOrEmpty(game.DisplayMonitorId);
         MonitorNote = ShowMonitorChoice ? string.Empty : _monitors.Count == 0
             ? "The monitors can't be read here (a remote session, for example)."
-            : $"Only one monitor is connected ({_monitors[0].Label}). With two or more, this list picks the monitor, and options to make it the main display, keep the mouse on it and dim the others appear.";
+            : $"Only one monitor is connected ({(string.IsNullOrWhiteSpace(_monitors[0].Name) ? "Monitor" : _monitors[0].Name)}, {_monitors[0].Bounds.Right - _monitors[0].Bounds.Left} × {_monitors[0].Bounds.Bottom - _monitors[0].Bounds.Top}). With two or more, this list picks the monitor, and options to make it the main display, keep the mouse on it and dim the others appear.";
         _makeMainDisplay = game.MakeMainDisplay;
         _dimOtherScreens = game.DimOtherScreens;
         _initialDim = game.DimOtherScreens;

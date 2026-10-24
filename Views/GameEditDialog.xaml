@@ -739,7 +739,7 @@
                                 <TextBlock Text="{Binding AudioNote}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                            Visibility="{Binding HasAudioNote, Converter={StaticResource BoolToVis}}"
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
-                                <TextBlock Text="The game's sound plays through this device while it runs, and goes back when it ends. A sound output chosen for this game in Windows' volume mixer overrides it."
+                                <TextBlock Visibility="{Binding ShowAudio, Converter={StaticResource BoolToVis}}" Text="Default leaves Windows' current device in use. Otherwise the game's sound plays through the device you pick while it runs, and goes back when it ends. A sound output chosen for this game in Windows' volume mixer overrides it."
                                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
                             </StackPanel>
@@ -754,7 +754,7 @@
                                 <TextBlock Text="{Binding MicrophoneNote}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                            Visibility="{Binding HasMicrophoneNote, Converter={StaticResource BoolToVis}}"
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
-                                <TextBlock Text="Windows uses this microphone while the game runs, and goes back when it ends. A program set to use the Communications device, or a microphone chosen inside the game or the chat app, keeps its own."
+                                <TextBlock Visibility="{Binding ShowMicrophone, Converter={StaticResource BoolToVis}}" Text="Default leaves Windows' current microphone in use. Otherwise Windows uses the one you pick while the game runs, and goes back when it ends. A program set to use the Communications device, or a microphone chosen inside the game or the chat app, keeps its own."
                                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
                             </StackPanel>
