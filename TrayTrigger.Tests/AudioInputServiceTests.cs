@@ -145,4 +145,26 @@ public sealed class AudioInputServiceTests : System.IDisposable
 
         Assert.Equal([ViewModels.GameEditViewModel.NoAudioChangeLabel, "Desk microphone", "A microphone that isn't connected"], options.Select(o => o.Label).ToList());
     }
+
+    [Fact]
+    public void TheMicrophoneAndTheSoundOutput_ReportTheirProblemsInSeparateRows()
+    {
+        var audio = new FakeAudio();
+        audio.Devices.RemoveAll(d => d.Id == "headset");
+        audio.Mics.RemoveAll(m => m.Id == "headset-mic");
+        var output = new AudioOutputService(audio, System.IO.Path.Combine(_dir, "audio-session.json"));
+        var mic = new AudioOutputService(audio, SnapshotPath, AudioFlow.Recording);
+        var activity = new ActivityService(_dir, readOnly: false);
+        ActivityService.Current = activity;
+        try
+        {
+            var game = new GameEntry { Id = "a", Name = "Game a", AudioOutputDeviceId = "headset", AudioInputDeviceId = "headset-mic" };
+            output.Begin(game);
+            mic.Begin(game);
+
+            var rows = activity.Entries.Where(e => e.Level == ActivityLevel.Problem).Select(e => e.GroupKey).Distinct().ToList();
+            Assert.Equal(2, rows.Count);
+        }
+        finally { ActivityService.Current = null; }
+    }
 }

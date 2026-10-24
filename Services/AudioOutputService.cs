@@ -111,7 +111,10 @@ internal sealed class AudioOutputService
     private bool Recording => _flow == AudioFlow.Recording;
 
     /// <summary>The wording is written for the sound output; the microphone's says "microphone" in its place.</summary>
-    private string N(string text) => Recording ? text.Replace("sound output", "microphone") : text;
+    private string N(string text) => Recording
+        ? text.Replace("sound output", "microphone").Replace("the sound as it is", "the microphone as it is")
+              .Replace("left the sound alone", "left the microphone alone").Replace("sound change", "microphone change")
+        : text;
 
     private IReadOnlyList<AudioDevice> Devices() => Recording ? _backend.RecordingDevices() : _backend.PlaybackDevices();
     private string? DefaultOf(AudioRole role) => Recording ? _backend.DefaultRecordingId(role) : _backend.DefaultId(role);
@@ -119,13 +122,13 @@ internal sealed class AudioOutputService
 
     public bool Wants(GameEntry game) => !string.IsNullOrWhiteSpace(WantedId(game));
 
-    /// <summary>The playback devices that are plugged in, for Edit Game's list; empty when they can't be read.</summary>
+    /// <summary>The devices of this service's kind (playback, or recording for the microphone) that are plugged in, for Edit Game's list; empty when they can't be read.</summary>
     public IReadOnlyList<AudioDevice> AvailableDevices()
     {
         try { return Devices(); }
         catch (Exception ex)
         {
-            LoggingService.Swallowed("Audio", ex, "listing the playback devices; Edit Game shows none");
+            LoggingService.Swallowed("Audio", ex, N("listing the devices; Edit Game shows none"));
             return [];
         }
     }
@@ -141,7 +144,7 @@ internal sealed class AudioOutputService
         catch (Exception ex)
         {
             LoggingService.Error("Audio", N($"Setting the sound output for '{game.Name}' failed: {ex.Message}"), ex);
-            Problem(game.Id, game.Name, N($"{game.Name}: the sound output couldn't be set"), "The game starts with the sound as it is.");
+            Problem(game.Id, game.Name, N($"{game.Name}: the sound output couldn't be set"), N("The game starts with the sound as it is."));
             return AudioApply.Failed;
         }
     }
@@ -197,7 +200,7 @@ internal sealed class AudioOutputService
             if (!WriteSnapshot(record))
             {
                 Skip(game, "TrayTrigger couldn't write down what it was about to change");
-                Problem(game.Id, game.Name, N($"{game.Name}: the sound output wasn't changed"), "TrayTrigger couldn't save a note of the change, so it left the sound alone.");
+                Problem(game.Id, game.Name, N($"{game.Name}: the sound output wasn't changed"), N("TrayTrigger couldn't save a note of the change, so it left the sound alone."));
                 return AudioApply.Failed;
             }
 
@@ -215,7 +218,7 @@ internal sealed class AudioOutputService
                 {
                     DeleteSnapshot();
                     Skip(game, N("Windows wouldn't change the sound output"));
-                    Problem(game.Id, game.Name, N($"{game.Name}: Windows wouldn't change the sound output"), "The game starts with the sound as it is.");
+                    Problem(game.Id, game.Name, N($"{game.Name}: Windows wouldn't change the sound output"), N("The game starts with the sound as it is."));
                 }
                 else
                 {
@@ -370,7 +373,7 @@ internal sealed class AudioOutputService
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            LoggingService.Warn("Audio", $"Couldn't write the note of the sound change: {ex.Message}");
+            LoggingService.Warn("Audio", N($"Couldn't write the note of the sound change: {ex.Message}"));
             return false;
         }
     }
@@ -380,7 +383,7 @@ internal sealed class AudioOutputService
         try { if (File.Exists(_snapshotPath)) File.Delete(_snapshotPath); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            LoggingService.Warn("Audio", $"Couldn't remove the note of the sound change: {ex.Message}");
+            LoggingService.Warn("Audio", N($"Couldn't remove the note of the sound change: {ex.Message}"));
         }
     }
 
@@ -391,5 +394,5 @@ internal sealed class AudioOutputService
     }
 
     private void Problem(string gameId, string gameName, string text, string detail) =>
-        ActivityService.Add(ActivityLevel.Problem, text, subject: gameName, detail: detail, groupKey: $"audio|{gameId}");
+        ActivityService.Add(ActivityLevel.Problem, text, subject: gameName, detail: detail, groupKey: $"{(Recording ? "audio-input" : "audio")}|{gameId}");
 }

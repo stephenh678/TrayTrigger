@@ -925,7 +925,7 @@
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
                             <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
                                 <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                <Run Text=" are hidden. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
+                                <Run Text=" are turned off. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
                             </TextBlock>
                         </DockPanel>
                     </Border>

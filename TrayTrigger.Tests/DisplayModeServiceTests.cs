@@ -565,4 +565,26 @@ public sealed class DisplayModeServiceTests : System.IDisposable
             [new DisplayMode(3840, 2160, 60), new DisplayMode(2560, 1440, 144), new DisplayMode(1920, 1080, 144), new DisplayMode(1920, 1080, 60)],
             service.AvailableModes().ToList());
     }
+
+    [Fact]
+    public void ASavedRateTheDisplayDoesNotList_IsOnlyOfferedUnderTheResolutionItWasSavedWith()
+    {
+        var saved = new DisplayMode(1920, 1080, 120);
+        var none = new ViewModels.GameEditViewModel.ResolutionOption(0, 0, "Default");
+
+        // Under Default, and under another resolution, the 120 Hz that belongs to 1920 × 1080 is not a choice.
+        Assert.DoesNotContain(ViewModels.GameEditViewModel.BuildRateOptions(Sample, none, saved, new DisplayMode(2560, 1440, 60)), r => r.Hz == 120);
+        Assert.DoesNotContain(ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(3840, 2160, "4K"), saved), r => r.Hz == 120);
+        // Under the resolution it was saved with, it stays, labelled.
+        Assert.Contains(ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(1920, 1080, "HD"), saved), r => r.Hz == 120);
+    }
+
+    [Fact]
+    public void ASavedRateOnItsOwn_IsOfferedWhileTheResolutionIsDefault()
+    {
+        var saved = new DisplayMode(0, 0, 120);
+        var none = new ViewModels.GameEditViewModel.ResolutionOption(0, 0, "Default");
+
+        Assert.Contains(ViewModels.GameEditViewModel.BuildRateOptions(Sample, none, saved, new DisplayMode(2560, 1440, 60)), r => r.Hz == 120);
+    }
 }

@@ -325,4 +325,17 @@ public sealed class GameEditDisplayTests : IDisposable
         Assert.False(vm.ShowMicrophone);
     });
 
+    [Fact]
+    public void ChoosingAnotherMonitor_BringsTheDisplayListsBack_WhenTheSavedMonitorIsNotConnected() => Sta(() =>
+    {
+        var vm = Open(new GameEntry { Name = "Hades", Category = "Action", DisplayMonitorId = "UNPLUGGED" });
+        Assert.False(vm.ShowDisplay);
+        Assert.Contains("isn't connected", vm.DisplayNote);
+
+        vm.SelectedMonitor = vm.MonitorOptions[0];
+
+        Assert.True(vm.ShowDisplay);
+        Assert.False(vm.HasDisplayNote);
+        Assert.NotEmpty(vm.ResolutionOptions.Skip(1));
+    });
 }

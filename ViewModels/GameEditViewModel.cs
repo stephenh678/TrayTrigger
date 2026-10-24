@@ -560,7 +560,8 @@ public class GameEditViewModel : ViewModelBase
         var rates = at.Select(m => m.RefreshHz).Distinct().OrderByDescending(hz => hz).ToList();
         var options = new List<RateOption> { new(0, DefaultLabel) };
         options.AddRange(rates.Select(hz => new RateOption(hz, $"{hz} Hz")));
-        if (saved is { RefreshHz: > 0 } kept && !rates.Contains(kept.RefreshHz))
+        // Only under the resolution it was saved with (none, for a rate saved on its own): under another one it is not a choice.
+        if (saved is { RefreshHz: > 0 } kept && kept.Width == resolution.Width && kept.Height == resolution.Height && !rates.Contains(kept.RefreshHz))
         {
             options.Add(new RateOption(kept.RefreshHz, $"{kept.RefreshHz} Hz (this display doesn't list it)"));
         }
@@ -570,6 +571,35 @@ public class GameEditViewModel : ViewModelBase
     private IReadOnlyList<DisplayMode> _availableModes = [];
     private DisplayMode? _savedMode;
     private DisplayMode? _desktopMode;
+
+    /// <summary>The Resolution and Refresh rate lists for one monitor, what is selected in them, and whether they can be used.</summary>
+    private sealed record DisplayLists(
+        IReadOnlyList<DisplayMode> Modes, DisplayMode? Desktop,
+        IReadOnlyList<ResolutionOption> Resolutions, ResolutionOption Resolution,
+        IReadOnlyList<RateOption> Rates, RateOption Rate,
+        bool Usable, string Note);
+
+    /// <summary>
+    /// The lists for a monitor (the main display when <paramref name="monitorId"/> is empty), with <paramref name="chosen"/> selected where
+    /// the monitor offers it. A mode the monitor doesn't list is kept at the end, labelled, so opening and saving Edit Game doesn't
+    /// quietly drop it. Used when the dialog opens and each time the monitor changes, so both work the same way.
+    /// </summary>
+    private DisplayLists BuildDisplayLists(string monitorId, DisplayMode? chosen)
+    {
+        var modes = DisplayModeService.Shared.AvailableModes(monitorId);
+        var desktop = DisplayModeService.Shared.CurrentMode(monitorId);
+        var resolutions = BuildResolutionOptions(modes, chosen);
+        var resolution = resolutions.FirstOrDefault(o => chosen is { Width: > 0 } s && o.Width == s.Width && o.Height == s.Height) ?? resolutions[0];
+        var rates = BuildRateOptions(modes, resolution, chosen, desktop);
+        var rate = rates.FirstOrDefault(r => r.Hz == chosen?.RefreshHz) ?? rates[0];
+
+        bool usable = modes.Count > 0 || chosen != null;
+        bool unplugged = !string.IsNullOrEmpty(monitorId) && !_monitors.Any(m => string.Equals(m.Id, monitorId, StringComparison.OrdinalIgnoreCase));
+        string note = usable ? string.Empty
+            : unplugged ? "That monitor isn't connected, so its resolutions and refresh rates can't be listed. Pick another monitor."
+            : "The display's resolutions and refresh rates can't be read here (a remote session, for example).";
+        return new DisplayLists(modes, desktop, resolutions, resolution, rates, rate, usable, note);
+    }
 
     public IReadOnlyList<ResolutionOption> ResolutionOptions { get; private set; } = [];
 
@@ -680,26 +710,27 @@ public class GameEditViewModel : ViewModelBase
         set
         {
             _selectedMonitor = value ?? MonitorOptions[0];
-            // The lists are of this monitor's modes. What is chosen now carries over (nothing chosen stays nothing); a mode
-            // this monitor doesn't list is kept at the end, labelled, like the one the game opened with.
+            // The lists are of this monitor's modes. What is chosen now carries over (nothing chosen stays nothing).
             var chosen = SelectedDisplayMode;
+            var lists = BuildDisplayLists(_selectedMonitor.Id, chosen);
             _savedMode = chosen;
-            _availableModes = DisplayModeService.Shared.AvailableModes(_selectedMonitor.Id);
-            _desktopMode = DisplayModeService.Shared.CurrentMode(_selectedMonitor.Id);
-            var resolutions = BuildResolutionOptions(_availableModes, chosen);
-            var resolution = resolutions.FirstOrDefault(o => chosen is { Width: > 0 } s && o.Width == s.Width && o.Height == s.Height) ?? resolutions[0];
-            var rates = BuildRateOptions(_availableModes, resolution, chosen, _desktopMode);
-            var rate = rates.FirstOrDefault(r => r.Hz == chosen?.RefreshHz) ?? rates[0];
+            _availableModes = lists.Modes;
+            _desktopMode = lists.Desktop;
 
             // The lists first and the choices after: replacing a ComboBox's items clears its selection and writes that back here.
-            ResolutionOptions = resolutions;
+            ResolutionOptions = lists.Resolutions;
             OnPropertyChanged(nameof(ResolutionOptions));
-            RateOptions = rates;
-            _selectedResolution = resolution;
-            _selectedRate = rate;
+            RateOptions = lists.Rates;
+            _selectedResolution = lists.Resolution;
+            _selectedRate = lists.Rate;
+            ShowDisplay = lists.Usable;
+            DisplayNote = lists.Note;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedResolution));
             OnPropertyChanged(nameof(SelectedRate));
+            OnPropertyChanged(nameof(ShowDisplay));
+            OnPropertyChanged(nameof(DisplayNote));
+            OnPropertyChanged(nameof(HasDisplayNote));
             OnPropertyChanged(nameof(ShowMakeMainDisplay));
             OnPropertyChanged(nameof(DisplayHint));
         }
@@ -815,14 +846,15 @@ public class GameEditViewModel : ViewModelBase
         _dimOtherScreens = game.DimOtherScreens;
         _initialDim = game.DimOtherScreens;
 
-        _availableModes = DisplayModeService.Shared.AvailableModes(_selectedMonitor.Id);
-        _desktopMode = DisplayModeService.Shared.CurrentMode(_selectedMonitor.Id);
-        ResolutionOptions = BuildResolutionOptions(_availableModes, _savedMode);
-        _selectedResolution = ResolutionOptions.FirstOrDefault(o => _savedMode is { Width: > 0 } s && o.Width == s.Width && o.Height == s.Height) ?? ResolutionOptions[0];
-        _rateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode, _desktopMode);
-        _selectedRate = _rateOptions.FirstOrDefault(r => r.Hz == _savedMode?.RefreshHz) ?? _rateOptions[0];
-        ShowDisplay = _availableModes.Count > 0 || _savedMode != null;
-        DisplayNote = ShowDisplay ? string.Empty : "The display's resolutions and refresh rates can't be read here (a remote session, for example).";
+        var lists = BuildDisplayLists(_selectedMonitor.Id, _savedMode);
+        _availableModes = lists.Modes;
+        _desktopMode = lists.Desktop;
+        ResolutionOptions = lists.Resolutions;
+        _selectedResolution = lists.Resolution;
+        _rateOptions = lists.Rates;
+        _selectedRate = lists.Rate;
+        ShowDisplay = lists.Usable;
+        DisplayNote = lists.Note;
 
         var devices = AudioOutputService.Shared.AvailableDevices();
         AudioOptions = BuildAudioOptions(devices, game.AudioOutputDeviceId);
@@ -885,7 +917,7 @@ public class GameEditViewModel : ViewModelBase
 
     public bool ShowScriptsCard { get; }
 
-    /// <summary>The one-line "scripts are hidden" stub shown in place of the scripts card, so
+    /// <summary>The one-line "scripts are turned off" note shown in place of the scripts card, so
     /// the feature stays discoverable from Edit Game while the Settings switch is off.</summary>
     public bool ShowScriptsStub => !ShowScriptsCard;
 
@@ -934,7 +966,7 @@ public class GameEditViewModel : ViewModelBase
     public bool ShowLaunchCard => IsAllSection || IsLaunchSection;
     public bool ShowPerformanceCard => IsAllSection || IsPerformanceSection;
     public bool ShowScriptsCardOnTab => ShowScriptsCard && (IsAllSection || IsScriptsSection);
-    /// <summary>The "scripts are hidden" stub has no tab of its own; it shows on All, as it always did.</summary>
+    /// <summary>The "scripts are turned off" note shows on the Scripts tab, and last on All.</summary>
     public bool ShowScriptsStubOnTab => ShowScriptsStub && (IsAllSection || IsScriptsSection);
 
     public ICommand SelectSectionCommand { get; }
@@ -951,16 +983,8 @@ public class GameEditViewModel : ViewModelBase
     }
 
     /// <summary>The tabs in strip order. Scripts is always there: while scripts are off it holds the note about turning them on.</summary>
-    public IReadOnlyList<GameEditSection> AvailableSections
-    {
-        get
-        {
-            var sections = new List<GameEditSection> { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance };
-            sections.Add(GameEditSection.Display);
-            sections.Add(GameEditSection.Scripts);
-            return sections;
-        }
-    }
+    public IReadOnlyList<GameEditSection> AvailableSections { get; } =
+        [GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts];
 
     /// <summary>Ctrl+Tab and Ctrl+Shift+Tab: the next or previous tab, wrapping at the ends.</summary>
     public void MoveSection(int step)
