@@ -57,6 +57,18 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 10. **Library tiering.** Says which unplayed games to move off the SSD and opens the launcher's own move
     option.
 
+## Done in 1.7.1-beta.4 (2026-10-24)
+
+Not roadmap items: a code-tidying pass with no change in what TrayTrigger does. One commit.
+
+- **Unused code removed.** Sixteen unused members, parameters and assignments, found by name search and the compiler's unused-code checks.
+- **Big files split.** `PerformanceProfileService`, `ProcessLauncherService`, `ImportCoordinator` and `App` are partial classes by area
+  (NVIDIA, admin put-back, Steam, Battle.net, exit tracking, drop import, ignored games, the tray, and so on). The seven launcher imports share one
+  method; startup is three named steps. Guard tests now name `App.Tray.cs`.
+- **View models split.** `SettingsViewModel`, `GameEditViewModel` and `LibraryViewModel` are partial classes by area (scan locations, scripts, display and hardware, launch, removal, DLSS, categories and so on). Still one class each, so no binding changes.
+- **Two more repeats gone.** The seven launcher "ignore this game" methods share one; the "process has already exited" checks (id, name, main window, start time) share a small `SafeProcess` helper.
+- **Registry reads.** A small `RegistryValues` helper replaces the repeated open, read and catch blocks in 14 tweak checks and two other reads.
+
 ## Done in 1.7.1-beta.3 (2026-10-24)
 
 Not roadmap items: an outside review of the code (Gemini; each claim checked against the code, some wrong or already fixed), the owner's

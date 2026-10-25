@@ -26,7 +26,6 @@ public class SystemTweakItem
     public bool CanToggle { get; set; } = true;
     public bool HasCustomAction { get; set; }
     public string CustomActionLabel { get; set; } = "";
-    public string RegistryKeyPath { get; set; } = "";
 
     /// <summary>
     /// Status-only rows (Core Isolation): shown with a neutral ON/OFF badge, never counted in the

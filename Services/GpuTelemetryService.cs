@@ -145,13 +145,13 @@ public sealed class GpuTelemetryService : IDisposable
     {
         var values = new List<KeyValuePair<string, double>>();
         uint size = 0;
-        int status = PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, ref size, out uint count, IntPtr.Zero);
+        int status = PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, ref size, out _, IntPtr.Zero);
         if (status != PDH_MORE_DATA || size == 0) return values;
 
         IntPtr buffer = Marshal.AllocHGlobal((int)size);
         try
         {
-            if (PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, ref size, out count, buffer) != 0)
+            if (PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, ref size, out uint count, buffer) != 0)
                 return values;
 
             int itemSize = Marshal.SizeOf<PDH_FMT_COUNTERVALUE_ITEM_W>();

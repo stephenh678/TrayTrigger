@@ -311,16 +311,8 @@ public sealed partial class ThemeService
     /// <summary>True when Windows' "choose your default app mode" is Light.</summary>
     internal static bool WindowsPrefersLight()
     {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-            return key?.GetValue("AppsUseLightTheme") is int v && v != 0;
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Swallowed("Theme", ex, "reading Windows' app mode");
-            return false;
-        }
+        return RegistryValues.Dword(Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            "AppsUseLightTheme", "Theme", "reading Windows' app mode") is int v && v != 0;
     }
 
     private void FollowWindows(bool follow)

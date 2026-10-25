@@ -93,7 +93,6 @@ public sealed class GpuCardViewModel : ViewModelBase
 
     /// <summary>"PCIe 5.0 x16"; empty for a built-in GPU, which has no link of its own.</summary>
     public string PcieDisplay => Info.PcieDisplay;
-    public bool HasPcie => Info.HasPcieLink;
     public bool IsPcieNarrowed => Info.IsPcieNarrowed;
     public string PcieWarning => Info.PcieWarning;
 

@@ -159,10 +159,9 @@ public static partial class ProcessPathResolver
                 if (!includeHelpers && IsKnownHelperProcess(path)) continue;
                 if (IsCriticalProcess(proc.Id)) continue;
 
-                bool hasWindow = false;
-                DateTime start = DateTime.MinValue;
-                try { hasWindow = proc.MainWindowHandle != IntPtr.Zero; } catch { /* per process, per poll: it has already exited */ }
-                try { start = proc.StartTime; } catch { /* per process, per poll: it has already exited */ }
+                // Per process, per poll: either may have exited since it was listed.
+                bool hasWindow = SafeProcess.MainWindow(proc) != IntPtr.Zero;
+                DateTime start = SafeProcess.StartTime(proc);
                 results.Add(new ProcessUnderDirectory(proc.Id, path, hasWindow, start));
             }
             catch

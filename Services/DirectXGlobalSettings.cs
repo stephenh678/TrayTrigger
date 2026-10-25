@@ -57,12 +57,7 @@ public static class DirectXGlobalSettings
 
     public static string? ReadRaw()
     {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(KeyPath);
-            return key?.GetValue(ValueName) as string;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("DirectXGlobalSettings", ex, "reading the setting"); return null; }
+        return RegistryValues.Read(Registry.CurrentUser, KeyPath, ValueName, "DirectXGlobalSettings", "reading the setting") as string;
     }
 
     /// <summary>True when the token is present and equals "1".</summary>

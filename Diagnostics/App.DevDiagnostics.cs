@@ -4574,15 +4574,6 @@ public partial class App
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int max);
     [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
 
-    /// <summary>For the --test-cursor capture: brings a test window to the front even from a background process (a tap of Alt first, which Windows accepts as input).</summary>
-    private static void ForceForeground(Window window)
-    {
-        const byte VK_MENU = 0x12; const uint KEYEVENTF_KEYUP = 0x2;
-        keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
-        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(window).Handle);
-        window.Activate();
-    }
 #endif
 }
 #endif

@@ -221,7 +221,6 @@ public sealed class ThemeCornersEditor : ViewModelBase
     private CornerShape _shape;
     private double _roundness = ThemeCorners.DefaultStep;
     private bool _showCustomize;
-    private readonly string _initial;
 
     internal ThemeCornersEditor(ThemeDefinition source)
     {
@@ -261,7 +260,6 @@ public sealed class ThemeCornersEditor : ViewModelBase
         _showCustomize = true;
         ResetCommand = new RelayCommand(Reset);
         ToggleCustomizeCommand = new RelayCommand(() => { ShowCustomize = !ShowCustomize; });
-        _initial = Snapshot();
     }
 
     public CornerRow Tags { get; }
@@ -351,8 +349,6 @@ public sealed class ThemeCornersEditor : ViewModelBase
 
     internal string Snapshot() => string.Join('|', Rows.Select(r =>
         FormattableString.Invariant($"{r.Value.TopLeft},{r.Value.TopRight},{r.Value.BottomRight},{r.Value.BottomLeft}")));
-
-    internal bool HasChanges => Snapshot() != _initial;
 
     /// <summary>The four radii as the theme would have them: for the preview, and for the file.</summary>
     internal IReadOnlyDictionary<string, CornerRadius> Values => Rows.ToDictionary(r => r.Target.Key, r => r.Value);

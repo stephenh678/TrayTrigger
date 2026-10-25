@@ -47,7 +47,7 @@ public class ShapeGuardTests
     /// <summary>Drawn artwork rather than UI: the tray icon's tile, whose radius follows the icon's size.</summary>
     private static readonly HashSet<string> ArtworkFiles = new()
     {
-        "App.xaml.cs",            // the tray icon tile
+        "App.Tray.cs",            // the tray icon tile
         "Services/AppShapes.cs",  // reads radii; names none
         "Services/Theming/ThemeShape.cs", // builds radii from the numbers a theme file gives; names none of its own
         "Converters/RoundedClipConverter.cs", // scales a shape's corners to its size; names none
