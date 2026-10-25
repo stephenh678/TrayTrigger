@@ -345,6 +345,70 @@ public class DlssCardViewModelTests
         Assert.False(card.HasStatus);   // it worked, and the switch says so
     }
 
+    [Fact]
+    public async Task RestoreThatCannotReachTheDriver_KeepsEveryRecord_SoItCanBeTriedAgain()
+    {
+        var driver = new FakeDrsBackend();
+        driver.AddProfile("game.exe", "Test Game");
+        var records = new List<DlssSettingRecord>();
+        int persisted = 0;
+
+        var card = Card(driver, records, () => persisted++);
+        await card.LoadAsync();
+        card.OverrideEnabled = true;
+        await WaitForIdle(card);
+        int held = records.Count;
+        Assert.True(held > 0);
+
+        driver.OpenError = "no NVIDIA display driver";
+        await ((AsyncRelayCommand)card.RestoreCommand).ExecuteAsync();
+
+        Assert.Equal(held, records.Count);
+        Assert.True(card.OverrideEnabled);
+        Assert.True(card.HasStatus);
+
+        driver.OpenError = null;
+        await ((AsyncRelayCommand)card.RestoreCommand).ExecuteAsync();
+        Assert.Empty(records);
+    }
+
+    [Fact]
+    public async Task APresetChangeThatCannotReachTheDriver_KeepsTheRecordsAndThePreset()
+    {
+        var driver = new FakeDrsBackend();
+        driver.AddProfile("game.exe", "Test Game");
+        var records = new List<DlssSettingRecord>();
+        var game = new GameEntry();
+
+        var card = Card(driver, records, game: game);
+        await card.LoadAsync();
+        card.OverrideEnabled = true;
+        await WaitForIdle(card);
+        int held = records.Count;
+        var preset = game.DlssPreset;
+
+        driver.OpenError = "no NVIDIA display driver";
+        await card.SetPresetAsync(preset == DlssPresetChoice.Default ? DlssPresetChoice.Recommended : DlssPresetChoice.Default);
+
+        Assert.Equal(held, records.Count);
+        Assert.Equal(preset, game.DlssPreset);
+    }
+
+    [Fact]
+    public async Task AnOverrideStillHeld_CanBeSwitchedOff_EvenThoughTheGameNoLongerShipsDlss()
+    {
+        // The switch is what the Edit Game card has to take it off with: no Restore button sits beside it.
+        var records = new List<DlssSettingRecord> { new() { SettingId = 0x10E41E01, ExecutablePath = Exe } };
+        var held = Card(new FakeDrsBackend(), records, probe: Result());
+        await held.LoadAsync();
+        Assert.False(held.CanEnable);
+        Assert.True(held.CanToggleOverride);
+
+        var none = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), probe: Result());
+        await none.LoadAsync();
+        Assert.False(none.CanToggleOverride);
+    }
+
     // ---- What the card shows --------------------------------------------------------------------
 
     [Fact]

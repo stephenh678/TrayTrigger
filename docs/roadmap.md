@@ -5,6 +5,8 @@ Playnite, GOG Galaxy, LaunchBox, Heroic, AutoActions, Display Changer, Process L
 Lossless Scaling and Ludusavi. The competitor claims are web-search summaries, not first-hand reads; check
 one before relying on it. Nothing here is scheduled until the owner says so.
 
+Released as 1.7.5: the 1.7.1 betas (1 to 5) were renamed when the owner chose the stable number, as 1.6.3 became 1.7.0.
+
 ## Rules
 
 - **Proven benefits only.** A tweak or claim is added only with independent, measured evidence.
@@ -57,6 +59,21 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 10. **Library tiering.** Says which unplayed games to move off the SSD and opens the launcher's own move
     option.
 
+## Done in 1.7.1-beta.5 (2026-10-25)
+
+Not roadmap items: a review of the Edit Game code, started from the owner's report that Convert to Local game on a Battle.net game offered no way back and showed the Steam option. One commit.
+
+- **Convert to Local game can be undone before Save.** A note with an Undo button replaces the platform box; Undo puts the link and the Steam flag back and leaves the dialog unchanged. After Save a scan does not offer the platform's record again (the exe is already in the library); the Help page and code comment said it might.
+- **Save kept a Steam tick wrongly dropped.** Ticking "Launch through the Steam client" after converting was thrown away by Save; it is kept now.
+- **Right name in the messages.** Converting a Steam game said it was linked to "Local" (status line, log, Activity); the name is taken before the Steam flag is cleared.
+- **No convert without an executable.** A launcher game with no exe on record is refused until one is chosen. Convert is not offered for Xbox / Game Pass (the GDK exe cannot run on its own).
+- **Steam badge option for Local games only.** It is cosmetic (for screenshots); a launcher game that already has it ticked keeps the box so it can be turned off.
+- **A refused Save leaves a blank title as typed**; the dead `HasPlatform` setter is gone.
+- **DLSS card.** Read in a second pass over Edit Game. The switch was disabled (`CanEnable`) for a game whose DLSS a patch removed, though the card stayed open "so Restore can be reached" and has no Restore button: it is now `CanToggleOverride`. A Restore or preset change that failed before reading the driver (`DlssOperationResult.Failure` carries no records) dropped every record and saved that, leaving driver values nothing could undo: `StillOwned` keeps them. A click that did nothing now resets the tick.
+- **Outside review (Gemini), each claim checked against the code.** Fixed: the window-wait poller on a `Win32Exception`; `BoundedProcess` output drain bounded; a declined prompt at game start no longer leaves the scheduler values marked captured (`ForgetUnwrittenSchedulerCaptures`, only for what this launch captured, not for `Unfinished`); the exit prompt is Put back now / Close anyway / Stay open, with Esc on Stay open; tray search Down after no match, and the box for tools alone; Reset keeps the backup, session-count and driver-notice records; log rotation re-checks the size under the mutex; the installer is not run without a verified hash; Xbox ID checked before explorer's command line, Steam ids before `steam://`; CI also builds Debug; the script-launched game's handle and the PDH query closed. Not changed, with reasons: the Performance Tweaks header split and `App.Screenshot.cs` in Release are deliberate; the DLSS poller already stops on a disposed process; `WTD_CACHE_ONLY_URL_RETRIEVAL` is a choice (releases are unsigned, integrity is the signed SHA256SUMS); `SemanticVersion` hash and sign quirks, `UpdateDialog`'s 400 ms, the unused hotkey fallback, shutdown-thread and `Dispatcher.Invoke` claims are too small or unshown. Not checked: Help opening frozen behind a modal dialog (needs a manual try), `OpenGameDetails` saving, null JSON collections. No test for the exit prompt or the tray Down key (UI); the poller change has none (needs a process that refuses `HasExited`).
+- **Read and found no defect:** the Identity, Performance, Display and Scripts XAML (bindings, enable rules). Left as small and unconfirmed: a typed name is overwritten when browsing an exe for a new game, Look Up's Undo after a mid-lookup edit, Cancel/X without a prompt, Save during a lookup.
+- Tests in `GameEditConvertToLocalTests`; Help (`library/launch`) and CHANGELOG updated. Not run on screen: the new Undo note.
+
 ## Done in 1.7.1-beta.4 (2026-10-24)
 
 Not roadmap items: a code-tidying pass with no change in what TrayTrigger does. One commit.
@@ -96,13 +113,16 @@ testing, and what that turned up. One commit.
 - **Tests.** The collection that points `ActivityService.Current` at its own service now runs alone; the intermittent Resizable BAR test
   failures were another class recording to Activity at the same moment.
 
-## To check at home
+## Checked on the owner's PC (2026-10-29)
 
-The 1.7.1 work has not been run on real games: the layout at 130% text on the Stutter tab, `tools\Audit-Layout.ps1`
-with TrayTrigger closed, the PLAYING tag on poster cards at large text sizes, and the new Edit Game and
-removal entries in Activity. Beta 3 was tried on Call of Duty (elevated, through a .bat) and Hellraiser (plain .bat); not tried: the Activity
-row menu after its last change, the saved driver notice across a real driver install, a game protected by an anti-cheat that hides its process,
-and two monitors (the beta 2 note above).
+Before the 1.7.5 release the owner confirmed, on real use: the layout at 130% text and `tools\Audit-Layout.ps1`, the PLAYING tag at large
+text sizes, the Activity row menu, the NVIDIA driver notice across a driver install, a game whose anti-cheat hides its process, two monitors,
+and from the last beta the Convert to Local Undo note, the DLSS switch, the exit prompt (Esc, Close anyway, Put back now), tray search Down, the
+Enable scripts checkbox and the already-running Play message. A Help window opened from inside Edit Game works normally (the review's claim that
+it opens frozen was wrong).
+
+Not shown by any test: whether a game whose own NVIDIA profile has no Resizable BAR value picks up the Global one (open item 4 below), which is why
+the release notes say the setting "applies", not that it speeds a game up.
 
 ## Open: Resizable BAR for undecided games (found 2026-10-24)
 
@@ -151,4 +171,4 @@ Still to settle:
    Code review of this (max): what was left waiting is "leftover only" until a session applies an ADMIN tweak of its own (an Optimized
    game ending doesn't prompt for it); later restores settle every entry that offered it (scheduler, Defender, not only NVIDIA); a
    session over a waiting put-back keeps the original it recorded; Restore Previous retries notes nothing twice. Left as is: the exit
-   put-back runs on the UI thread while the prompt waits, and Esc on the "Some settings are still changed" dialog closes TrayTrigger.
+   put-back runs on the UI thread while the prompt waits, (Esc on the "Some settings are still changed" dialog closed TrayTrigger then; in 1.7.5 it stays open: Put back now, Close anyway or Stay open).

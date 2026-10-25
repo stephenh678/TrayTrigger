@@ -193,6 +193,14 @@ public partial class ProcessLauncherService
     private void ApplyToRealGame(ActiveGameSession session, Process real)
     {
         var game = session.Game;
+        // The session's own process is the script, so nothing else would release this handle. What still
+        // holds it when the session ends (the window and DLSS pollers) treats a disposed process as exited.
+        var previousCancel = session.CancelTracking;
+        session.CancelTracking = () =>
+        {
+            previousCancel?.Invoke();
+            try { real.Dispose(); } catch (Exception) { /* already gone */ }
+        };
         try
         {
             _performanceProfileService.OnGameProcessStarted(game, real);

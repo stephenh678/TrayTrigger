@@ -141,9 +141,9 @@ public partial class App
                     break;
                 case Key.Down:
                     // Into the results, or into the menu's own first row when nothing is typed.
-                    var target = results.Count > 0
-                        ? FirstResult()
-                        : menu.Items.OfType<MenuItem>().Skip(1).FirstOrDefault(m => m.IsVisible && m.IsEnabled && m.Focusable);
+                    // A query with no match leaves only the disabled "No games match" row, so Down goes on to the menu's own rows.
+                    var target = FirstResult()
+                        ?? menu.Items.OfType<MenuItem>().Skip(1).FirstOrDefault(m => m.IsVisible && m.IsEnabled && m.Focusable);
                     if (target != null)
                     {
                         target.Focus();

@@ -705,6 +705,9 @@ public partial class PerformanceProfileService
             // prompt covers both. The snapshot is saved before the write for the same reason it
             // always was: whatever happens next, what was there is already on disk.
             var hklmChanges = new List<SystemTweaksService.RegFileEntry>(2);
+            // Captured by an earlier put-back still waiting, not by this launch: those stay whatever happens below.
+            bool responsivenessWasCaptured = snapshot.SystemResponsivenessCaptured;
+            bool schedulingWasCaptured = snapshot.SchedulingCategoryCaptured;
 
             if (aggressive && settings.AggressiveProfileTweaks.SystemResponsivenessEnabled)
             {
@@ -732,7 +735,13 @@ public partial class PerformanceProfileService
                 if (hklmChanges.Count > 0)
                 {
                     if (result.RegistryOk) Note("Windows' multimedia scheduler settings");
-                    else Skipped("Windows' multimedia scheduler settings couldn't be set");
+                    else
+                    {
+                        Skipped("Windows' multimedia scheduler settings couldn't be set");
+                        // Not written, so nothing to put back: without this the game's end asks for permission
+                        // again to "restore" values that never changed. A helper still running may yet write them.
+                        if (!result.Unfinished) ForgetUnwrittenSchedulerCaptures(snapshot, responsivenessWasCaptured, schedulingWasCaptured);
+                    }
                 }
                 if (resizableBar != null) FinishResizableBar(game, snapshot, resizableBar, result);
             }

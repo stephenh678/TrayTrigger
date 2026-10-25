@@ -136,6 +136,32 @@ public partial class PerformanceProfileService
         return true;
     }
 
+    /// <summary>
+    /// The write of the two scheduler values was refused (the administrator prompt declined). A capture
+    /// made for this launch whose value is still not TrayTrigger's describes a change that never
+    /// happened, so it goes; one whose value already is ours (left from an earlier game) stays, as
+    /// does one an earlier put-back was already holding. The snapshot is saved again when anything went.
+    /// </summary>
+    private void ForgetUnwrittenSchedulerCaptures(PerformanceProfileSessionSnapshot snapshot, bool keepResponsiveness, bool keepScheduling)
+    {
+        bool forgot = false;
+        if (!keepResponsiveness && snapshot.SystemResponsivenessCaptured
+            && _backend.ReadHklmDword(SystemResponsivenessPath, "SystemResponsiveness") != AggressiveSystemResponsiveness)
+        {
+            snapshot.SystemResponsivenessCaptured = false;
+            snapshot.PreviousSystemResponsiveness = null;
+            forgot = true;
+        }
+        if (!keepScheduling && snapshot.SchedulingCategoryCaptured
+            && !string.Equals(_backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"), AggressiveSchedulingCategory, StringComparison.OrdinalIgnoreCase))
+        {
+            snapshot.SchedulingCategoryCaptured = false;
+            snapshot.PreviousSchedulingCategory = null;
+            forgot = true;
+        }
+        if (forgot) _store.SaveProfileSessionSnapshot(snapshot);
+    }
+
     /// <summary>Captures and returns the change; see <see cref="CaptureSystemResponsiveness"/>.</summary>
     private SystemTweaksService.RegFileEntry CaptureSchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
     {

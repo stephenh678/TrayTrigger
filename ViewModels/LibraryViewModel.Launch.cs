@@ -54,6 +54,15 @@ public partial class LibraryViewModel
             }
         }
 
+        // Play on a game TrayTrigger is already tracking launches nothing: the game's window comes forward (or it
+        // resumes). So no "Launching" popup, and no profile line that was not applied again.
+        var tracked = _launcherService.TrackedLaunchOf(card.Game.Id);
+        if (tracked != ProcessLauncherService.TrackedLaunch.None)
+        {
+            SwitchToTrackedGame(card, tracked);
+            return;
+        }
+
         // A second Play (a double-click, or the hotkey twice) while this one waits out the delay
         // would run the pre-launch scripts and start the game again. OnLaunchDispatched clears it.
         if (!_launchesInFlight.Add(card.Id))
@@ -79,6 +88,29 @@ public partial class LibraryViewModel
             DispatchLaunch(card, owner);
         };
         launchDelayTimer.Start();
+    }
+
+    /// <summary>What the status line says when Play finds the game already tracked.</summary>
+    internal static string AlreadyTrackedMessage(string name, ProcessLauncherService.TrackedLaunch state) => state switch
+    {
+        ProcessLauncherService.TrackedLaunch.Suspended => $"Resumed {name}",
+        ProcessLauncherService.TrackedLaunch.Starting => $"{name} is still starting",
+        _ => $"{name} is already running - switched to it",
+    };
+
+    /// <summary>
+    /// Play on a game that is starting, running or suspended: the launcher service brings its window forward
+    /// (and resumes it), off the UI thread like a real launch, and nothing is dispatched again.
+    /// </summary>
+    private void SwitchToTrackedGame(GameCardViewModel card, ProcessLauncherService.TrackedLaunch state)
+    {
+        LoggingService.Info("Library", $"Play on '{card.Name}', which is already {state.ToString().ToLowerInvariant()}: switching to it, not launching.");
+        StatusMessage = AlreadyTrackedMessage(card.Name, state);
+        _ = Task.Run(() =>
+        {
+            try { _launcherService.LaunchGame(card.Game, out _, out _); }
+            catch (Exception ex) { LoggingService.Warn("Library", $"Switching to '{card.Name}' failed: {ex.Message}"); }
+        });
     }
 
     /// <summary>

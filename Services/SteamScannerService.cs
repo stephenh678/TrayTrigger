@@ -458,6 +458,7 @@ public partial class SteamScannerService
 
     public static void OpenStorePage(string appId)
     {
+        if (!UrlProtocolHelper.IsValidSteamAppId(appId)) { LoggingService.Warn("SteamScanner", $"Not opening a store page: '{appId}' is not a Steam App ID."); return; }
         try
         {
             Process.Start(new ProcessStartInfo($"https://store.steampowered.com/app/{appId}") { UseShellExecute = true });
@@ -471,6 +472,7 @@ public partial class SteamScannerService
 
     public static void OpenInSteamLibrary(string appId)
     {
+        if (!UrlProtocolHelper.IsValidSteamAppId(appId)) { LoggingService.Warn("SteamScanner", $"Not opening Steam: '{appId}' is not a Steam App ID."); return; }
         try
         {
             Process.Start(new ProcessStartInfo($"steam://nav/games/details/{appId}") { UseShellExecute = true });
@@ -484,6 +486,7 @@ public partial class SteamScannerService
 
     public static void VerifyGameFiles(string appId)
     {
+        if (!UrlProtocolHelper.IsValidSteamAppId(appId)) { LoggingService.Warn("SteamScanner", $"Not verifying files: '{appId}' is not a Steam App ID."); return; }
         try
         {
             Process.Start(new ProcessStartInfo($"steam://validate/{appId}") { UseShellExecute = true });

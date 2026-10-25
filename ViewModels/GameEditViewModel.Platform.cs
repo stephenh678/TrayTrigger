@@ -22,17 +22,26 @@ public partial class GameEditViewModel
     // The card shows a platform badge the dialog previously could neither explain nor change.
 
     private bool _launchDirectly;
-    private bool _hasPlatform;
+    private readonly bool _hasPlatform;
     private bool _convertToLocal;
+    /// <summary>The platform's name when Convert to Local was clicked, for the messages and the Activity entry;
+    /// by Save time the edited Steam flag has already been cleared and the name would read "Local".</summary>
+    private string? _convertedFrom;
     private ICommand? _convertToLocalCommand;
+    private ICommand? _undoConvertToLocalCommand;
 
     /// <summary>True while the entry is tagged to a launcher platform (and hasn't been converted
     /// to Local in this edit session) - shows the platform card.</summary>
-    public bool HasPlatform
-    {
-        get => (_hasPlatform || _isSteamGame) && !_convertToLocal;
-        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); OnPropertyChanged(nameof(LaunchDirectlyHint)); OnPropertyChanged(nameof(LinkTargetHint)); OnPropertyChanged(nameof(CanOfferSteamLaunch)); OnPropertyChanged(nameof(CanOfferLaunchDirectly)); }
-    }
+    public bool HasPlatform => (_hasPlatform || _isSteamGame) && !_convertToLocal;
+
+    /// <summary>Convert to Local game is offered unless the result couldn't run: a Game Pass (GDK) exe needs its package.</summary>
+    public bool CanConvertToLocal => !SourceGame.IsXboxGame;
+
+    /// <summary>Convert to Local was clicked and not yet saved or undone: shows the note with Undo in the platform card's place.</summary>
+    public bool IsConvertedToLocal => _convertToLocal;
+
+    /// <summary>e.g. "Will be saved as a Local game, no longer linked to Battle.net."</summary>
+    public string ConvertedNotice => $"Will be saved as a Local game, no longer linked to {_convertedFrom}.";
 
     /// <summary>"GOG", "EA", "Epic", "Ubisoft" or "Steam" - whichever tag the entry carries.
     /// Steam reads the edited value so ticking "launch through Steam" relabels the box at once.</summary>
@@ -85,15 +94,46 @@ public partial class GameEditViewModel
 
     /// <summary>Drops the platform tag and ID on save, making this a plain Local game: launched
     /// from its executable, badged as Local, no longer swept by "turn off integration + remove
-    /// its games". The next Scan for Games may offer the platform's own record again.</summary>
+    /// its games". Until Save, Undo puts the link back; after Save a scan won't offer the
+    /// platform's record again, since the entry already holds its executable.</summary>
     public ICommand ConvertToLocalCommand => _convertToLocalCommand ??= new RelayCommand(() =>
     {
+        // A scan can leave a platform game with no executable on record (the client starts it, so
+        // nothing needed one); as a Local game it would have nothing to run.
+        if (string.IsNullOrWhiteSpace(ExecutablePath))
+        {
+            ShowProblem("This game has no executable on record, so it couldn't start as a Local game. Browse to its .exe under Executable / Shortcut Target first, then convert.");
+            return;
+        }
+
+        _convertedFrom = PlatformName;
         _convertToLocal = true;
         IsSteamGame = false;
-        OnPropertyChanged(nameof(HasPlatform));
-        OnPropertyChanged(nameof(CanOfferSteamLaunch));
-        StatusMessage = $"Will be saved as a Local game (no longer linked to {PlatformName}). Click Save to apply.";
+        NotifyPlatformChanged();
+        StatusMessage = $"Will be saved as a Local game (no longer linked to {_convertedFrom}). Click Save to apply, or Undo to keep the link.";
     });
+
+    /// <summary>Takes back Convert to Local before it is saved: the link, and the Steam flag as the game has it, come back.</summary>
+    public ICommand UndoConvertToLocalCommand => _undoConvertToLocalCommand ??= new RelayCommand(() =>
+    {
+        string platform = _convertedFrom ?? PlatformName;
+        _convertToLocal = false;
+        _convertedFrom = null;
+        IsSteamGame = SourceGame.IsSteamGame;
+        NotifyPlatformChanged();
+        StatusMessage = $"Still linked to {platform}.";
+    });
+
+    private void NotifyPlatformChanged()
+    {
+        OnPropertyChanged(nameof(HasPlatform));
+        OnPropertyChanged(nameof(IsConvertedToLocal));
+        OnPropertyChanged(nameof(ConvertedNotice));
+        OnPropertyChanged(nameof(PlatformDescription));
+        OnPropertyChanged(nameof(CanOfferLaunchDirectly));
+        OnPropertyChanged(nameof(CanOfferSteamLaunch));
+        OnPropertyChanged(nameof(CanOfferSteamBadge));
+    }
 
     public bool ForceSteamOverlayTag
     {

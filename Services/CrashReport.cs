@@ -88,6 +88,16 @@ internal static class CrashReport
     }
 
     /// <summary>
+    /// The fault WPF's own C++/CLI loader raises as the process unloads when the native DLLs the single-file exe
+    /// extracted to the temp folder have been removed meanwhile (a cleaner deleting the ones not in use): its
+    /// uninitializer cannot find vcruntime140_cor3.dll. It comes after TrayTrigger has finished shutting down.
+    /// </summary>
+    internal static bool IsHarmlessExitFault(object? exception) =>
+        exception is DllNotFoundException ex
+        && ex.StackTrace is { } stack
+        && (stack.Contains("ModuleUninitializer", StringComparison.Ordinal) || stack.Contains("__std_type_info_destroy_list", StringComparison.Ordinal));
+
+    /// <summary>
     /// Puts the last-chance handler in place, as early as the app can: an exception that nothing caught ends the process, and
     /// this writes it down and says so first. Exceptions on the UI thread are the app's own handler's business once it is
     /// running; this catches the ones on other threads, and any before that handler exists.
@@ -96,6 +106,14 @@ internal static class CrashReport
     {
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
+            if (IsHarmlessExitFault(args.ExceptionObject))
+            {
+                // Everything was saved before this: nothing to report, and a crash window on a normal close is worse than the fault.
+                try { LoggingService.Info("App", $"Ignored a fault while the process was exiting (WPF's C++ runtime shim could not find its extracted vcruntime140_cor3.dll): {args.ExceptionObject}"); }
+                catch { /* the exit goes on either way */ }
+                return;
+            }
+
             string? file = Write("unhandled", args.ExceptionObject);
             try { LoggingService.Error("App", $"FATAL AppDomain Exception: {args.ExceptionObject}"); }
             catch { /* the report above is the one that matters */ }

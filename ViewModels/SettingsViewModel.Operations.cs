@@ -134,6 +134,17 @@ public partial class SettingsViewModel
             nameof(AppSettings.TweakPriorState),
             nameof(AppSettings.TweaksAppliedByTrayTrigger),
             nameof(AppSettings.LastRunVersion),
+            // Records of what happened, not preferences: a reset would forget when the last backup was made (and have
+            // the automatic one run again at once), the error it ended on, how often TrayTrigger has started, and the driver notice.
+            nameof(AppSettings.LastBackupUtc),
+            nameof(AppSettings.LastAutoBackupUtc),
+            nameof(AppSettings.AutoBackupLastError),
+            nameof(AppSettings.SessionsStarted),
+            nameof(AppSettings.NvidiaDriverGpu),
+            nameof(AppSettings.NvidiaDriverVersion),
+            nameof(AppSettings.NvidiaDriverReleased),
+            nameof(AppSettings.NvidiaDriverUrl),
+            nameof(AppSettings.NvidiaDriverCheckedUtc),
         };
         foreach (var prop in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {

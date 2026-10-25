@@ -121,11 +121,14 @@ public partial class GameEditViewModel : ViewModelBase
         ScriptDefaults? scriptDefaults = null,
         ScriptLibraryService? scriptLibrary = null,
         Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null,
-        Action? persistLibrary = null)
+        Action? persistLibrary = null,
+        Action<bool>? setScriptsEnabled = null)
     {
         SourceGame = game;
         _scriptDefaults = scriptDefaults;
         _scriptLibrary = scriptLibrary;
+        _setScriptsEnabled = setScriptsEnabled;
+        _scriptsEnabled = scriptsEnabled;
         _skipDefaultScripts = game.SkipDefaultScripts;
         // The card is opt-in (Settings > General), but a game that already has a script must
         // stay editable even if the setting was later turned off or reset.
@@ -395,11 +398,40 @@ public partial class GameEditViewModel : ViewModelBase
 
     // --- Pre-launch / post-exit scripts ---
 
-    public bool ShowScriptsCard { get; }
+    public bool ShowScriptsCard { get; private set; }
 
     /// <summary>The one-line "scripts are turned off" note shown in place of the scripts card, so
     /// the feature stays discoverable from Edit Game while the Settings switch is off.</summary>
     public bool ShowScriptsStub => !ShowScriptsCard;
+
+    private bool _scriptsEnabled;
+    private readonly Action<bool>? _setScriptsEnabled;
+
+    /// <summary>
+    /// "Enable scripts" in the notice: the same switch as Settings > Launch &amp; Performance, which is one setting for
+    /// every game. It takes effect at once, like the DLSS switch, so Cancel does not undo it. Turned on, the notice goes
+    /// and the scripts card takes its place.
+    /// </summary>
+    public bool ScriptsEnabled
+    {
+        get => _scriptsEnabled;
+        set
+        {
+            if (_scriptsEnabled == value) return;
+            _scriptsEnabled = value;
+            _setScriptsEnabled?.Invoke(value);
+            // A game with scripts of its own keeps the card with the feature off; any other shows it only while it is on.
+            ShowScriptsCard = value || SourceGame.HasScripts;
+            ShowScriptsDisabledNotice = !value && SourceGame.HasScripts;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowScriptsCard));
+            OnPropertyChanged(nameof(ShowScriptsStub));
+            OnPropertyChanged(nameof(ShowScriptsCardOnTab));
+            OnPropertyChanged(nameof(ShowScriptsStubOnTab));
+            OnPropertyChanged(nameof(ShowScriptsDisabledNotice));
+            OnPropertyChanged(nameof(CanEditScriptArguments));
+        }
+    }
 
     private void BrowseExe()
     {
@@ -443,11 +475,6 @@ public partial class GameEditViewModel : ViewModelBase
 
     private void Save()
     {
-        if (string.IsNullOrWhiteSpace(Name))
-        {
-            Name = "Unnamed Game";
-        }
-
         SetFieldError(null);
 
         // Scripts are validated at save time rather than silently skipped at launch, so a typo
@@ -494,8 +521,14 @@ public partial class GameEditViewModel : ViewModelBase
             }
         }
 
+        // Only now that nothing can refuse the save: a refused one leaves the box as it was typed.
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            Name = "Unnamed Game";
+        }
+
         var settingsBefore = LibraryChanges.Capture(SourceGame);
-        string platformBefore = PlatformName;
+        string platformBefore = _convertedFrom ?? PlatformName;
 
         SourceGame.Name = Name.Trim();
         SourceGame.ExecutablePath = ExecutablePath.Trim();
@@ -510,8 +543,9 @@ public partial class GameEditViewModel : ViewModelBase
         SourceGame.LaunchDirectly = LaunchDirectly;
         if (_convertToLocal)
         {
-            LoggingService.Info("GameEdit", $"'{SourceGame.Name}' converted from {PlatformName} to a Local game.");
-            SourceGame.IsSteamGame = false;
+            LoggingService.Info("GameEdit", $"'{SourceGame.Name}' converted from {platformBefore} to a Local game.");
+            // IsSteamGame is left as the box has it: false after Convert, unless "Launch through the
+            // Steam client" was ticked afterwards - a choice Save must not throw away.
             SourceGame.IsGogGame = false;
             SourceGame.GogGameId = null;
             SourceGame.IsEaGame = false;

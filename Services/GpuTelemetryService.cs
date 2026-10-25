@@ -43,7 +43,11 @@ public sealed class GpuTelemetryService : IDisposable
             LoggingService.Warn("SystemInfo", $"GPU performance counters unavailable: {ex.Message}");
         }
         if (!_available)
+        {
+            // A query that opened but could not take its counters would otherwise be held for good.
+            Dispose();
             LoggingService.Info("SystemInfo", "GPU performance counters unavailable; the GPU card shows no live load.");
+        }
     }
 
     /// <summary>Load and memory per adapter LUID. Empty when the counters aren't available.</summary>

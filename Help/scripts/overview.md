@@ -4,6 +4,8 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 
 This page covers using scripts. Writing your own script covers the arguments a script receives and the PowerShell details.
 
+Scripts are off until you turn them on. Tick **Enable scripts** under Settings > Launch & Performance, or in Edit Game's Scripts tab, where the notice has the same switch. It is one setting for every game and takes effect at once, even if you cancel Edit Game.
+
 ## Supported file types
 
 - .ps1, run through Windows PowerShell with the execution policy bypassed, so a locked-down policy will not block it. The New script... template, the examples and the TrayTrigger-Scripts catalogue are all PowerShell.

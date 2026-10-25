@@ -556,7 +556,9 @@ public partial class MainWindow : Window
             profileTweaks: _viewModel.SystemVM.EnabledTweaksFor,
             // A DLSS apply changes the driver there and then, so its record must reach disk there
             // and then too - not on Save Changes, which the user may never press.
-            persistLibrary: () => _viewModel.Library.SaveGamesOnly());
+            persistLibrary: () => _viewModel.Library.SaveGamesOnly(),
+            // The Enable scripts switch in the Scripts notice: the Settings switch itself, saved and set up at once.
+            setScriptsEnabled: on => _viewModel.SettingsVM.EnableGameScripts = on);
         editDialog.Owner = this;
         if (editDialog.ShowDialog() == true)
         {

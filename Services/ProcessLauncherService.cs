@@ -1282,6 +1282,12 @@ public partial class ProcessLauncherService
                 // The process has already exited.
                 exited = true;
             }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // An elevated or protected game refuses the question (access denied). That is not an
+                // exit and not a reason to throw every tick: no window is found, and the wait ends at its limit.
+                exited = false;
+            }
 
             bool timedOut = DateTime.UtcNow - waitStartedUtc > WindowActivationTimeout;
             if (hWnd == IntPtr.Zero && !exited && !timedOut)

@@ -1507,6 +1507,28 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Null(_store.OnDisk);
     }
 
+    /// <summary>A prompt declined at the start wrote nothing, so the end has nothing to put back and asks nothing.</summary>
+    [Fact]
+    public void DeclinedAtStart_LeavesNoRecordOfTheSchedulerValues_AndTheEndAsksNoPermission()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        _backend.Hklm[PerformanceProfileService.SystemResponsivenessPath + "|SystemResponsiveness"] = 20;
+        _backend.DeclineAdmin = true;
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.False(_store.OnDisk?.SystemResponsivenessCaptured ?? false);
+        Assert.False(_store.OnDisk?.SchedulingCategoryCaptured ?? false);
+
+        _backend.DeclineAdmin = false;
+        int prompts = _backend.AdminSteps.Count;
+        service.EndGameSession("g");
+
+        Assert.DoesNotContain(_backend.AdminSteps.Skip(prompts), step => step.Registry > 0);
+    }
+
     /// <summary>Restore Previous after a declined prompt puts the scheduler values back and drops their record.</summary>
     [Fact]
     public void DeclinedPutBack_RestorePrevious_PutsTheSchedulerValuesBack_AndClearsTheRecord()

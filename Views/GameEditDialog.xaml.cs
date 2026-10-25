@@ -23,13 +23,14 @@ public partial class GameEditDialog : Window
         ScriptDefaults? scriptDefaults = null,
         ScriptLibraryService? scriptLibrary = null,
         Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null,
-        Action? persistLibrary = null)
+        Action? persistLibrary = null,
+        Action<bool>? setScriptsEnabled = null)
     {
         InitializeComponent();
         TrayTrigger.Services.WindowSizeMemory.Attach(this, "GameEdit");
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
-        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary, profileTweaks, persistLibrary);
+        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary, profileTweaks, persistLibrary, setScriptsEnabled);
         DataContext = _viewModel;
 
         Owner = WindowHelper.ActiveOwner();
