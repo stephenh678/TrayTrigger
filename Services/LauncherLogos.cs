@@ -11,8 +11,6 @@ public static class LauncherLogos
 {
     private const string Folder = "pack://application:,,,/Assets/LauncherLogos/";
 
-    public const string LocalGames = Folder + "local_games.png";
-
     /// <summary>The logo of the platform the entry belongs to, or null for a plain local game.</summary>
     public static string? PackUriFor(GameEntry game)
     {

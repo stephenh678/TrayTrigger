@@ -633,14 +633,6 @@ public partial class SystemTweaksService
         }
     }
 
-    /// <summary>
-    /// Reverts every tweak that is currently applied (and only those - a Balanced plan is not
-    /// forced onto a machine that never used the power-plan tweak). HKCU/SPI/powercfg reverts run
-    /// one by one; every HKLM revert (writes and deletes) is folded into a single elevated reg
-    /// import so the whole reset costs at most one UAC prompt instead of six.
-    /// </summary>
-    public void ResetAllToDefaults() => ResetToDefaults(GetAllTweaks().Where(t => t.IsOptimal && t.CanToggle && !t.IsInformational).Select(t => t.Id));
-
     public void ResetToDefaults(IEnumerable<string> tweakIds)
     {
         var ids = tweakIds.ToHashSet(StringComparer.Ordinal);
@@ -727,7 +719,6 @@ public partial class SystemTweaksService
         }
     }
 
-    private static bool ResetHagsToDefault() => DeleteHklmValue(GraphicsDriversKey, "HwSchMode");
     private static bool ResetDeliveryOptimizationToDefault() => DeleteHklmValue(DeliveryOptPolicyKey, "DODownloadMode");
     private static bool ResetTelemetryToDefault() => DeleteHklmValue(DataCollectionPolicyKey, "AllowTelemetry");
 
@@ -767,19 +758,10 @@ public partial class SystemTweaksService
 
     private static bool CheckMouseAccelerationDisabled()
     {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Mouse");
-            if (key != null)
-            {
-                string? speed = key.GetValue("MouseSpeed") as string;
-                string? t1 = key.GetValue("MouseThreshold1") as string;
-                string? t2 = key.GetValue("MouseThreshold2") as string;
-                return speed == "0" && t1 == "0" && t2 == "0";
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        const string mouse = @"Control Panel\Mouse";
+        return RegistryValues.Read(Registry.CurrentUser, mouse, "MouseSpeed", "SystemTweaks") as string == "0"
+            && RegistryValues.Read(Registry.CurrentUser, mouse, "MouseThreshold1", "SystemTweaks") as string == "0"
+            && RegistryValues.Read(Registry.CurrentUser, mouse, "MouseThreshold2", "SystemTweaks") as string == "0";
     }
 
     /// <summary>
@@ -795,13 +777,7 @@ public partial class SystemTweaksService
             return state.Supported && state.Enabled;
         }
 
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(GraphicsDriversKey);
-            return key?.GetValue("HwSchMode") is int i && i == 2;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        return RegistryValues.Dword(Registry.LocalMachine, GraphicsDriversKey, "HwSchMode", "SystemTweaks") == 2;
     }
 
     private static bool CheckWindowedOptsEnabled() => IsWindows11 && DirectXGlobalSettings.IsEnabled(DirectXGlobalSettings.SwapEffectUpgrade);
@@ -816,20 +792,11 @@ public partial class SystemTweaksService
 
     private static bool CheckFseDisabled()
     {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"System\GameConfigStore");
-            if (key != null)
-            {
-                // GameDVR_FSEBehavior only takes effect when GameDVR_HonorUserFSEBehaviorMode=1 -
-                // without it Windows ignores the behavior override, so both must be checked.
-                var behavior = key.GetValue("GameDVR_FSEBehavior");
-                var honor = key.GetValue("GameDVR_HonorUserFSEBehaviorMode");
-                return behavior is int b && b == 2 && honor is int h && h == 1;
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        // GameDVR_FSEBehavior only takes effect when GameDVR_HonorUserFSEBehaviorMode=1 -
+        // without it Windows ignores the behavior override, so both must be checked.
+        const string store = @"System\GameConfigStore";
+        return RegistryValues.Dword(Registry.CurrentUser, store, "GameDVR_FSEBehavior", "SystemTweaks") == 2
+            && RegistryValues.Dword(Registry.CurrentUser, store, "GameDVR_HonorUserFSEBehaviorMode", "SystemTweaks") == 1;
     }
 
     private static bool CheckUltimatePlanActive()
@@ -903,17 +870,9 @@ public partial class SystemTweaksService
 
     private static bool CheckGameModeEnabled()
     {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar");
-            if (key != null)
-            {
-                var val = key.GetValue("AllowAutoGameMode");
-                return val == null || (val is int i && i != 0);
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return true;
+        // Absent (or unreadable) = Windows' default, on.
+        var val = RegistryValues.Read(Registry.CurrentUser, @"Software\Microsoft\GameBar", "AllowAutoGameMode", "SystemTweaks");
+        return val == null || (val is int i && i != 0);
     }
 
     internal const string UltimatePlanName = "Ultimate Plan - TrayTrigger";
@@ -921,28 +880,12 @@ public partial class SystemTweaksService
 
     private static bool CheckTimerResolutionOptimal()
     {
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel");
-            if (key != null)
-            {
-                var val = key.GetValue("GlobalTimerResolutionRequests");
-                return val is int i && i == 1;
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        return RegistryValues.Dword(Registry.LocalMachine, @"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", "SystemTweaks") == 1;
     }
 
     private static int? ReadVisualFxMarker()
     {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects");
-            return key?.GetValue("VisualFXSetting") is int value ? value : null;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return null;
+        return RegistryValues.Dword(Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", "SystemTweaks");
     }
 
     /// <summary>The marker recorded with the tweak's prior state: its number, "none" when the value did not exist, null when none was recorded.</summary>
@@ -1000,17 +943,8 @@ public partial class SystemTweaksService
 
     private static bool CheckNetworkThrottlingDisabled()
     {
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile");
-            if (key != null)
-            {
-                var val = key.GetValue("NetworkThrottlingIndex");
-                if (val is int i) return (uint)i == 0xFFFFFFFF || i == -1;
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        return RegistryValues.Dword(Registry.LocalMachine, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", "SystemTweaks")
+            is int i && ((uint)i == 0xFFFFFFFF || i == -1);
     }
 
     private const string TcpInterfacesPath = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";
@@ -1049,67 +983,26 @@ public partial class SystemTweaksService
     {
         // Either the policy TrayTrigger writes, or the user's own Settings choice ("Allow
         // downloads from other PCs" off, stored under CurrentVersion\...\Config) counts.
-        try
-        {
-            using var policy = Registry.LocalMachine.OpenSubKey(DeliveryOptPolicyKey);
-            if (policy?.GetValue("DODownloadMode") is int p && (p == 0 || p == 99 || p == 100)) return true;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        try
-        {
-            using var config = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config");
-            if (config?.GetValue("DODownloadMode") is int c && (c == 0 || c == 99 || c == 100)) return true;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        return RegistryValues.Dword(Registry.LocalMachine, DeliveryOptPolicyKey, "DODownloadMode", "SystemTweaks") is 0 or 99 or 100
+            || RegistryValues.Dword(Registry.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config", "DODownloadMode", "SystemTweaks") is 0 or 99 or 100;
     }
 
     private static bool CheckGameDvrDisabled()
     {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"System\GameConfigStore");
-            if (key != null)
-            {
-                var val = key.GetValue("GameDVR_Enabled");
-                return val is int i && i == 0;
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        return RegistryValues.Dword(Registry.CurrentUser, @"System\GameConfigStore", "GameDVR_Enabled", "SystemTweaks") == 0;
     }
 
     private static bool CheckTelemetryDisabled()
     {
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection");
-            if (key != null)
-            {
-                var val = key.GetValue("AllowTelemetry");
-                return val is int i && i == 0;
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        return RegistryValues.Dword(Registry.LocalMachine, @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", "SystemTweaks") == 0;
     }
 
     private static bool CheckGameBarDisabled()
     {
-        try
-        {
-            // UseNexusForGameBarEnabled is the actual Xbox Game Bar overlay toggle.
-            // (AppCaptureEnabled under CurrentVersion\GameDVR is a different setting - it's
-            // Game DVR clip recording, owned by the separate "game_dvr" tweak.)
-            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar");
-            if (key != null)
-            {
-                var val = key.GetValue("UseNexusForGameBarEnabled");
-                return val is int i && i == 0;
-            }
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        // UseNexusForGameBarEnabled is the actual Xbox Game Bar overlay toggle.
+        // (AppCaptureEnabled under CurrentVersion\GameDVR is a different setting - it's
+        // Game DVR clip recording, owned by the separate "game_dvr" tweak.)
+        return RegistryValues.Dword(Registry.CurrentUser, @"Software\Microsoft\GameBar", "UseNexusForGameBarEnabled", "SystemTweaks") == 0;
     }
 
     /// <summary>
@@ -1140,13 +1033,7 @@ public partial class SystemTweaksService
             LoggingService.Verbose("SystemTweaks", $"Win32_DeviceGuard query failed, falling back to registry: {ex.Message}");
         }
 
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity");
-            return key?.GetValue("Enabled") is int i && i == 1;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
-        return false;
+        return RegistryValues.Dword(Registry.LocalMachine, @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled", "SystemTweaks") == 1;
     }
 
     // ---- New in 1.3.6: accessibility shortcuts, MPO, WU driver policy, priority separation ----
@@ -1204,12 +1091,7 @@ public partial class SystemTweaksService
 
     private static bool CheckMpoDisabled()
     {
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(DwmKey);
-            return key?.GetValue("OverlayTestMode") is int i && i == 5;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the MPO setting"); return false; }
+        return RegistryValues.Dword(Registry.LocalMachine, DwmKey, "OverlayTestMode", "SystemTweaks", "reading the MPO setting") == 5;
     }
 
     private static bool SetMpoDisabled(bool disable) =>
@@ -1217,12 +1099,7 @@ public partial class SystemTweaksService
 
     private static bool CheckWuDriversExcluded()
     {
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(WindowsUpdatePolicyKey);
-            return key?.GetValue("ExcludeWUDriversInQualityUpdate") is int i && i == 1;
-        }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the driver-update policy"); return false; }
+        return RegistryValues.Dword(Registry.LocalMachine, WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate", "SystemTweaks", "reading the driver-update policy") == 1;
     }
 
     private static bool SetWuDriversExcluded(bool exclude) =>

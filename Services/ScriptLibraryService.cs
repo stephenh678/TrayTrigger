@@ -29,7 +29,6 @@ public class ScriptLibraryService
     private const string ResourcePrefix = "ScriptLibrary/";
     /// <summary>Logical-name prefix set in TrayTrigger.csproj for Scripts\Templates\*.</summary>
     private const string TemplatePrefix = "ScriptTemplate/";
-    public const string ReadmeFileName = "README.txt";
     public const string BlankPowerShellFileName = "_Blank.ps1";
 
     public string ScriptsDirectory { get; }

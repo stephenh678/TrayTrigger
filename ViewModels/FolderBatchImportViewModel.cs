@@ -121,7 +121,6 @@ public class BatchGameItemViewModel : ViewModelBase
 public class FolderBatchImportViewModel : ViewModelBase
 {
     private string _filterText = string.Empty;
-    private readonly string _folderPath;
     private bool _rememberAsScanLocation = true;
 
     public string FolderName { get; }
@@ -172,7 +171,6 @@ public class FolderBatchImportViewModel : ViewModelBase
     /// path or, for one that resolved to a launcher game, by platform ID (see MainWindow).</param>
     public FolderBatchImportViewModel(string folderPath, List<GameCandidate> candidates, Func<GameCandidate, bool> isAlreadyImported, bool canRememberAsScanLocation, bool isAlreadyScanLocation, Action<GameCandidate> onIgnoreCandidate)
     {
-        _folderPath = folderPath;
         FolderName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         CanRememberAsScanLocation = canRememberAsScanLocation;
         IsAlreadyScanLocation = isAlreadyScanLocation;

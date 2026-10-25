@@ -29,7 +29,7 @@ public class ColorGuardTests
     /// <summary>Drawn artwork rather than UI: the tray icon's tile, the cover-art overlay, the fallback game icon.</summary>
     private static readonly HashSet<string> ArtworkFiles = new()
     {
-        "App.xaml.cs",                      // TrayIconTileBrush: the tray icon's own tile
+        "App.Tray.cs",                         // TrayIconTileBrush: the tray icon's own tile
         "Services/SteamMetadataService.cs", // System.Drawing overlay composited into poster images
         "Services/IconExtractorService.cs", // System.Drawing: draws the fallback game icon
         "Services/AppPalette.cs",           // formats colors; names none

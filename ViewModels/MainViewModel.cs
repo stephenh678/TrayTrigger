@@ -1016,5 +1016,4 @@ public class MainViewModel : ViewModelBase
     public void RebuildCategories() => Library.RebuildCategories();
     public void RebuildCategoryTabs() => Library.RebuildCategoryTabs();
     public void SelectCategoryTab(string category) => Library.SelectCategoryTab(category);
-    private void ApplySort() => Library.ApplySort();
 }

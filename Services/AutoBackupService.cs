@@ -17,8 +17,6 @@ public sealed class AutoBackupService
     public const int MaxAttemptsPerDay = 3;
     internal const string ProblemKey = "autobackup-failed";
 
-    /// <summary>What the Every choice offers, in days.</summary>
-    public static readonly int[] IntervalChoices = [7, 14, 30];
     /// <summary>What the Keep choice offers.</summary>
     public static readonly int[] KeepChoices = [3, 4, 6, 10];
 

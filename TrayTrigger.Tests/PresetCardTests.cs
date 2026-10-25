@@ -63,11 +63,11 @@ public class PresetCardTests
     [Fact]
     public void Rows_SortNotAppliedFirst_ThenApplied_ThenOptIn_ThenUnavailable()
     {
-        int notApplied = SystemViewModel.SortKey(recommended: true, optimal: false, optIn: false, available: true, informational: false);
-        int applied = SystemViewModel.SortKey(true, true, false, true, false);
-        int optIn = SystemViewModel.SortKey(false, false, true, true, false);
-        int unavailable = SystemViewModel.SortKey(false, false, false, false, false);
-        int informational = SystemViewModel.SortKey(false, true, false, true, true);
+        int notApplied = SystemViewModel.SortKey(recommended: true, optimal: false, available: true, informational: false);
+        int applied = SystemViewModel.SortKey(true, true, true, false);
+        int optIn = SystemViewModel.SortKey(false, false, true, false);
+        int unavailable = SystemViewModel.SortKey(false, false, false, false);
+        int informational = SystemViewModel.SortKey(false, true, true, true);
 
         Assert.True(notApplied < applied);
         Assert.True(applied < optIn);

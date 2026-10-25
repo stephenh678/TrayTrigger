@@ -588,9 +588,9 @@ public class SystemViewModel : ViewModelBase
     private IEnumerable<SystemTweakViewModel> ForCategory(TweakCategory category) =>
         Tweaks.Where(t => t.Category == category).OrderBy(SortKey);
 
-    internal static int SortKey(SystemTweakViewModel t) => SortKey(t.IsRecommended, t.IsOptimal, t.IsOptIn, t.IsAvailable, t.IsInformational);
+    internal static int SortKey(SystemTweakViewModel t) => SortKey(t.IsRecommended, t.IsOptimal, t.IsAvailable, t.IsInformational);
 
-    internal static int SortKey(bool recommended, bool optimal, bool optIn, bool available, bool informational) =>
+    internal static int SortKey(bool recommended, bool optimal, bool available, bool informational) =>
         !available && !informational ? 3
         : recommended && !optimal ? 0
         : recommended ? 1
