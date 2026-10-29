@@ -4,23 +4,13 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
-## 1.7.1
+## 1.7.5
 
-- **Activity & History in a backup** - Back Up has a tick, on by default, to include your history, so it comes back after a restore.
-- **Automatic backups** - Tick Back up automatically beside Back Up and TrayTrigger backs up every week (or 2 weeks, or month) and keeps the last few. Off until you turn it on.
-- **Stutter Check spots a single memory stick** - If your PC has one stick of memory and room for another, Stutter Check now says so and what to do about it.
-- **Stutter Check has its own tab** - On the System page, between Hardware Specs and Performance Tweaks. The All tab still shows it.
-- **Launch problems are recorded** - A game that didn't launch, or that was started but never seen running, now leaves an entry in Activity & History with the reason.
-- **Resizable BAR in Aggressive now works** - It needs administrator rights, so it joins the Aggressive profile's one Windows prompt at the start and end of a game. If you decline the prompt that puts things back, TrayTrigger asks "Put back now?" when you close it or next start it, instead of a Windows prompt out of nowhere.
-- **Display and sound per game** - In Edit Game's new Display & Sound tab, pick a resolution, a refresh rate or both, and with two monitors the monitor, whether it becomes the main display, whether the mouse stays on the game's screen, whether the other screens dim, where the sound plays and which microphone is used. It all goes back when the game ends.
-- **Edits and removals are recorded** - Activity & History now notes when you change a game's launch settings in Edit Game, with the old and new values, and when you remove a game or undo it.
-- **Favorite star at large text sizes** - On poster cards with a long category, the star is no longer pushed off the card, and the PLAYING tag moves below the middle of the poster so it always has room.
-- **Update window fix** - At a large text size, the Download & Install button no longer runs off the edge of the update window.
-- **A newer NVIDIA driver stays on the card** - Press Check for Newer Driver and a newer one is remembered, with a Get Driver button in Activity & History, until you install it.
-- **Browse opens where your path is** - In Edit Game and Edit Tool, the file or folder window starts at the path you already have.
-- **Admin games and .bat launchers** - A game that runs as administrator keeps its profile for the whole session, and a game started by a .bat gets its priority and CPU settings on the game itself.
-- **Right-click an Activity row** - Copy it, show only that game, open the game or the log, or remove the entry.
-- **Fixes** - Steam games stay Steam games, Play pressed twice launches once, and Scan Locations accept a library root.
+- **Display and sound per game** - In Edit Game's new Display & Sound tab, pick a resolution, refresh rate, monitor, sound output or microphone for a game. TrayTrigger sets them when it starts and puts them back when it ends, even after a crash.
+- **Backups** - Back Up can include your Activity & History, and Back up automatically (off until you turn it on) keeps the last few for you.
+- **A fuller Activity & History** - It records games that didn't launch, edits you make in Edit Game with the old and new values, and removals and undos. Right-click a row to copy it, show only that game, or remove it.
+- **Fixes** - Steam games stay Steam games, Play pressed on a running game just brings it forward, a game running as administrator or started by a .bat keeps its profile, Esc on the "Some settings are still changed" prompt stays open, and closing TrayTrigger no longer ends in an error window.
+- **Security and reliability** - The updater only runs an installer it has verified, links built from saved game data are checked before they open, and a number of smaller problems that could leave a setting changed or a tool hanging were fixed.
 
 ## 1.7.0
 

@@ -637,18 +637,23 @@ public class UpdateService
             throw new FileNotFoundException("Installer executable was not found.", installerPath);
         }
 
+        // Every installer DownloadAssetAsync hands back was verified and recorded. One with no record
+        // did not come from it, so it is not run: the re-check below would otherwise be skipped.
+        if (string.IsNullOrEmpty(verifiedSha256))
+        {
+            LoggingService.Error("Update", $"Not launching '{installerPath}': it was not verified by this download.");
+            throw new UpdateVerificationException("The installer was not verified, so it was not run.");
+        }
+
         // The file has sat in the user's temp folder since it was verified, for as long as the
         // dialog was open. Check it again, and hold it open (sharing read access only, so it can
         // still be executed but not rewritten or replaced) until the installer process exists.
         using var guard = new FileStream(installerPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (verifiedSha256 != null)
+        string actual = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(guard)).ToLowerInvariant();
+        if (!string.Equals(actual, verifiedSha256, StringComparison.OrdinalIgnoreCase))
         {
-            string actual = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(guard)).ToLowerInvariant();
-            if (!string.Equals(actual, verifiedSha256, StringComparison.OrdinalIgnoreCase))
-            {
-                LoggingService.Error("Update", $"Installer changed after verification: expected {verifiedSha256}, got {actual}.");
-                throw new UpdateVerificationException("The downloaded installer changed after it was verified.");
-            }
+            LoggingService.Error("Update", $"Installer changed after verification: expected {verifiedSha256}, got {actual}.");
+            throw new UpdateVerificationException("The downloaded installer changed after it was verified.");
         }
 
         LoggingService.Info("Update", $"Launching installer: {installerPath} {InstallerUpdateArguments}");

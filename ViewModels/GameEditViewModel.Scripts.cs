@@ -162,7 +162,7 @@ public partial class GameEditViewModel
     }
 
     /// <summary>Scripts are configured on this game but the Settings switch is off, so they won't run.</summary>
-    public bool ShowScriptsDisabledNotice { get; }
+    public bool ShowScriptsDisabledNotice { get; private set; }
 
     /// <summary>Cancel the launch when the pre-launch script fails/times out. Implies waiting for it.</summary>
     public bool AbortLaunchOnScriptFailure
@@ -224,8 +224,9 @@ public partial class GameEditViewModel
     /// (or one converted to Local in this session) that has a Steam App ID to launch by.</summary>
     public bool CanOfferSteamLaunch => !HasPlatform && !string.IsNullOrWhiteSpace(SteamAppId);
 
-    /// <summary>"Use the Steam badge instead of the Local badge" only matters for a game that does not launch through Steam.</summary>
-    public bool CanOfferSteamBadge => !_isSteamGame;
+    /// <summary>"Use the Steam badge instead of the Local badge" is cosmetic and only for a Local game (no launcher, not
+    /// launching through Steam). A launcher game that already has it ticked keeps the box, so it can be turned off.</summary>
+    public bool CanOfferSteamBadge => !_isSteamGame && (!HasPlatform || SourceGame.ForceSteamOverlayTag);
 
     private static string? ValidateScriptPath(string? rawPath, string label)
     {

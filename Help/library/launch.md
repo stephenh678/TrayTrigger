@@ -4,6 +4,8 @@ Edit Game's Launch card has two parts: the route at the top (which client, if an
 
 Edit Game opens on its All tab, with every card in one scrolling column. The Launch tab shows this card on its own; Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and nothing you type is lost when you switch.
 
+Pressing Play (or the game's hotkey) on a game that is already running, starting or suspended does not launch it again: no scripts run, no profile is applied twice, and there is no "Launching" popup. The game's window comes forward (a suspended game resumes), and the status line says so.
+
 ## Which route a game takes
 
 TrayTrigger decides how to start a game from what the entry is, not from the path alone:
@@ -16,10 +18,10 @@ TrayTrigger decides how to start a game from what the entry is, not from the pat
 
 Shown at the top of the card for a platform game; a Local game has none.
 
-- **Imported from / Linked to** - which platform record the entry is tied to and the id the launcher knows it by. Convert to Local game drops the link and turns the entry into a plain exe launch.
+- **Imported from / Linked to** - which platform record the entry is tied to and the id the launcher knows it by. Convert to Local game drops the link and turns the entry into a plain exe launch (not offered for Xbox / Game Pass, whose exe can't run outside its package). Until you press Save Changes, Undo beside it puts the link back. Once saved, the game stays Local: a scan sees its executable is already in your library and does not offer the platform's record again.
 - **Launch this executable directly** - for GOG, EA, Epic, Ubisoft and Steam entries: bypass the client and run the executable below, with the arguments and Run as Administrator from the fields below applied. You lose whatever the client provides (sign-in, cloud saves, overlay). Not offered for Xbox (a GDK exe can't run outside its package) or Battle.net (the game needs the sign-in token only the client passes).
 - **Close the launcher after this game exits** - when the session ends, the client (Steam, GOG Galaxy, EA app, Epic, Ubisoft Connect, the Xbox app, or Battle.net) is closed, so it doesn't stay resident with its overlay and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows. "Keep game launchers minimized when launching a game" in Settings > Launch & Performance > Launching Games does this for every game.
-- **Launch through the Steam client** - offered for a Local game that has a Steam App ID. Ticking it makes the entry a Steam game, launched with `steam://rungameid/`, and the options above take over. Leave it off for a standalone game that merely shares a Steam listing.
+- **Launch through the Steam client** - offered for a Local game that has a Steam App ID. Ticking it makes the entry a Steam game, launched with `steam://rungameid/`, and the options above take over. Leave it off for a standalone game that merely shares a Steam listing. It is also offered right after Convert to Local game, and ticking it there is kept when you save.
 
 ## Keeping the launcher minimized
 

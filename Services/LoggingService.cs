@@ -349,6 +349,10 @@ public static class LoggingService
                 try
                 {
                     CloseWriter();
+                    // Looked at again now the mutex is ours: another process may have rotated while this one waited,
+                    // and copying its fresh, short log over debug.old.log would lose the archive it just made.
+                    var current = new FileInfo(LogFilePath);
+                    if (!current.Exists || current.Length <= MaxLogSizeBytes) return;
                     string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
                     File.Copy(LogFilePath, oldLog, overwrite: true);
                     File.WriteAllText(LogFilePath, BuildBanner("log rotated, previous log archived to debug.old.log"));

@@ -19,6 +19,18 @@ public class BoundedProcessTests
     }
 
     [Fact]
+    public void ReturnsAfterTheDrainLimit_WhenAGrandchildHoldsThePipesOpen()
+    {
+        // cmd ends at once, but the ping it started keeps the redirected output open for ~14 s.
+        var psi = new ProcessStartInfo("cmd.exe", "/c echo before & start /b ping -n 15 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true };
+        var started = Stopwatch.StartNew();
+        var result = BoundedProcess.Run(psi, 5000);
+        Assert.NotNull(result);
+        Assert.True(result!.Value.Completed);
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(8), $"took {started.Elapsed}");
+    }
+
+    [Fact]
     public void KillsTheTool_WhenItRunsPastTheLimit()
     {
         var psi = new ProcessStartInfo("ping.exe", "-n 30 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true };

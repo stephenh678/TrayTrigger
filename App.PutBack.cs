@@ -52,12 +52,15 @@ public partial class App
                 confirmText: "Close and put back", cancelText: "Stay open");
         }
 
-        bool putBack = ModernDialog.Confirm(owner, "Some settings are still changed",
+        // Three ways out, with Esc and the title-bar close on the one that changes nothing: staying open.
+        // Enter is on "Put back now", the choice that leaves nothing behind.
+        var choice = ModernDialog.PromptChoice(owner, "Some settings are still changed",
             $"Your last game's changes weren't all put back: {list}. Put them back before closing?",
             "Windows may ask for your permission. If you close anyway, TrayTrigger offers again the next time it starts, and Activity & History keeps a reminder.",
-            confirmText: "Put back now", cancelText: "Close anyway");
-        if (putBack) _performanceProfileService!.RetryUnrestored();
-        return true;
+            primaryText: "Close anyway", secondaryText: "Put back now", cancelText: "Stay open",
+            iconType: Views.DialogIconType.Warning);
+        if (choice == Views.DialogResultOption.Secondary) _performanceProfileService!.RetryUnrestored();
+        return choice != Views.DialogResultOption.Cancel;
     }
 
     /// <summary>Called once crash recovery has run: remembers whether something is waiting, for <see cref="ShowPutBackPromptIfPending"/>.</summary>

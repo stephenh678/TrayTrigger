@@ -492,7 +492,9 @@ public partial class App
 
             // The optional search row at the very top (UX-16); with the setting off the menu is
             // exactly as before. Nothing to search in an empty library.
-            if (_mainViewModel.Settings.ShowTraySearch && games.Count > 0)
+            // The search covers tools as well as games, so a library of tools alone gets the box too.
+            bool toolsInTray = _mainViewModel.Settings.EnableTools && _mainViewModel.Settings.ShowToolsInTray;
+            if (_mainViewModel.Settings.ShowTraySearch && (games.Count > 0 || (toolsInTray && _mainViewModel.Tools.TrayTools().Any())))
             {
                 AttachTraySearch(menu, navStart, games);
             }

@@ -28,9 +28,19 @@ public static class PackagedAppActivator
             LoggingService.Warn("PackagedAppActivator", $"IApplicationActivationManager failed for '{aumid}' ({ex.Message}); falling back to shell:AppsFolder.");
         }
 
+        // The ID goes onto explorer's command line here, as tools.json's do: a game record that is
+        // hand-edited or restored from a backup must not be able to add a switch or a path.
+        if (!CanUseShellFallback(aumid))
+        {
+            throw new InvalidOperationException($"'{aumid}' is not a well-formed app ID, so it was not handed to explorer.");
+        }
+
         using var _ = Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"shell:AppsFolder\\{aumid}") { UseShellExecute = true });
         return 0;
     }
+
+    /// <summary>Whether <paramref name="aumid"/> is safe to put on explorer's command line (see <see cref="ToolCatalog.ValidateAppId"/>).</summary>
+    internal static bool CanUseShellFallback(string aumid) => ToolCatalog.ValidateAppId(aumid) == null;
 
     private enum ActivateOptions
     {

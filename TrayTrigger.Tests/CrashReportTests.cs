@@ -106,6 +106,22 @@ public class CrashReportTests : IDisposable
         Assert.Contains("send that file", start);
     }
 
+    private sealed class WithStack(string message, string stack) : DllNotFoundException(message)
+    {
+        public override string? StackTrace => stack;
+    }
+
+    [Fact]
+    public void WpfsLoaderFaultAtExit_IsHarmless_AnythingElseIsNot()
+    {
+        const string exitStack = "   at __std_type_info_destroy_list(__type_info_node*)\n   at __scrt_uninitialize_type_info()\n   at <CrtImplementationDetails>.ModuleUninitializer.SingletonDomainUnload(Object source, EventArgs arguments)";
+
+        Assert.True(CrashReport.IsHarmlessExitFault(new WithStack("Dll was not found.", exitStack)));
+        Assert.False(CrashReport.IsHarmlessExitFault(new WithStack("Dll was not found.", "   at TrayTrigger.Services.GpuTelemetryService..ctor()")));
+        Assert.False(CrashReport.IsHarmlessExitFault(new InvalidOperationException(exitStack)));
+        Assert.False(CrashReport.IsHarmlessExitFault(null));
+    }
+
     [Fact]
     public void WhenNothingCouldBeSaved_TheMessageSaysThat_AndGivesNoPath()
     {

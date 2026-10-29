@@ -124,6 +124,10 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// <summary>False when the game ships no DLSS: there is nothing for an override to replace.</summary>
     public bool CanEnable => _content.HasDlss;
 
+    /// <summary>The switch can be clicked: to turn it on the game must ship DLSS, but one TrayTrigger already holds an
+    /// override for can always be turned off, whatever the game ships now.</summary>
+    public bool CanToggleOverride => CanEnable || OverrideEnabled;
+
     /// <summary>True while a driver write is in flight.</summary>
     public bool IsBusy
     {
@@ -157,7 +161,13 @@ public sealed class DlssCardViewModel : ViewModelBase
     public bool OverrideEnabled
     {
         get => _records.Count > 0;
-        set => _ = SetOverrideAsync(value);
+        set
+        {
+            var work = SetOverrideAsync(value);
+            // A click that did nothing (busy, or no DLSS to override) must not leave the box ticked
+            // while the switch is off; work that runs raises it itself when it ends.
+            if (work.IsCompleted) OnPropertyChanged();
+        }
     }
 
     /// <summary>
@@ -230,6 +240,11 @@ public sealed class DlssCardViewModel : ViewModelBase
             if (!undone.Succeeded)
             {
                 _game.DlssPreset = previous;
+                // Some settings may have gone back before one failed: keep a record of only what is still ours.
+                _records.Clear();
+                _records.AddRange(StillOwned(undone, before));
+                ClearDerivedState();
+                _persist?.Invoke();
                 Status = undone.Error ?? "NVIDIA would not undo the change.";
                 return;
             }
@@ -473,7 +488,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             if (result.Succeeded)
                 _records.AddRange(result.Records.Where(r => !handedBack.Contains(r.SettingId)));
             else
-                _records.AddRange(result.Records);
+                _records.AddRange(StillOwned(result, toUndo));
             ClearDerivedState();
             _persist?.Invoke();
             if (result.Succeeded) RecordSwitch(on: false);
@@ -494,6 +509,14 @@ public sealed class DlssCardViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// What TrayTrigger still owns after an Undo that did not succeed. One that failed before it read
+    /// anything (no database session) has no details and carries no records, which is not "nothing is
+    /// ours": every record it was given is kept, or the driver would keep values nothing could undo.
+    /// </summary>
+    private static IReadOnlyList<DlssSettingRecord> StillOwned(DlssOperationResult result, IReadOnlyList<DlssSettingRecord> attempted) =>
+        result.Details.Count == 0 ? attempted : result.Records;
+
     /// <summary>The override just changed, so what loaded under the old one no longer describes this setup.</summary>
     private void ClearDerivedState()
     {
@@ -511,6 +534,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsVisible));
         OnPropertyChanged(nameof(CanEnable));
+        OnPropertyChanged(nameof(CanToggleOverride));
         OnPropertyChanged(nameof(ShowFullCard));
         OnPropertyChanged(nameof(ShowNotAvailable));
         OnPropertyChanged(nameof(VersionLine));

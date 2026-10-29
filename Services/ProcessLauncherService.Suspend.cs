@@ -59,6 +59,17 @@ public partial class ProcessLauncherService
     /// <summary>A session is tracked for this game and Suspend has it frozen.</summary>
     public bool IsGameSuspended(string gameId) => GetSession(gameId)?.IsSuspended == true;
 
+    /// <summary>What Play would find for a game: nothing tracked, a launch still starting, the game running, or it suspended.</summary>
+    public enum TrackedLaunch { None, Starting, Running, Suspended }
+
+    public TrackedLaunch TrackedLaunchOf(string gameId) => GetSession(gameId) switch
+    {
+        null => TrackedLaunch.None,
+        { IsSuspended: true } => TrackedLaunch.Suspended,
+        { GameStarted: true } => TrackedLaunch.Running,
+        _ => TrackedLaunch.Starting,
+    };
+
     public enum SuspendResult
     {
         Suspended,

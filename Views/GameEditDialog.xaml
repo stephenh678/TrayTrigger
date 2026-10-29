@@ -342,7 +342,7 @@
                                         <CheckBox Content="Use the Steam badge instead of the Local badge"
                                                   IsChecked="{Binding ForceSteamOverlayTag}"
                                                   Style="{StaticResource ModernCheckBox}"/>
-                                        <TextBlock Text="Shows the Steam logo on the library card in place of the Local badge."
+                                        <TextBlock Text="Cosmetic only, for a game with no launcher: shows the Steam logo on the library card in place of the Local badge. It doesn't change how the game launches."
                                                    FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -372,6 +372,7 @@
                                         <TextBlock Text="{Binding PlatformDescription}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                         <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
+                                                Visibility="{Binding CanConvertToLocal, Converter={StaticResource BoolToVis}}"
                                                 Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
                                     </DockPanel>
                                     <!-- Hidden for Xbox / Game Pass entries (a GDK exe can't run outside its package) and Battle.net
@@ -388,6 +389,24 @@
                                     <TextBlock Text="Frees the memory a client keeps after you stop playing. Leave it off if you keep the client open for downloads or chat."
                                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                 </StackPanel>
+                            </Border>
+
+                            <!-- Convert to Local game was clicked and not yet saved: the platform box is gone, so
+                                 say so here and keep the way back one click away. -->
+                            <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusControl}" Padding="10,8" Margin="0,0,0,12"
+                                    Visibility="{Binding IsConvertedToLocal, Converter={StaticResource BoolToVis}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding ConvertedNotice}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0"/>
+                                    <Button Grid.Column="1" Content="Undo" Command="{Binding UndoConvertToLocalCommand}"
+                                            AutomationProperties.Name="Undo Convert to Local game"
+                                            Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
+                                </Grid>
                             </Border>
 
                             <!-- Launch through Steam: offered only while the entry has no launcher platform and
@@ -608,7 +627,7 @@
                                     <CheckBox Grid.Column="0" Content="Enable DLSS Override for this game"
                                               AutomationProperties.Name="Enable DLSS Override for this game"
                                               IsChecked="{Binding Dlss.OverrideEnabled}"
-                                              IsEnabled="{Binding Dlss.CanEnable}"
+                                              IsEnabled="{Binding Dlss.CanToggleOverride}"
                                               Style="{StaticResource ModernCheckBox}"/>
                                     <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"
                                                FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Margin="12,0,0,0"
@@ -780,8 +799,13 @@
                             <Border Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}"
                                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="10,6" Margin="0,0,0,12"
                                     Visibility="{Binding ShowScriptsDisabledNotice, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Scripts are turned off in Settings › Launch &amp; Performance (Enable scripts), so these will NOT run until that switch is back on."
-                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
+                                <StackPanel>
+                                    <TextBlock Text="Scripts are turned off in Settings › Launch &amp; Performance (Enable scripts), so these will NOT run until that switch is back on."
+                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
+                                    <CheckBox Content="Enable scripts (every game, at once)" IsChecked="{Binding ScriptsEnabled}" Margin="0,6,0,0"
+                                              Style="{StaticResource ModernCheckBox}"
+                                              AutomationProperties.Name="Enable scripts"/>
+                                </StackPanel>
                             </Border>
 
                             <!-- Pre-launch script -->
@@ -920,14 +944,21 @@
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,10" Margin="0,0,0,12"
                             Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
-                        <DockPanel LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
-                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
-                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
-                                <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                <Run Text=" are turned off. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
-                            </TextBlock>
-                        </DockPanel>
+                        <StackPanel>
+                            <DockPanel LastChildFill="True">
+                                <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
+                                    <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <Run Text=" are turned off, so your own script can't run before this game starts or after it exits."/>
+                                </TextBlock>
+                            </DockPanel>
+                            <CheckBox Content="Enable scripts" IsChecked="{Binding ScriptsEnabled}" Margin="0,8,0,0"
+                                      Style="{StaticResource ModernCheckBox}"
+                                      AutomationProperties.Name="Enable scripts"/>
+                            <TextBlock Text="The same switch as Settings › Launch &amp; Performance: one setting for every game, and it takes effect at once, even if you cancel this window."
+                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                        </StackPanel>
                     </Border>
 
                 </StackPanel>

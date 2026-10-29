@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace TrayTrigger.Services;
 
@@ -26,8 +27,14 @@ internal static class BoundedProcess
             return new Result(false, -1, string.Empty, string.Empty);
         }
 
-        // The process has exited; the streams close with it, so this returns at once.
-        proc.WaitForExit();
-        return new Result(true, proc.ExitCode, output.GetAwaiter().GetResult(), error.GetAwaiter().GetResult());
+        // The streams normally close with the process, but a grandchild it started can hold them open
+        // (powershell leaving something running), so the read is bounded too rather than waiting for EOF.
+        bool drained = Task.WaitAll([output, error], DrainTimeoutMs);
+        return new Result(true, proc.ExitCode,
+            drained || output.IsCompletedSuccessfully ? output.Result : string.Empty,
+            drained || error.IsCompletedSuccessfully ? error.Result : string.Empty);
     }
+
+    /// <summary>How long to wait for the output after the process has exited.</summary>
+    internal const int DrainTimeoutMs = 2000;
 }

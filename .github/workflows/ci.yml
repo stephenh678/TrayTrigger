@@ -50,6 +50,10 @@ jobs:
       - name: Build (Release)
         run: dotnet build TrayTrigger.csproj -c Release
 
+      # The diagnostics under #if DEBUG are not in the Release build; this keeps them compiling.
+      - name: Build (Debug)
+        run: dotnet build TrayTrigger.csproj -c Debug
+
       - name: Test
         run: dotnet test TrayTrigger.Tests/TrayTrigger.Tests.csproj -c Release --logger "trx;LogFileName=tests.trx"
 
