@@ -38,7 +38,7 @@ Machine-wide tweaks such as the power plan are applied by the first game to laun
 - GOG, EA, Epic, Ubisoft, Xbox and Battle.net games launched through their client (or directly) are tracked by watching the game's install folder for its real process, because the exe the client registers is often only a short-lived launcher stub. Every tweak, priority included, applies to them.
 - A bare launcher link, meaning a dropped .url or protocol shortcut with no platform ID behind it, has no exit signal at all, so profiles are not applied for it.
 - Launching a game that is already running never re-applies the profile or re-runs scripts; TrayTrigger just brings its window forward.
-- "Close the launcher after this game exits" (Edit Game, Launch card) shuts the platform client down once the session ends. How a game is launched covers it, and how launchers are kept minimized.
+- "Close the launcher after this game exits" (Edit Game > Launch) shuts the platform client down once the session ends. How a game is launched covers it, and how launchers are kept minimized.
 
 ## Now Playing, Close Game, and Force Close
 

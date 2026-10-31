@@ -3505,6 +3505,110 @@ public partial class App
                 return;
             }
 
+            // --screenshot-campaign <out-dir> <steam app id> "<name>": the frames the site, the README and the walkthrough GIF use for
+            // Game Details. The game's text, rating, news and hero banner are the real ones from Steam (the page loads them as it opens);
+            // only the setup on the game and the Played row are a demonstration, and nothing is written to the library or the settings.
+            if (e.Args[i].Equals("--screenshot-campaign", StringComparison.OrdinalIgnoreCase) && i + 3 < e.Args.Length)
+            {
+                _skipSettingsSaveOnExit = true;
+                string outDir = e.Args[i + 1];
+                string appId = e.Args[i + 2];
+                string title = e.Args[i + 3];
+                var game = new GameEntry
+                {
+                    Name = title,
+                    Category = "RPG",
+                    SteamAppId = appId,
+                    IsSteamGame = true,
+                    ExecutablePath = $@"C:\Program Files (x86)\Steam\steamapps\common\{title.Replace(":", "")}\{title.Replace(":", "")}.exe",
+                    CumulativePlaytimeMinutes = 52 * 60,
+                    LastPlayed = DateTime.Now.AddHours(-3).AddMinutes(72),
+                    PerformanceProfile = PerformanceProfileMode.Aggressive,
+                    Hdr = HdrMode.On,
+                    DisplayWidth = 2560,
+                    DisplayHeight = 1440,
+                    DisplayRefreshHz = 165,
+                    Hotkey = "Ctrl+Alt+W",
+                };
+                var demoLog = new ActivityService(Path.Combine(Path.GetTempPath(), "tt-campaign-activity"), readOnly: true);
+                var sessionStart = DateTime.Now.AddHours(-3);
+                demoLog.Record(ActivityLevel.Change, $"Played {title} · 1h 12m", subject: title,
+                    detail: $"Played: from {sessionStart:HH:mm} to {sessionStart.AddMinutes(72):HH:mm} · launched through Steam.\n"
+                        + "Profile: Aggressive · changed: Ultimate Performance power plan · HDR on · NVIDIA power management: Prefer maximum performance.\n"
+                        + "Put back: everything.");
+                // TRAYTRIGGER_CAMPAIGN_ICON_EXE=<an exe>: the game's own icon, taken from that file, so the Icon card is not empty.
+                // Only the extracted icon is used; the file's path is never shown.
+                if (Environment.GetEnvironmentVariable("TRAYTRIGGER_CAMPAIGN_ICON_EXE") is { Length: > 0 } iconExe && File.Exists(iconExe))
+                {
+                    string icon = _iconExtractorService.ExtractAndCacheIcon(game.Id, iconExe, title);
+                    if (!string.IsNullOrEmpty(icon)) game.IconPath = icon;
+                }
+                var campaignVm = new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService(),
+                    editHost: DiagnosticEditHost(), heroArt: new HeroArtService(), activity: demoLog);
+                var campaign = new GameDetailsDialog(campaignVm);
+                PumpDispatcher(TimeSpan.FromSeconds(40), () => campaignVm.HasDetails && !campaignVm.IsLoading);
+                WaitForHero(campaign, 30);
+                PumpDispatcher(TimeSpan.FromSeconds(2));
+                // The poster the page found for the game, as a library card would already hold it.
+                if (string.IsNullOrWhiteSpace(game.CoverImagePath) && campaignVm.Details?.CoverImagePath is { Length: > 0 } found) game.CoverImagePath = found;
+                File.WriteAllText(Path.Combine(outDir, "campaign.txt"),
+                    $"name={game.Name}\ncover={game.CoverImagePath} exists={(game.CoverImagePath != null && File.Exists(game.CoverImagePath))}\nicon={game.IconPath}\nloaded={campaignVm.HasDetails}\n");
+                bool Frame(string file, int height = 700)
+                {
+                    PumpDispatcher(TimeSpan.FromMilliseconds(900));
+                    return CaptureVisual(campaign, 960, height, Path.Combine(outDir, file));
+                }
+                Frame("details-overview.png");
+                // Tall enough to hold the whole Overview: both columns, the setup and the last session.
+                Frame("details-overview-full.png", 1200);
+                campaign.ShowSettings(GameEditSection.Artwork);
+                Frame("details-artwork.png", 860);
+                campaign.ShowSettings(GameEditSection.Performance);
+                PumpDispatcher(TimeSpan.FromSeconds(2));
+                Frame("details-performance.png", 860);
+                campaign.ShowSettings(GameEditSection.Identity);
+                Frame("details-match.png", 860);
+
+                // The launch popup, with what the pre-launch script said in it.
+                var target = LaunchTarget.ForGame(game) with { PerformanceProfile = PerformanceProfileMode.Aggressive };
+                var popup = new LaunchPopupWindow();
+                popup.Render(new LaunchPopupContent(LaunchPopupKind.Launching, target.Name, "Launching", "closed Dropbox and Google Drive", GetLaunchTargetIcon(target), null));
+                // Drawn 2.4 times as large, as sharp as the rest, for a walkthrough that shows it big.
+                const double popupZoom = 2.4;
+                popup.Width = 320 * popupZoom;
+                if (popup.Content is FrameworkElement popupCard) popupCard.LayoutTransform = new ScaleTransform(popupZoom, popupZoom);
+                popup.Show();
+                popup.Opacity = 1;
+                popup.UpdateLayout();
+                CaptureVisual(popup, (int)popup.ActualWidth, (int)popup.ActualHeight, Path.Combine(outDir, "launch-popup.png"));
+                popup.Close();
+
+                // The game's Played row in Activity & History, open, in this run's in-memory history (a capture never writes activity.json).
+                if (ActivityService.Current is { } history)
+                {
+                    var playedRow = history.Record(ActivityLevel.Change, $"Played {title} · 1h 12m", subject: title,
+                        detail: $"Played: from {sessionStart:HH:mm} to {sessionStart.AddMinutes(72):HH:mm} · launched through Steam.\n"
+                            + "Profile: Aggressive · changed: Ultimate Performance power plan · HDR on · NVIDIA power management: Prefer maximum performance · Windows' multimedia scheduler settings.\n"
+                            + "Put back: everything.\n"
+                            + "Game: exempt from Windows power throttling.\n"
+                            + "Scripts: pre-launch Example-CloseBackgroundApps.ps1 ran · closed Dropbox and Google Drive.\n"
+                            + "Tools: MSI Afterburner started, closed after.",
+                        groupKey: "played|campaign");
+                    // Written when the session ended, as the app writes it.
+                    playedRow.TimeUtc = sessionStart.AddMinutes(72).ToUniversalTime();
+                    _mainViewModel.ActivityVM.Refresh();
+                    if (_mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Text.StartsWith($"Played {title}", StringComparison.Ordinal)) is { } row) row.IsExpanded = true;
+                    campaign.Close();
+                    _mainViewModel.CurrentSection = NavSection.Activity;
+                    _mainWindow.Show();
+                    _mainWindow.UpdateLayout();
+                    PumpDispatcher(TimeSpan.FromMilliseconds(900));
+                    CaptureVisual(_mainWindow, 960, 750, Path.Combine(outDir, "activity-played.png"));
+                }
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-details", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-details", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
