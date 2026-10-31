@@ -35,14 +35,18 @@ public partial class GameEditViewModel
             {
                 OnPropertyChanged(nameof(IsAllSection));
                 OnPropertyChanged(nameof(IsIdentitySection));
+                OnPropertyChanged(nameof(IsArtworkSection));
                 OnPropertyChanged(nameof(IsLaunchSection));
                 OnPropertyChanged(nameof(IsPerformanceSection));
                 OnPropertyChanged(nameof(IsDisplaySection));
                 OnPropertyChanged(nameof(IsScriptsSection));
                 OnPropertyChanged(nameof(ShowIdentityCard));
+                OnPropertyChanged(nameof(ShowArtworkCard));
                 OnPropertyChanged(nameof(ShowLaunchCard));
                 OnPropertyChanged(nameof(ShowPerformanceCard));
                 OnPropertyChanged(nameof(ShowDisplayCard));
+                OnPropertyChanged(nameof(ShowScreensCard));
+                OnPropertyChanged(nameof(ShowCoresAndHdrCard));
                 // The DLSS card shares the Performance tab; it owns its own visibility so the
                 // XAML needs one binding rather than a multi-binding across two view models.
                 Dlss.IsOnTab = IsAllSection || IsPerformanceSection;
@@ -54,34 +58,40 @@ public partial class GameEditViewModel
 
     public bool IsAllSection => SelectedSection == GameEditSection.All;
     public bool IsIdentitySection => SelectedSection == GameEditSection.Identity;
+    public bool IsArtworkSection => SelectedSection == GameEditSection.Artwork;
     public bool IsLaunchSection => SelectedSection == GameEditSection.Launch;
     public bool IsPerformanceSection => SelectedSection == GameEditSection.Performance;
     public bool IsDisplaySection => SelectedSection == GameEditSection.Display;
     public bool IsScriptsSection => SelectedSection == GameEditSection.Scripts;
 
     public bool ShowIdentityCard => IsAllSection || IsIdentitySection;
+    public bool ShowArtworkCard => IsAllSection || IsArtworkSection;
     public bool ShowLaunchCard => IsAllSection || IsLaunchSection;
     public bool ShowPerformanceCard => IsAllSection || IsPerformanceSection;
+
+    /// <summary>CPU cores, HDR and Auto HDR each come and go with this PC; with none of them, the card is left out.</summary>
+    public bool ShowCoresAndHdrCard => ShowPerformanceCard && (ShowCpuCores || ShowHdr || ShowAutoHdr);
+
+    /// <summary>The mouse and dimming options only exist with more than one monitor, so the Screens card does too.</summary>
+    public bool ShowScreensCard => ShowDisplayCard && (ShowMouseLock || ShowDim);
+
+    private bool _showScriptRunOptions;
+
+    /// <summary>The "How the scripts run" section: shut for a game with no script, open once it has one or a value in it is refused.</summary>
+    public bool ShowScriptRunOptions
+    {
+        get => _showScriptRunOptions;
+        set => SetProperty(ref _showScriptRunOptions, value);
+    }
     public bool ShowScriptsCardOnTab => ShowScriptsCard && (IsAllSection || IsScriptsSection);
     /// <summary>The "scripts are turned off" note shows on the Scripts tab, and last on All.</summary>
     public bool ShowScriptsStubOnTab => ShowScriptsStub && (IsAllSection || IsScriptsSection);
 
     public ICommand SelectSectionCommand { get; }
 
-    private bool _showAdvancedLaunchOptions;
-    /// <summary>
-    /// The "Advanced launch options" expander (working folder, arguments). Starts open when either
-    /// already has a value, so nothing set on a game is tucked out of sight.
-    /// </summary>
-    public bool ShowAdvancedLaunchOptions
-    {
-        get => _showAdvancedLaunchOptions;
-        set => SetProperty(ref _showAdvancedLaunchOptions, value);
-    }
-
     /// <summary>The tabs in strip order. Scripts is always there: while scripts are off it holds the note about turning them on.</summary>
     public IReadOnlyList<GameEditSection> AvailableSections { get; } =
-        [GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts];
+        [GameEditSection.All, GameEditSection.Identity, GameEditSection.Artwork, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts];
 
     /// <summary>Ctrl+Tab and Ctrl+Shift+Tab: the next or previous tab, wrapping at the ends.</summary>
     public void MoveSection(int step)
@@ -113,6 +123,9 @@ public partial class GameEditViewModel
         // The reason goes under the field itself, where the eye already is once focus moves
         // there; the footer only says the save didn't happen.
         SetFieldError(field, message);
+        // The App ID box sits behind "Enter an App ID": a refused ID opens it.
+        if (field == EditField.SteamAppId) ShowAppIdEntry = true;
+        if (field == EditField.PreLaunchTimeout) ShowScriptRunOptions = true;
         ShowProblem("Not saved: one field needs fixing. The reason is under it.");
         var section = SectionOf(field);
         if (!IsAllSection && SelectedSection != section) SelectedSection = section;

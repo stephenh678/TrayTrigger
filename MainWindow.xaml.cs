@@ -542,33 +542,9 @@ public partial class MainWindow : Window
 
 
 
-    private void OnRequestEditGameDialog(GameCardViewModel card)
-    {
-        var editDialog = new GameEditDialog(
-            card.Game, 
-            _viewModel.Categories, 
-            _viewModel.IconExtractorService, 
-            steamGridDbApiKey: _viewModel.SettingsVM.SteamGridDbApiKeyOrNull,
-            minConfidence: _viewModel.Settings.OnlineMatchConfidenceThreshold,
-            scriptsEnabled: _viewModel.Settings.EnableGameScripts,
-            scriptDefaults: _viewModel.Settings.ScriptDefaults,
-            scriptLibrary: new ScriptLibraryService(_viewModel.StorageService.BaseDirectory),
-            profileTweaks: _viewModel.SystemVM.EnabledTweaksFor,
-            // A DLSS apply changes the driver there and then, so its record must reach disk there
-            // and then too - not on Save Changes, which the user may never press.
-            persistLibrary: () => _viewModel.Library.SaveGamesOnly(),
-            // The Enable scripts switch in the Scripts notice: the Settings switch itself, saved and set up at once.
-            setScriptsEnabled: on => _viewModel.SettingsVM.EnableGameScripts = on);
-        editDialog.Owner = this;
-        if (editDialog.ShowDialog() == true)
-        {
-            card.RefreshProperties();
-            _viewModel.RebuildCategories();
-            _viewModel.SaveLibrary();
-            _viewModel.UpdateHotkeys();
-            _viewModel.FilteredGames.Refresh();
-        }
-    }
+    /// <summary>Edit, from the card menu, the tray or Activity: the game's page, on its Settings tab.</summary>
+    private void OnRequestEditGameDialog(GameCardViewModel card) =>
+        _viewModel.Library.OpenGameDetails(card, startOnSettings: true);
 
     private void OnRequestCandidatePicker(string folderPath, List<GameCandidate> candidates)
     {

@@ -336,6 +336,7 @@ public partial class SteamMetadataService
                 if (!string.IsNullOrEmpty(details.Name))
                 {
                     details.FetchedUtc = DateTime.UtcNow;
+                    details.DataVersion = SteamAppDetails.CurrentDataVersion;
                     Store(details);
                     return details;
                 }
@@ -392,6 +393,14 @@ public partial class SteamMetadataService
         if (data.TryGetProperty("short_description", out var sd))
         {
             details.ShortDescription = CleanHtmlText(sd.GetString() ?? string.Empty);
+        }
+
+        // The developer's own site: opened by a link on the page, so only a web address is kept.
+        if (data.TryGetProperty("website", out var ws) && ws.ValueKind == JsonValueKind.String
+            && Uri.TryCreate(ws.GetString(), UriKind.Absolute, out var siteUri)
+            && (siteUri.Scheme == Uri.UriSchemeHttp || siteUri.Scheme == Uri.UriSchemeHttps))
+        {
+            details.Website = siteUri.AbsoluteUri;
         }
 
         // Images
@@ -472,40 +481,63 @@ public partial class SteamMetadataService
         }
     }
 
+    /// <summary>Fewer reviews than this have no percentage worth showing: Steam itself says only how many there are.</summary>
+    internal const int MinReviewsForPercent = 10;
+
     private static async Task FetchReviewSummaryAsync(string appId, SteamAppDetails details, CancellationToken ct)
     {
         try
         {
-            string url = $"https://store.steampowered.com/appreviews/{appId}?json=1&language=all&purchase_type=all";
+            // Steam stopped serving /appreviews (the page that carried its own "Very Positive" wording): it now
+            // redirects to the store's front page. The histogram still counts the reviews, with no key, so the
+            // page says how many are positive rather than a label this app would have to guess at.
+            string url = $"https://store.steampowered.com/appreviewhistogram/{Uri.EscapeDataString(appId)}?l=english";
             using var timeoutCts = LinkedTimeoutCts(ct, JsonCallTimeout);
             using var resp = await HttpClient.GetAsync(url, timeoutCts.Token).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return;
 
             await using var stream = await resp.Content.ReadAsStreamAsync(timeoutCts.Token).ConfigureAwait(false);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: timeoutCts.Token).ConfigureAwait(false);
-
-            if (doc.RootElement.TryGetProperty("query_summary", out var qs))
-            {
-                string? reviewDesc = qs.TryGetProperty("review_score_desc", out var rsd) ? rsd.GetString() : null;
-                int totalPositive = qs.TryGetProperty("total_positive", out var tp) && tp.TryGetInt32(out int p) ? p : 0;
-                int totalReviews = qs.TryGetProperty("total_reviews", out var tr) && tr.TryGetInt32(out int r) ? r : 0;
-
-                if (totalReviews > 0)
-                {
-                    int percent = (int)Math.Round((double)totalPositive * 100 / totalReviews);
-                    details.ReviewScorePercent = percent;
-                    details.ReviewSummary = $"{reviewDesc ?? "Positive"} ({percent}% of {totalReviews:N0} reviews)";
-                }
-                else if (!string.IsNullOrWhiteSpace(reviewDesc))
-                {
-                    details.ReviewSummary = reviewDesc;
-                }
-            }
+            ApplyReviewHistogram(doc.RootElement, details);
         }
-        catch
+        catch (Exception ex)
         {
-            // Non-fatal
+            // Non-fatal: the page simply shows no rating. Logged, so a page Steam has moved is noticed.
+            LoggingService.Verbose("SteamMetadata", $"No review counts for AppId {appId}: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Adds up the positive and negative reviews in Steam's review histogram: "92% positive (14,280 reviews)", or just
+    /// "N user reviews" while there are too few for a percentage. Leaves the details alone when there are none.
+    /// </summary>
+    internal static void ApplyReviewHistogram(JsonElement root, SteamAppDetails details)
+    {
+        if (!root.TryGetProperty("results", out var results) ||
+            !results.TryGetProperty("rollups", out var rollups) ||
+            rollups.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        long up = 0, down = 0;
+        foreach (var rollup in rollups.EnumerateArray())
+        {
+            if (rollup.TryGetProperty("recommendations_up", out var u) && u.TryGetInt64(out long upCount)) up += upCount;
+            if (rollup.TryGetProperty("recommendations_down", out var d) && d.TryGetInt64(out long downCount)) down += downCount;
+        }
+
+        long total = up + down;
+        if (total <= 0) return;
+        if (total < MinReviewsForPercent)
+        {
+            details.ReviewSummary = total == 1 ? "1 user review" : $"{total:N0} user reviews";
+            return;
+        }
+
+        int percent = (int)Math.Round(up * 100.0 / total);
+        details.ReviewScorePercent = percent;
+        details.ReviewSummary = $"{percent}% positive ({total:N0} reviews)";
     }
 
     private static async Task FetchNewsItemsAsync(string appId, SteamAppDetails details, CancellationToken ct)
@@ -791,7 +823,7 @@ public partial class SteamMetadataService
     /// Guards against caching a non-image response body (e.g. an HTML error/rate-limit page
     /// that happened to come back with a 200 status and exceed the byte-size check) as a poster.
     /// </summary>
-    private static bool IsDecodableImage(byte[] bytes)
+    internal static bool IsDecodableImage(byte[] bytes)
     {
         try
         {

@@ -315,7 +315,8 @@ public partial class LibraryViewModel
             removed,
             Games.Select(c => c.Game).ToList(),
             _storageService.IconsDirectory,
-            _storageService.CoversDirectory);
+            _storageService.CoversDirectory,
+            HeroArtService.HeroesDirectory);
         LoggingService.Verbose("Library", $"Cleaned up after {removed.Count} removed game(s): {result}.");
 
         UndoDlssOverridesOf(removed);

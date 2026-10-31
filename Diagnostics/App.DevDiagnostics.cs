@@ -923,10 +923,10 @@ public partial class App
                     var modes = DisplayModeService.Shared.AvailableModes();
                     var mode = modes[1];
                     var game = new GameEntry { Id = "t", Name = "Test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz, DisplayMonitorId = monitors[0].Id };
-                    var dialog = new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                    var dialog = NewEditGameWindow(game, GameEditSection.Display);
                     dialog.Show();
                     dialog.UpdateLayout();
-                    var vm = (ViewModels.GameEditViewModel)dialog.DataContext;
+                    var vm = dialog.EditViewModel!;
                     var combo = FindVisualChild<ComboBox>(dialog, c => System.Windows.Automation.AutomationProperties.GetName(c) == "Monitor");
                     string State(string label) => $"{label}: monitor='{vm.SelectedMonitor.Label}' resolution='{vm.SelectedResolution.Label}' rate='{vm.SelectedRate?.Label}' (saved {mode})";
                     lines.Add(State("opened"));
@@ -2126,9 +2126,9 @@ public partial class App
                 if (kind == "editgame")
                 {
                     var game = _mainViewModel.Games.FirstOrDefault()?.Game ?? new GameEntry { Name = "Audit Game" };
-                    dialog = new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
-                    dialog.Width = 820;
-                    dialog.Height = 675;
+                    dialog = NewEditGameWindow(game);
+                    dialog.Width = 960;
+                    dialog.Height = 760;
                 }
                 else
                 {
@@ -2235,13 +2235,13 @@ public partial class App
                 {
                     sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz, KeepMouseOnGameScreen = true, DimOtherScreens = true, DisplayMonitorId = DisplayModeService.Shared.AvailableMonitors().Select(m => m.Id).FirstOrDefault() ?? string.Empty, AudioOutputDeviceId = AudioOutputService.Shared.AvailableDevices().Select(d => d.Id).FirstOrDefault() ?? string.Empty };
                 }
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                var dlg = NewEditGameWindow(sampleGame);
                 dlg.Show();
                 dlg.UpdateLayout();
-                var sv = FindVisualChild<ScrollViewer>(dlg, s => s.ScrollableHeight > 0);
+                var sv = FindVisualChild<ScrollViewer>(dlg, s => s.Name == "EditScroll");
                 if (scrollOffset is double offset) sv?.ScrollToVerticalOffset(offset); else sv?.ScrollToBottom();
                 dlg.UpdateLayout();
-                CaptureVisual(dlg, 820, 660, targetPng);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -2309,9 +2309,8 @@ public partial class App
                 var sampleGame = source == null
                     ? new GameEntry { Name = "DOOM Eternal", Category = "Action", ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe" }
                     : new GameEntry { Name = source.Name, Category = source.Category, ExecutablePath = source.ExecutablePath, WorkingDirectory = source.WorkingDirectory, Arguments = source.Arguments, IconPath = source.IconPath, CoverImagePath = source.CoverImagePath, SteamAppId = source.SteamAppId, IsSteamGame = source.IsSteamGame };
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true,
-                    profileTweaks: _mainViewModel.SystemVM.EnabledTweaksFor);
-                var editVm = (GameEditViewModel)dlg.DataContext;
+                var dlg = NewEditGameWindow(sampleGame, section, withHero: true);
+                var editVm = dlg.EditViewModel!;
                 if (invalid) editVm.SteamAppId = "not-a-number";
                 // The Performance tab shows the tier summary; Aggressive lists the most.
                 if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
@@ -2327,7 +2326,6 @@ public partial class App
                     editVm.UseSameScriptForBoth = true;
                     editVm.ScriptArguments = "recommended";
                 }
-                editVm.SelectedSection = section;
                 dlg.Show();
                 // The DLSS card loads asynchronously, so a capture taken straight after Show()
                 // would omit it and quietly misrepresent the tab. Pump the dispatcher until the
@@ -2347,7 +2345,7 @@ public partial class App
                     Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                     dlg.UpdateLayout();
                 }
-                CaptureVisual(dlg, 820, 675, targetPng);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -2532,8 +2530,8 @@ public partial class App
                     sampleGame.IconPath = _iconExtractorService.ExtractAndCacheIcon(sampleGame.Id, fallbackExe, sampleGame.Name);
                 }
 
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
-                CaptureVisual(dlg, 550, 640, targetPng);
+                var dlg = NewEditGameWindow(sampleGame);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -2559,8 +2557,8 @@ public partial class App
 
                 using var mainBmp = CaptureVisualBitmap(_mainWindow, 960, 700);
                 var sampleGame = _mainViewModel.Games.First().Game;
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
-                using var dlgBmp = CaptureVisualBitmap(dlg, 550, 640);
+                var dlg = NewEditGameWindow(sampleGame);
+                using var dlgBmp = CaptureVisualBitmap(dlg, 960, 760);
 
                 using var composite = new System.Drawing.Bitmap(mainBmp.Width, mainBmp.Height);
                 using (var g = System.Drawing.Graphics.FromImage(composite))
@@ -2609,7 +2607,6 @@ public partial class App
                 var search = new SteamSearchService();
 
                 bool launched = false;
-                bool edited = false;
                 bool deleted = false;
                 int closeCount = 0;
 
@@ -2618,8 +2615,8 @@ public partial class App
                     meta,
                     search,
                     launchAction: g => launched = true,
-                    editAction: g => edited = true,
-                    deleteAction: g => deleted = true
+                    deleteAction: g => deleted = true,
+                    editHost: DiagnosticEditHost()
                 );
 
                 testVm.RequestClose += () => closeCount++;
@@ -2628,13 +2625,13 @@ public partial class App
                 testVm.LaunchGameCommand.Execute(null);
                 if (!launched || closeCount != 1) throw new Exception("Launch failed or didn't request close!");
 
-                // Test Edit
+                // Test Edit: the page stays open and shows its Settings tab
                 testVm.EditGameCommand.Execute(null);
-                if (!edited || closeCount != 2) throw new Exception("Edit failed or didn't request close!");
+                if (!testVm.IsSettingsTab || testVm.EditViewModel == null || closeCount != 1) throw new Exception("Edit didn't open the Settings tab in place!");
 
                 // Test Delete
                 testVm.DeleteGameCommand.Execute(null);
-                if (!deleted || closeCount != 3) throw new Exception("Delete failed or didn't request close!");
+                if (!deleted || closeCount != 2) throw new Exception("Delete failed or didn't request close!");
 
                 // Test Properties
                 if (testVm.PlaytimeDisplay != "1.5h played") throw new Exception($"Playtime mismatch: {testVm.PlaytimeDisplay}");
@@ -3508,6 +3505,110 @@ public partial class App
                 return;
             }
 
+            // --screenshot-campaign <out-dir> <steam app id> "<name>": the frames the site, the README and the walkthrough GIF use for
+            // Game Details. The game's text, rating, news and hero banner are the real ones from Steam (the page loads them as it opens);
+            // only the setup on the game and the Played row are a demonstration, and nothing is written to the library or the settings.
+            if (e.Args[i].Equals("--screenshot-campaign", StringComparison.OrdinalIgnoreCase) && i + 3 < e.Args.Length)
+            {
+                _skipSettingsSaveOnExit = true;
+                string outDir = e.Args[i + 1];
+                string appId = e.Args[i + 2];
+                string title = e.Args[i + 3];
+                var game = new GameEntry
+                {
+                    Name = title,
+                    Category = "RPG",
+                    SteamAppId = appId,
+                    IsSteamGame = true,
+                    ExecutablePath = $@"C:\Program Files (x86)\Steam\steamapps\common\{title.Replace(":", "")}\{title.Replace(":", "")}.exe",
+                    CumulativePlaytimeMinutes = 52 * 60,
+                    LastPlayed = DateTime.Now.AddHours(-3).AddMinutes(72),
+                    PerformanceProfile = PerformanceProfileMode.Aggressive,
+                    Hdr = HdrMode.On,
+                    DisplayWidth = 2560,
+                    DisplayHeight = 1440,
+                    DisplayRefreshHz = 165,
+                    Hotkey = "Ctrl+Alt+W",
+                };
+                var demoLog = new ActivityService(Path.Combine(Path.GetTempPath(), "tt-campaign-activity"), readOnly: true);
+                var sessionStart = DateTime.Now.AddHours(-3);
+                demoLog.Record(ActivityLevel.Change, $"Played {title} · 1h 12m", subject: title,
+                    detail: $"Played: from {sessionStart:HH:mm} to {sessionStart.AddMinutes(72):HH:mm} · launched through Steam.\n"
+                        + "Profile: Aggressive · changed: Ultimate Performance power plan · HDR on · NVIDIA power management: Prefer maximum performance.\n"
+                        + "Put back: everything.");
+                // TRAYTRIGGER_CAMPAIGN_ICON_EXE=<an exe>: the game's own icon, taken from that file, so the Icon card is not empty.
+                // Only the extracted icon is used; the file's path is never shown.
+                if (Environment.GetEnvironmentVariable("TRAYTRIGGER_CAMPAIGN_ICON_EXE") is { Length: > 0 } iconExe && File.Exists(iconExe))
+                {
+                    string icon = _iconExtractorService.ExtractAndCacheIcon(game.Id, iconExe, title);
+                    if (!string.IsNullOrEmpty(icon)) game.IconPath = icon;
+                }
+                var campaignVm = new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService(),
+                    editHost: DiagnosticEditHost(), heroArt: new HeroArtService(), activity: demoLog);
+                var campaign = new GameDetailsDialog(campaignVm);
+                PumpDispatcher(TimeSpan.FromSeconds(40), () => campaignVm.HasDetails && !campaignVm.IsLoading);
+                WaitForHero(campaign, 30);
+                PumpDispatcher(TimeSpan.FromSeconds(2));
+                // The poster the page found for the game, as a library card would already hold it.
+                if (string.IsNullOrWhiteSpace(game.CoverImagePath) && campaignVm.Details?.CoverImagePath is { Length: > 0 } found) game.CoverImagePath = found;
+                File.WriteAllText(Path.Combine(outDir, "campaign.txt"),
+                    $"name={game.Name}\ncover={game.CoverImagePath} exists={(game.CoverImagePath != null && File.Exists(game.CoverImagePath))}\nicon={game.IconPath}\nloaded={campaignVm.HasDetails}\n");
+                bool Frame(string file, int height = 700)
+                {
+                    PumpDispatcher(TimeSpan.FromMilliseconds(900));
+                    return CaptureVisual(campaign, 960, height, Path.Combine(outDir, file));
+                }
+                Frame("details-overview.png");
+                // Tall enough to hold the whole Overview: both columns, the setup and the last session.
+                Frame("details-overview-full.png", 1200);
+                campaign.ShowSettings(GameEditSection.Artwork);
+                Frame("details-artwork.png", 860);
+                campaign.ShowSettings(GameEditSection.Performance);
+                PumpDispatcher(TimeSpan.FromSeconds(2));
+                Frame("details-performance.png", 860);
+                campaign.ShowSettings(GameEditSection.Identity);
+                Frame("details-match.png", 860);
+
+                // The launch popup, with what the pre-launch script said in it.
+                var target = LaunchTarget.ForGame(game) with { PerformanceProfile = PerformanceProfileMode.Aggressive };
+                var popup = new LaunchPopupWindow();
+                popup.Render(new LaunchPopupContent(LaunchPopupKind.Launching, target.Name, "Launching", "closed Dropbox and Google Drive", GetLaunchTargetIcon(target), null));
+                // Drawn 2.4 times as large, as sharp as the rest, for a walkthrough that shows it big.
+                const double popupZoom = 2.4;
+                popup.Width = 320 * popupZoom;
+                if (popup.Content is FrameworkElement popupCard) popupCard.LayoutTransform = new ScaleTransform(popupZoom, popupZoom);
+                popup.Show();
+                popup.Opacity = 1;
+                popup.UpdateLayout();
+                CaptureVisual(popup, (int)popup.ActualWidth, (int)popup.ActualHeight, Path.Combine(outDir, "launch-popup.png"));
+                popup.Close();
+
+                // The game's Played row in Activity & History, open, in this run's in-memory history (a capture never writes activity.json).
+                if (ActivityService.Current is { } history)
+                {
+                    var playedRow = history.Record(ActivityLevel.Change, $"Played {title} · 1h 12m", subject: title,
+                        detail: $"Played: from {sessionStart:HH:mm} to {sessionStart.AddMinutes(72):HH:mm} · launched through Steam.\n"
+                            + "Profile: Aggressive · changed: Ultimate Performance power plan · HDR on · NVIDIA power management: Prefer maximum performance · Windows' multimedia scheduler settings.\n"
+                            + "Put back: everything.\n"
+                            + "Game: exempt from Windows power throttling.\n"
+                            + "Scripts: pre-launch Example-CloseBackgroundApps.ps1 ran · closed Dropbox and Google Drive.\n"
+                            + "Tools: MSI Afterburner started, closed after.",
+                        groupKey: "played|campaign");
+                    // Written when the session ended, as the app writes it.
+                    playedRow.TimeUtc = sessionStart.AddMinutes(72).ToUniversalTime();
+                    _mainViewModel.ActivityVM.Refresh();
+                    if (_mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Text.StartsWith($"Played {title}", StringComparison.Ordinal)) is { } row) row.IsExpanded = true;
+                    campaign.Close();
+                    _mainViewModel.CurrentSection = NavSection.Activity;
+                    _mainWindow.Show();
+                    _mainWindow.UpdateLayout();
+                    PumpDispatcher(TimeSpan.FromMilliseconds(900));
+                    CaptureVisual(_mainWindow, 960, 750, Path.Combine(outDir, "activity-played.png"));
+                }
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-details", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-details", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -3529,7 +3630,19 @@ public partial class App
                 var searchService = new SteamSearchService();
                 // "--screenshot-details <out.png> playing": as while the game runs (Close Game, Force Close).
                 bool detailsPlaying = e.Args.Any(a => a.Equals("playing", StringComparison.OrdinalIgnoreCase));
-                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying);
+                // "rich": some setup on the game and a Played row for it, to see Your setup with several rows and the Last session card.
+                bool detailsRich = e.Args.Any(a => a.Equals("rich", StringComparison.OrdinalIgnoreCase));
+                ActivityService? detailsActivity = null;
+                if (detailsRich)
+                {
+                    game.PerformanceProfile = PerformanceProfileMode.Aggressive;
+                    game.DisplayWidth = 2560; game.DisplayHeight = 1440; game.DisplayRefreshHz = 165;
+                    game.Hotkey = "Ctrl+Alt+H"; game.RunAsAdmin = true;
+                    detailsActivity = new ActivityService(Path.Combine(Path.GetTempPath(), "tt-details-activity"), readOnly: true);
+                    detailsActivity.Record(ActivityLevel.Change, $"Played {game.Name} · 48m", subject: game.Name,
+                        detail: "Played: from 18:02 to 18:50 · launched through Steam.\nProfile: Aggressive applied.\nPut back: the power plan and 6 background apps.");
+                }
+                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying, editHost: DiagnosticEditHost(), heroArt: new HeroArtService(), activity: detailsActivity);
 
                 var sampleDetails = new SteamAppDetails
                 {
@@ -3542,7 +3655,7 @@ public partial class App
                     ShortDescription = "Dawnwalker is a dark fantasy narrative-action RPG set in medieval Europe. Unravel ancient curses and wage tactical war against monstrous adversaries across a dynamic, blood-drenched open world.",
                     MetacriticScore = 88,
                     ReviewScorePercent = 91,
-                    ReviewSummary = "Very Positive (91% of 14,280 reviews)",
+                    ReviewSummary = "91% positive (14,280 reviews)",
                     PcRequirementsMin = "• OS: Windows 10/11 64-bit\n• Processor: Intel Core i5-8400 or AMD Ryzen 5 2600X\n• Memory: 16 GB RAM\n• Graphics: NVIDIA GeForce RTX 2060 (6GB) or AMD Radeon RX 5600 XT\n• DirectX: Version 12 (DirectX 12 Ultimate)\n• Storage: 85 GB available space (SSD required)",
                     PcRequirementsRec = "• OS: Windows 11 64-bit\n• Processor: Intel Core i7-12700K or AMD Ryzen 7 7800X3D\n• Memory: 32 GB RAM\n• Graphics: NVIDIA GeForce RTX 4070 (12GB) or AMD Radeon RX 7800 XT\n• DirectX: Version 12\n• Storage: 85 GB NVMe SSD"
                 };
@@ -3572,12 +3685,15 @@ public partial class App
                 vm.IsLoading = false;
 
                 var dlg = new GameDetailsDialog(vm);
+                WaitForHero(dlg);
+                // "--screenshot-details <out.png> settings": the Settings tab.
+                if (e.Args.Any(a => a.Equals("settings", StringComparison.OrdinalIgnoreCase))) dlg.ShowSettings();
                 // "--screenshot-details <out.png> scroll": scrolled to the end of the details, to see the cards below the fold.
                 if (e.Args.Any(a => a.Equals("scroll", StringComparison.OrdinalIgnoreCase)))
                 {
                     dlg.ContentRendered += (_, _) => (dlg.FindName("DetailsScroll") as ScrollViewer)?.ScrollToEnd();
                 }
-                CaptureVisual(dlg, 820, 680, targetPng);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -3957,8 +4073,8 @@ public partial class App
                     sampleGame.IconPath = _iconExtractorService.ExtractAndCacheIcon(sampleGame.Id, fallbackExe, sampleGame.Name);
                 }
 
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
-                CaptureVisual(dlg, 560, 680, targetPng);
+                var dlg = NewEditGameWindow(sampleGame);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -4408,6 +4524,29 @@ public partial class App
                 return;
             }
         }
+    }
+
+    /// <summary>What Game Details needs to edit a game on its Settings tab, as the library gives it: scripts on, the System page's tweaks, nothing persisted.</summary>
+    private GameEditHost DiagnosticEditHost() => new(
+        g => new GameEditViewModel(g, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true, profileTweaks: _mainViewModel.SystemVM.EnabledTweaksFor),
+        _ => { }, () => true, () => false);
+
+    /// <summary>Game Details on its Settings tab, as Edit Properties opens it, showing one of the editor's tabs (All by default).</summary>
+    private GameDetailsDialog NewEditGameWindow(GameEntry game, GameEditSection section = GameEditSection.All, bool withHero = false)
+    {
+        var details = new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService(), editHost: DiagnosticEditHost(),
+            heroArt: withHero ? new HeroArtService() : null) { IsLoading = false };
+        var dialog = new GameDetailsDialog(details);
+        dialog.ShowSettings(section);
+        if (withHero) WaitForHero(dialog);
+        return dialog;
+    }
+
+    /// <summary>Lets the banner finish arriving (the page asks for it as it opens), up to a limit, so a capture shows it.</summary>
+    private void WaitForHero(GameDetailsDialog dialog, int seconds = 20)
+    {
+        var until = DateTime.UtcNow.AddSeconds(seconds);
+        while (!dialog.HasHeroImage && DateTime.UtcNow < until) PumpDispatcher(TimeSpan.FromMilliseconds(250));
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent, Func<T, bool> predicate) where T : DependencyObject

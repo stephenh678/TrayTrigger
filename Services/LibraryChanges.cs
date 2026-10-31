@@ -20,7 +20,8 @@ internal static class LibraryChanges
         string PreLaunchScriptPath, string PostExitScriptPath, bool WaitForPreLaunchScript, bool AbortLaunchOnScriptFailure,
         bool RunScriptsHidden, bool RunScriptsAsAdmin, string ScriptArguments, bool SkipDefaultScripts, int PreLaunchScriptTimeoutSeconds,
         string DisplayMode, bool KeepMouseOnGameScreen,
-        string DisplayMonitorId, bool MakeMainDisplay, bool DimOtherScreens, string AudioOutputDeviceId, string AudioInputDeviceId);
+        string DisplayMonitorId, bool MakeMainDisplay, bool DimOtherScreens, string AudioOutputDeviceId, string AudioInputDeviceId,
+        string SteamAppId, string HeroArt, string PosterArt, string IconArt);
 
     public static GameSettings Capture(GameEntry g) => new(
         g.Name, g.ExecutablePath, g.Arguments, g.WorkingDirectory, g.RunAsAdmin, g.LaunchDirectly,
@@ -28,7 +29,12 @@ internal static class LibraryChanges
         g.PreLaunchScriptPath, g.PostExitScriptPath, g.WaitForPreLaunchScript, g.AbortLaunchOnScriptFailure,
         g.RunScriptsHidden, g.RunScriptsAsAdmin, g.ScriptArguments, g.SkipDefaultScripts, g.PreLaunchScriptTimeoutSeconds,
         DisplayModeService.RequestedMode(g)?.ToString() ?? string.Empty, g.KeepMouseOnGameScreen,
-        g.DisplayMonitorId, g.MakeMainDisplay, g.DimOtherScreens, g.AudioOutputDeviceId, g.AudioInputDeviceId);
+        g.DisplayMonitorId, g.MakeMainDisplay, g.DimOtherScreens, g.AudioOutputDeviceId, g.AudioInputDeviceId,
+        g.SteamAppId?.Trim() ?? string.Empty,
+        // Each picture is the file the player chose, or empty while it is Automatic (found for the game).
+        g.HeroImagePath ?? string.Empty,
+        g.HasCustomPoster ? g.CoverImagePath ?? string.Empty : string.Empty,
+        g.HasCustomIcon ? g.IconPath ?? string.Empty : string.Empty);
 
     /// <summary>
     /// "Hades: launch arguments and run as administrator changed", with each old and new value as the detail;
@@ -51,6 +57,14 @@ internal static class LibraryChanges
             labels.Add(label);
             lines.Add($"{Capital(label)}: {(string.IsNullOrEmpty(was) ? none : "a chosen one")} -> {(string.IsNullOrEmpty(now) ? none : "a chosen one")}");
         }
+        void Art(string label, string was, string now)
+        {
+            if (string.Equals(was, now, StringComparison.Ordinal)) return;
+            labels.Add(label);
+            string from = was.Length == 0 ? "automatic" : "a chosen one";
+            string to = now.Length == 0 ? "automatic" : was.Length == 0 ? "a chosen one" : "another chosen one";
+            lines.Add($"{Capital(label)}: {from} -> {to}");
+        }
         void Flag(string label, bool was, bool now)
         {
             if (was == now) return;
@@ -59,6 +73,10 @@ internal static class LibraryChanges
         }
 
         Text("name", before.Name, after.Name);
+        Text("Steam App ID", before.SteamAppId, after.SteamAppId);
+        Art("hero banner", before.HeroArt, after.HeroArt);
+        Art("poster", before.PosterArt, after.PosterArt);
+        Art("icon", before.IconArt, after.IconArt);
         Text("executable", before.ExecutablePath, after.ExecutablePath);
         Text("launch arguments", before.Arguments, after.Arguments);
         Text("working folder", before.WorkingDirectory, after.WorkingDirectory);
@@ -91,6 +109,18 @@ internal static class LibraryChanges
         if (labels.Count == 0) return null;
         // Named by its new name: that is what the library shows from now on.
         return ($"{after.Name}: {Join(labels)} changed", string.Join("\n", lines));
+    }
+
+    /// <summary>"Hades: poster changed", for a picture chosen from the library's menu: from Automatic, or from another chosen one.</summary>
+    public static (string Text, string Detail) DescribeArtChosen(string name, string label, bool wasChosen) =>
+        ($"{name}: {label} changed", $"{Capital(label)}: {(wasChosen ? "a chosen one" : "automatic")} -> {(wasChosen ? "another chosen one" : "a chosen one")}");
+
+    /// <summary>"Hades: Steam App ID changed", from the library's Change Steam App ID; null when it is the same one.</summary>
+    public static (string Text, string Detail)? DescribeSteamIdChange(string name, string? was, string? now)
+    {
+        string before = was?.Trim() ?? string.Empty, after = now?.Trim() ?? string.Empty;
+        if (string.Equals(before, after, StringComparison.Ordinal)) return null;
+        return ($"{name}: Steam App ID changed", $"Steam App ID: {Shown(before)} -> {Shown(after)}");
     }
 
     /// <summary>"Hades was removed from the library" or "3 games were removed from the library".</summary>

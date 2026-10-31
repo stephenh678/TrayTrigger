@@ -13,14 +13,13 @@ using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
-public class GameDetailsViewModel : ViewModelBase
+public partial class GameDetailsViewModel : ViewModelBase
 {
     public event Action? RequestClose;
 
     private readonly SteamMetadataService _steamMetadataService;
     private readonly SteamSearchService _steamSearchService;
     private readonly Action<GameEntry>? _launchAction;
-    private readonly Action<GameEntry>? _editAction;
     private readonly Action<GameEntry>? _deleteAction;
     private readonly Action<GameEntry>? _closeGameAction;
     private readonly Action<GameEntry>? _forceCloseAction;
@@ -119,7 +118,8 @@ public class GameDetailsViewModel : ViewModelBase
 
     // The header shows the active source's official title (Steam's or RAWG's spelling). The
     // library entry itself is never renamed from here.
-    public string GameTitle => IsRawgActive
+    // A name the player has just typed in Settings and saved is the title, so the page does not keep showing the old one.
+    public string GameTitle => _showLibraryTitle ? Game.Name : IsRawgActive
         ? (!string.IsNullOrWhiteSpace(_rawgDetails?.Name) ? _rawgDetails!.Name : Game.Name)
         : (!string.IsNullOrWhiteSpace(_details?.Name) ? _details!.Name : Game.Name);
 
@@ -170,6 +170,15 @@ public class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasMetacritic));
                 OnPropertyChanged(nameof(ReviewSummary));
                 OnPropertyChanged(nameof(HasReviewSummary));
+                OnPropertyChanged(nameof(HeroRatingChip));
+                OnPropertyChanged(nameof(HasHeroRatingChip));
+                OnPropertyChanged(nameof(DeveloperLabel));
+                OnPropertyChanged(nameof(ShowPublisherRow));
+                OnPropertyChanged(nameof(VisibleNews));
+                OnPropertyChanged(nameof(WebsiteUrl));
+                OnPropertyChanged(nameof(HasWebsite));
+                OnPropertyChanged(nameof(ShowLinks));
+                OnPropertyChanged(nameof(HasSteamDbPage));
                 OnPropertyChanged(nameof(PlayModes));
                 OnPropertyChanged(nameof(TagList));
                 OnPropertyChanged(nameof(HasPlayModes));
@@ -183,6 +192,8 @@ public class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ShowSteamStoreButton));
                 OnPropertyChanged(nameof(LastUpdatedCaption));
                 OnPropertyChanged(nameof(ShowFreshness));
+                // Steam may only have linked the game now: a banner looked for by name is looked for by id.
+                if (value != null && _heroImage == null) _ = LoadHeroAsync();
             }
         }
     }
@@ -585,7 +596,6 @@ public class GameDetailsViewModel : ViewModelBase
         SteamMetadataService steamMetadataService,
         SteamSearchService steamSearchService,
         Action<GameEntry>? launchAction = null,
-        Action<GameEntry>? editAction = null,
         Action<GameEntry>? deleteAction = null,
         string? steamGridDbApiKey = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
@@ -596,8 +606,16 @@ public class GameDetailsViewModel : ViewModelBase
         MetadataRefreshInterval refreshInterval = MetadataRefreshInterval.Every3Days,
         bool isPlaying = false,
         Action<GameEntry>? closeGameAction = null,
-        Action<GameEntry>? forceCloseAction = null)
+        Action<GameEntry>? forceCloseAction = null,
+        GameEditHost? editHost = null,
+        HeroArtService? heroArt = null,
+        ActivityService? activity = null,
+        Action? openActivityAction = null)
     {
+        _activity = activity;
+        _openActivityAction = openActivityAction;
+        _editHost = editHost;
+        _heroArt = heroArt;
         IsPlaying = isPlaying;
         _closeGameAction = closeGameAction;
         _forceCloseAction = forceCloseAction;
@@ -608,7 +626,6 @@ public class GameDetailsViewModel : ViewModelBase
         _steamMetadataService = steamMetadataService ?? throw new ArgumentNullException(nameof(steamMetadataService));
         _steamSearchService = steamSearchService ?? throw new ArgumentNullException(nameof(steamSearchService));
         _launchAction = launchAction;
-        _editAction = editAction;
         _deleteAction = deleteAction;
         _steamGridDbApiKey = steamGridDbApiKey;
         _minConfidence = minConfidence;
@@ -631,10 +648,11 @@ public class GameDetailsViewModel : ViewModelBase
         RefreshNowCommand = new RelayCommand(() => _ = RefreshNowAsync(), () => !IsRefreshingNow);
         ToggleFavoriteCommand = new RelayCommand(() => IsFavorite = !IsFavorite);
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
-        EditGameCommand = new RelayCommand(ExecuteEdit);
+        EditGameCommand = new RelayCommand(() => ShowSettings(), () => CanEdit);
+        SelectTabCommand = new RelayCommand(p => { if (p is GameDetailsTab tab) SelectedTab = tab; else if (p is string name && Enum.TryParse(name, out GameDetailsTab parsed)) SelectedTab = parsed; });
         DeleteGameCommand = new RelayCommand(ExecuteDelete);
-        CloseGameCommand = new RelayCommand(() => { RequestClose?.Invoke(); _closeGameAction?.Invoke(Game); }, () => IsPlaying);
-        ForceCloseCommand = new RelayCommand(() => { RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
+        CloseGameCommand = new RelayCommand(() => { if (!CanLeave()) return; RequestClose?.Invoke(); _closeGameAction?.Invoke(Game); }, () => IsPlaying);
+        ForceCloseCommand = new RelayCommand(() => { if (!CanLeave()) return; RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
         OpenPcGamingWikiCommand = new RelayCommand(() => ExecuteOpenUrl(PcGamingWikiUrl), () => HasPcGamingWikiPage);
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
@@ -645,6 +663,8 @@ public class GameDetailsViewModel : ViewModelBase
         // Paint from the cache (above), then re-fetch behind it only when the entry is older
         // than the configured refresh interval (or missing).
         _ = LoadDetailsAsync();
+
+        _ = LoadHeroAsync();
 
         // When RAWG is the active source on open (a non-Steam game preferring it), fetch it too.
         if (IsRawgActive)
@@ -782,6 +802,8 @@ public class GameDetailsViewModel : ViewModelBase
         // A previously cached (possibly wrong) result for this id must not be served back.
         SteamMetadataService.InvalidateCache(appId);
         Game.SteamAppId = appId;
+        // The banner behind the name is the old listing's until it is looked for again under the new App ID.
+        _ = LoadHeroAsync(replace: true);
 
         // The Steam listing is the game's identity, so the RAWG side must describe the same
         // game: drop the old RAWG match and let it re-resolve from the new Steam title.
@@ -829,6 +851,7 @@ public class GameDetailsViewModel : ViewModelBase
             SteamMetadataService.InvalidateCache(match.AppId);
             Game.SteamAppId = match.AppId;
             _saveGame?.Invoke(Game);
+            _ = LoadHeroAsync(replace: true);
 
             Details = null;
             _replaceCoverOnNextLoad = true;
@@ -997,7 +1020,9 @@ public class GameDetailsViewModel : ViewModelBase
             nameof(HasRawgPage), nameof(ShowSteamStoreButton),
             nameof(LastUpdatedCaption), nameof(ShowFreshness), nameof(RefreshNowToolTip),
             nameof(DisplayCoverImage), nameof(AmbientImage), nameof(Category),
-            nameof(HasRequirements), nameof(HasNews), nameof(NewsItems),
+            nameof(HasRequirements), nameof(HasNews), nameof(NewsItems), nameof(VisibleNews),
+            nameof(DeveloperLabel), nameof(ShowPublisherRow), nameof(HeroRatingChip), nameof(HasHeroRatingChip),
+            nameof(WebsiteUrl), nameof(HasWebsite), nameof(ShowLinks), nameof(HasSteamDbPage),
             nameof(ErrorMessage), nameof(HasError),
         })
         {
@@ -1062,7 +1087,7 @@ public class GameDetailsViewModel : ViewModelBase
             // and the rematch paths clear the cache or set the force flag to get past this.
             bool force = _forceSteamRefresh;
             _forceSteamRefresh = false;
-            if (_details != null && !force && !MetadataFreshness.IsStale(_details.FetchedUtc, _refreshInterval))
+            if (_details != null && !force && !MetadataFreshness.IsStale(_details.FetchedUtc, _refreshInterval) && !MetadataFreshness.IsOutdated(_details, _refreshInterval))
             {
                 if (_resyncRawgAfterSteamLoad)
                 {
@@ -1109,6 +1134,8 @@ public class GameDetailsViewModel : ViewModelBase
                     (replaceCover || string.IsNullOrWhiteSpace(Game.CoverImagePath) || !File.Exists(Game.CoverImagePath)))
                 {
                     Game.CoverImagePath = loaded.CoverImagePath;
+                    // Found for the game, not chosen by the player.
+                    Game.HasCustomPoster = false;
                     InvalidateCoverImageCache();
                     OnPropertyChanged(nameof(DisplayCoverImage));
                 }
@@ -1166,18 +1193,14 @@ public class GameDetailsViewModel : ViewModelBase
 
     private void ExecuteLaunch()
     {
+        if (!CanLeave()) return;
         RequestClose?.Invoke();
         _launchAction?.Invoke(Game);
     }
 
-    private void ExecuteEdit()
-    {
-        RequestClose?.Invoke();
-        _editAction?.Invoke(Game);
-    }
-
     private void ExecuteDelete()
     {
+        if (!CanLeave()) return;
         RequestClose?.Invoke();
         _deleteAction?.Invoke(Game);
     }

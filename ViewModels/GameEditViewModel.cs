@@ -20,6 +20,7 @@ public enum GameEditSection
 {
     All,
     Identity,
+    Artwork,
     Launch,
     Performance,
     Display,
@@ -211,7 +212,6 @@ public partial class GameEditViewModel : ViewModelBase
         ResetIconCommand = new RelayCommand(ResetIcon);
         BrowseCoverCommand = new RelayCommand(BrowseCover);
         ResetCoverCommand = new RelayCommand(ResetCover);
-        LookUpCommand = new RelayCommand(LookUp, () => !IsRefreshingMetadata);
         UndoLookUpCommand = new RelayCommand(UndoLookUp, () => CanUndoLookUp && !IsRefreshingMetadata);
         FetchBySteamIdCommand = new RelayCommand(FetchBySteamId, () => !IsRefreshingMetadata);
         RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
@@ -225,7 +225,8 @@ public partial class GameEditViewModel : ViewModelBase
 
         UpdateIconPreview();
         UpdateCoverPreview();
-        _showAdvancedLaunchOptions = !string.IsNullOrWhiteSpace(_workingDirectory) || !string.IsNullOrWhiteSpace(_arguments);
+        InitArtworkTab(game);
+        _showScriptRunOptions = game.HasScripts;
         _initialEditState = EditState();
     }
 
@@ -247,7 +248,7 @@ public partial class GameEditViewModel : ViewModelBase
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
-        CustomIconPath, CustomCoverPath, _fetchedCoverPath,
+        CustomIconPath, CustomCoverPath, _fetchedCoverPath, _customHeroSource, _heroCustom, _posterCustom, _iconCustom,
     });
 
     public string Name
@@ -608,17 +609,6 @@ public partial class GameEditViewModel : ViewModelBase
         SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
         SourceGame.IsHidden = IsHidden;
 
-        var edit = LibraryChanges.DescribeEdit(settingsBefore, LibraryChanges.Capture(SourceGame));
-        if (edit != null)
-        {
-            ActivityService.Add(ActivityLevel.Change, edit.Value.Text, subject: SourceGame.Name, detail: edit.Value.Detail);
-        }
-        if (_convertToLocal)
-        {
-            ActivityService.Add(ActivityLevel.Change, $"{SourceGame.Name} is now a Local game", subject: SourceGame.Name,
-                detail: $"It was linked to {platformBefore}; it no longer is, and launches the way a Local game does.");
-        }
-
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))
         {
@@ -669,6 +659,20 @@ public partial class GameEditViewModel : ViewModelBase
         {
             // Already written into the covers cache dir by the fetch itself - just point at it.
             SourceGame.CoverImagePath = _fetchedCoverPath;
+        }
+
+        CommitHero();
+
+        // Said last: the pictures are only in place once they have been committed.
+        var edit = LibraryChanges.DescribeEdit(settingsBefore, LibraryChanges.Capture(SourceGame));
+        if (edit != null)
+        {
+            ActivityService.Add(ActivityLevel.Change, edit.Value.Text, subject: SourceGame.Name, detail: edit.Value.Detail);
+        }
+        if (_convertToLocal)
+        {
+            ActivityService.Add(ActivityLevel.Change, $"{SourceGame.Name} is now a Local game", subject: SourceGame.Name,
+                detail: $"It was linked to {platformBefore}; it no longer is, and launches the way a Local game does.");
         }
 
         RequestClose?.Invoke(true);

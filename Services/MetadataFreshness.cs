@@ -25,6 +25,13 @@ public static class MetadataFreshness
     /// <paramref name="interval"/>. An entry with no timestamp (written before 1.3.9-beta.3)
     /// counts as stale so it picks one up on its next open, unless the interval is Never.
     /// </summary>
+    /// <summary>
+    /// A saved Steam copy made before the page showed something new (see <see cref="SteamAppDetails.DataVersion"/>) is out of date
+    /// whatever its age, so it is fetched again once. "Never" still means never: the player's own refresh actions are then the only ones.
+    /// </summary>
+    public static bool IsOutdated(SteamAppDetails details, MetadataRefreshInterval interval) =>
+        interval != MetadataRefreshInterval.Never && details.DataVersion < SteamAppDetails.CurrentDataVersion;
+
     public static bool IsStale(DateTime fetchedUtc, MetadataRefreshInterval interval, DateTime? nowUtc = null)
     {
         var maxAge = MaxAge(interval);

@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 using TrayTrigger.Services;
 using TrayTrigger.ViewModels;
@@ -18,6 +20,10 @@ public partial class GameDetailsDialog : Window
         InitializeComponent();
         _defaultWidth = Width;
         _defaultHeight = Height;
+        // Taller than a small screen's work area: fit it, rather than push the buttons off the bottom.
+        var work = SystemParameters.WorkArea;
+        if (Height > work.Height) Height = Math.Max(MinHeight, work.Height - 24);
+        if (Width > work.Width) Width = Math.Max(MinWidth, work.Width - 24);
         _viewModel = viewModel;
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
@@ -33,12 +39,58 @@ public partial class GameDetailsDialog : Window
             Owner = main;
         }
 
+        // Play, Remove and Close Game ask before they close the page over edits; so does closing it.
+        viewModel.ConfirmLeave = ConfirmLeave;
+        Closing += (s, e) =>
+        {
+            if (!ConfirmLeave()) e.Cancel = true;
+        };
+
         Loaded += (s, e) =>
         {
             WindowThemeService.CenterOverOwner(this);
             Activate();
             _ = _viewModel.LoadInstallDriveAsync();
+            _ = _viewModel.LoadInstallSizeAsync();
         };
+        Closed += (s, e) => _viewModel.StopBackgroundWork();
+    }
+
+    private bool _discardConfirmed;
+
+    /// <summary>
+    /// True when nothing in Settings is open to lose, or when the player says to discard it. Asked once:
+    /// after a yes, the rest of the closing goes through without asking again.
+    /// </summary>
+    private bool ConfirmLeave()
+    {
+        // While TrayTrigger is shutting down nobody can be asked, and the close goes ahead whatever the answer.
+        if (_discardConfirmed || !_viewModel.HasUnsavedEdits || Dispatcher.HasShutdownStarted) return true;
+        if (!ModernDialog.Confirm(this, "Discard Changes", "Discard your changes?",
+                "Nothing you changed in Settings has been saved.", "Discard", "Keep Editing"))
+            return false;
+        _discardConfirmed = true;
+        return true;
+    }
+
+    /// <summary>The game's banner has been found and is on show. Diagnostics wait for it before they capture.</summary>
+    internal bool HasHeroImage => _viewModel.HasHeroImage;
+
+    /// <summary>The Settings tab's editor, once the tab has been opened. Diagnostics drive it directly.</summary>
+    internal GameEditViewModel? EditViewModel => _viewModel.EditViewModel;
+
+    /// <summary>Opens the Settings tab, on one of its own tabs when given: what Edit and the card menu's Edit do.</summary>
+    public void ShowSettings(GameEditSection? section = null) => _viewModel.ShowSettings(section);
+
+    /// <summary>Opens the menu a button carries (the ... menu, the info-source menu) beneath it.</summary>
+    private void OpenMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { ContextMenu: { } menu } button)
+        {
+            menu.PlacementTarget = button;
+            menu.Placement = PlacementMode.Bottom;
+            menu.IsOpen = true;
+        }
     }
 
     /// <summary>

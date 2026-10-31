@@ -7,6 +7,8 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 
 Released as 1.7.5: the 1.7.1 betas (1 to 5) were renamed when the owner chose the stable number, as 1.6.3 became 1.7.0.
 
+Released as 1.7.6: Game Details is the page for each game (header with Play and the recorded figures, Overview, and a Settings tab that hosts Edit Game in place, so Edit has no window of its own). The Overview shows Details (with Size on disk and links), Your setup and a Last session card (read from Activity & History). Only facts TrayTrigger already records are shown, never a measured result.
+
 ## Rules
 
 - **Proven benefits only.** A tweak or claim is added only with independent, measured evidence.

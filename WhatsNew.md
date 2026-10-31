@@ -4,6 +4,14 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.7.6
+
+- **Hero banners** - Click a game and its page opens on a big hero banner with the game's name, a Play button, and your playtime, last played and profile. Banners and fresh game info load in as you open each game, so the first visit may take a sec. Overview is the game; Settings is Edit Game right there in the same window. Save keeps you on the page, and Cancel puts everything back how it was.
+
+- **A cleaner Overview** - Game details up top (with size on disk and quick links to the store page, PCGamingWiki and SteamDB), then Your setup and what TrayTrigger did last session and put back. The Steam rating sits right on the hero banner, and the system requirements sit at the bottom.
+
+- **Your art, your call** - The new Artwork tab has the hero banner, poster and icon, each Automatic or Custom: pick a picture or just drop one on the card. Online match replaces Look Up and tells you what a new match will change.
+
 ## 1.7.5
 
 - **Display and sound per game** - In Edit Game's new Display & Sound tab, pick a resolution, refresh rate, monitor, sound output or microphone for a game. TrayTrigger sets them when it starts and puts them back when it ends, even after a crash.

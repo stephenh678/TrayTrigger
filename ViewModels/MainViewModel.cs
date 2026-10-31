@@ -226,6 +226,16 @@ public class MainViewModel : ViewModelBase
         SettingsVM.RunningGameName = () => _launcherService.GetActiveSessions().FirstOrDefault()?.Game.Name;
 
         Library.RequestEditGameDialog += card => RequestEditGameDialog?.Invoke(card);
+        // Game Details' Settings tab: the editor is built here, where settings and the System page are known.
+        Library.CreateGameEditor = CreateGameEditViewModel;
+        Library.GameEdited += card =>
+        {
+            card.RefreshProperties();
+            RebuildCategories();
+            SaveLibrary();
+            UpdateHotkeys();
+            FilteredGames.Refresh();
+        };
         Library.RequestQuickRename += card => RequestQuickRename?.Invoke(card);
         Library.RequestQuickCategory += card => RequestQuickCategory?.Invoke(card);
         Library.RequestBatchCategory += cards => RequestBatchCategory?.Invoke(cards);
@@ -279,6 +289,13 @@ public class MainViewModel : ViewModelBase
             settings: _settings,
             saveSettings: () => _storageService.SaveSettings(_settings, source: "ActivityViewModel.Retention"));
         ActivityVM.CanOpenGameNamed = name => FindGameCard(name) != null;
+        Library.RequestShowActivity += game =>
+        {
+            // The same as Activity's "Show only this game": the game's name in the search box, on the tab that lists everything.
+            ActivityVM.Tab = ActivityTab.All;
+            ActivityVM.SearchText = game;
+            CurrentSection = NavSection.Activity;
+        };
         ActivityVM.OpenGameNamed = name =>
         {
             if (FindGameCard(name) is { } card) RequestEditGameDialog?.Invoke(card);
@@ -976,6 +993,26 @@ public class MainViewModel : ViewModelBase
     {
         CurrentSection = NavSection.Settings;
     }
+
+    /// <summary>
+    /// The editor for one game, as Game Details' Settings tab hosts it. Built here because it needs what
+    /// only the main view model holds: the settings, the scripts folder, and the System page's tweaks.
+    /// </summary>
+    public GameEditViewModel CreateGameEditViewModel(GameEntry game) => new(
+        game,
+        Categories,
+        _iconExtractorService,
+        steamGridDbApiKey: SettingsVM.SteamGridDbApiKeyOrNull,
+        minConfidence: _settings.OnlineMatchConfidenceThreshold,
+        scriptsEnabled: _settings.EnableGameScripts,
+        scriptDefaults: _settings.ScriptDefaults,
+        scriptLibrary: new ScriptLibraryService(_storageService.BaseDirectory),
+        profileTweaks: SystemVM.EnabledTweaksFor,
+        // A DLSS apply changes the driver there and then, so its record must reach disk there and then
+        // too - not on Save Changes, which the player may never press.
+        persistLibrary: () => Library.SaveGamesOnly(),
+        // The Enable scripts switch in the Scripts notice: the Settings switch itself, saved and set up at once.
+        setScriptsEnabled: on => SettingsVM.EnableGameScripts = on);
 
     // --- Forwarded to LibraryViewModel; see L-13 ---
     public void SaveLibrary([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "") => Library.SaveLibrary(callerMember, callerFile);

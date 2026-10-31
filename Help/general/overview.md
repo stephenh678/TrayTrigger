@@ -24,7 +24,7 @@ These three are under Settings > Launch & Performance > Launching Games.
 
 ## Window sizes
 
-Edit Game, Edit Tool, Scan for Games, the folder import and Edit Theme open at the size you last left them, as Game Details does. A window you never resized keeps its normal size, and a saved size that is too big for the screen is ignored.
+Game Details (which holds Edit Game on its Settings tab), Edit Tool, Scan for Games, the folder import and Edit Theme open at the size you last left them. A window you never resized keeps its normal size, and a saved size that is too big for the screen is ignored.
 
 ## The tray icon
 

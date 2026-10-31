@@ -168,4 +168,60 @@ public class LibraryChangesTests
         Assert.Equal("Hades was put back in the library", LibraryChanges.DescribeRestored(["Hades"]));
         Assert.Equal("3 games were put back in the library", LibraryChanges.DescribeRestored(["a", "b", "c"]));
     }
+
+    // --- Pictures and the Steam match ---
+
+    [Fact]
+    public void ChoosingAPicture_IsSaid_AsAutomaticToAChosenOne()
+    {
+        var game = Game();
+        var line = Edit(game, () => game.HeroImagePath = @"C:\Covers\x_1.jpg");
+        Assert.Equal("Hades: hero banner changed", line!.Value.Text);
+        Assert.Equal("Hero banner: automatic -> a chosen one", line.Value.Detail);
+
+        var poster = Game();
+        poster.CoverImagePath = @"C:\Covers\auto.jpg";
+        var posterLine = Edit(poster, () => { poster.CoverImagePath = @"C:\Covers\mine.png"; poster.HasCustomPoster = true; });
+        Assert.Equal("Poster: automatic -> a chosen one", posterLine!.Value.Detail);
+    }
+
+    [Fact]
+    public void PuttingAPictureBackToAutomatic_AndPickingAnotherOne_AreEachSaid()
+    {
+        var game = Game();
+        game.HeroImagePath = @"C:\Covers\x_1.jpg";
+        game.IconPath = @"C:\Icons\mine.ico";
+        game.HasCustomIcon = true;
+
+        var back = Edit(game, () => { game.HeroImagePath = null; game.HasCustomIcon = false; });
+        Assert.Equal("Hades: hero banner and icon changed", back!.Value.Text);
+        Assert.Equal("Hero banner: a chosen one -> automatic\nIcon: a chosen one -> automatic", back.Value.Detail);
+
+        var game2 = Game();
+        game2.HeroImagePath = @"C:\Covers\x_1.jpg";
+        Assert.Equal("Hero banner: a chosen one -> another chosen one", Edit(game2, () => game2.HeroImagePath = @"C:\Covers\x_2.jpg")!.Value.Detail);
+    }
+
+    [Fact]
+    public void ANewAutomaticPoster_IsNotSaid_ButAChangedSteamMatchIs()
+    {
+        var game = Game();
+        game.CoverImagePath = @"C:\Covers\1.jpg";
+        Assert.Null(Edit(game, () => game.CoverImagePath = @"C:\Covers\2.jpg"));
+
+        game.SteamAppId = "1145360";
+        var line = Edit(game, () => game.SteamAppId = "292030");
+        Assert.Equal("Hades: Steam App ID changed", line!.Value.Text);
+        Assert.Equal("Steam App ID: 1145360 -> 292030", line.Value.Detail);
+        Assert.Equal("Steam App ID: 292030 -> (none)", Edit(game, () => game.SteamAppId = null)!.Value.Detail);
+    }
+
+    [Fact]
+    public void TheLibraryMenusLines_SayWhatChanged()
+    {
+        Assert.Equal(("Hades: poster changed", "Poster: automatic -> a chosen one"), LibraryChanges.DescribeArtChosen("Hades", "poster", false));
+        Assert.Equal("Icon: a chosen one -> another chosen one", LibraryChanges.DescribeArtChosen("Hades", "icon", true).Detail);
+        Assert.Null(LibraryChanges.DescribeSteamIdChange("Hades", "1145360", " 1145360 "));
+        Assert.Equal("Steam App ID: (none) -> 1145360", LibraryChanges.DescribeSteamIdChange("Hades", null, "1145360")!.Value.Detail);
+    }
 }

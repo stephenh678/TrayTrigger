@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="site/assets/walkthrough.gif" width="800" alt="One launch in TrayTrigger: pick a game in the tray, its own setup, the launch popup, and the Activity row showing what changed and that it was put back">
+  <img src="site/assets/walkthrough.gif" width="800" alt="A walkthrough: the library of games from every launcher; picking a game in the tray menu; its page with the hero banner, play time and Steam rating; the game's details, news and setup; its profile, cores and HDR; the hero banner, poster and icon; the launch popup; and the Activity row showing what changed and that it was put back">
 </p>
 
 <p align="center">
@@ -100,6 +100,14 @@ Each game's Played row in Activity & History lists what the profile changed, wha
 
 <p align="center">
   <img src="site/assets/closeup-played.png" width="800" alt="A Played Overwatch row in Activity and History: what the profile changed, what was put back, the cores the game ran on">
+</p>
+
+### A page for every game
+
+Click a game for its **Game Details** page: a hero banner, your play time and the Steam rating at the top, then what the game is, what TrayTrigger changes for it, and a Settings tab to change it, all in one window.
+
+<p align="center">
+  <img src="site/assets/game-details-overview.png" width="800" alt="Game Details for The Witcher 3: a hero banner with the title, Play, play time and the 95% positive Steam rating, then the game's description, the latest news, its details and Your setup">
 </p>
 
 ### Also in the box

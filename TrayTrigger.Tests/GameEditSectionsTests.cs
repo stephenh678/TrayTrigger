@@ -216,14 +216,4 @@ public class GameEditSectionsTests : IDisposable
         Assert.Equal("Show fewer", vm.ProfileSummaryToggleText);
     });
 
-    [Theory]
-    [InlineData("", "", false)]
-    [InlineData(@"C:\Games\Hades", "", true)]
-    [InlineData("", "-windowed", true)]
-    public void AdvancedLaunchOptions_StartOpenOnlyWhenSet(string workingDirectory, string arguments, bool expected) => Sta(() =>
-    {
-        var vm = Create(new GameEntry { Name = "Hades", WorkingDirectory = workingDirectory, Arguments = arguments });
-        Assert.Equal(expected, vm.ShowAdvancedLaunchOptions);
-        Assert.False(vm.HasUnsavedChanges);
-    });
 }

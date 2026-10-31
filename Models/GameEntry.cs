@@ -23,6 +23,18 @@ public class GameEntry
     public string Hotkey { get; set; } = string.Empty;
     public string IconPath { get; set; } = string.Empty;
     public string? CoverImagePath { get; set; }
+
+    /// <summary>
+    /// The banner the player chose for Game Details: a copy kept in the Covers folder (so a backup holds it
+    /// and removing the game takes it). Null means the automatic one, from Steam or SteamGridDB.
+    /// </summary>
+    public string? HeroImagePath { get; set; }
+
+    /// <summary>The poster was chosen by the player (Edit Game > Artwork), not found for the game. Edit Game says so; nothing else reads it.</summary>
+    public bool HasCustomPoster { get; set; }
+
+    /// <summary>The icon was chosen by the player, not taken from the game's exe.</summary>
+    public bool HasCustomIcon { get; set; }
     public bool IsSteamGame { get; set; }
     public bool ForceSteamOverlayTag { get; set; }
     public string? SteamAppId { get; set; }
@@ -243,19 +255,29 @@ public class GameEntry
     [JsonIgnore]
     public bool HasSteamOverlay => IsSteamGame || ForceSteamOverlayTag;
 
+    /// <summary>The launcher this game belongs to as a player names it ("Steam", "GOG", "Epic", ...), or "Local" for a game with none.</summary>
+    [JsonIgnore]
+    public string PlatformLabel =>
+        IsSteamGame ? "Steam"
+        : IsGogGame ? "GOG"
+        : IsEaGame ? "EA"
+        : IsEpicGame ? "Epic"
+        : IsUbisoftGame ? "Ubisoft"
+        : IsXboxGame ? "Xbox"
+        : IsBattleNetGame ? "Battle.net"
+        : "Local";
+
+    /// <summary>A playtime as the library and Game Details write it: "45m" under an hour, then hours to one decimal ("2.5h").</summary>
+    public static string FormatPlaytime(long minutes) =>
+        minutes < 60 ? $"{minutes}m" : $"{Math.Round(minutes / 60.0, 1):0.#}h";
+
     [JsonIgnore]
     public string PlaytimeDisplay
     {
         get
         {
             if (CumulativePlaytimeMinutes > 0)
-            {
-                if (CumulativePlaytimeMinutes < 60)
-                    return $"{CumulativePlaytimeMinutes}m played";
-
-                double hours = Math.Round(CumulativePlaytimeMinutes / 60.0, 1);
-                return $"{hours:0.#}h played";
-            }
+                return $"{FormatPlaytime(CumulativePlaytimeMinutes)} played";
 
             // Steam sessions have recorded real playtime since 1.3.6, so a Steam game with
             // nothing recorded reads the same as every other platform.

@@ -151,6 +151,7 @@ public partial class GameEditViewModel
             ClearFieldError(EditField.SteamAppId);
             OnPropertyChanged(nameof(SteamAppIdDisplay));
             OnPropertyChanged(nameof(HasSteamAppId));
+            NotifyMatchChanged();
             OnPropertyChanged(nameof(CanOfferSteamLaunch));
             OnPropertyChanged(nameof(PlatformDescription));
         }
@@ -182,8 +183,10 @@ public partial class GameEditViewModel
             if (_customIconPath != value)
             {
                 _customIconPath = value;
+                _iconCustom = !string.IsNullOrEmpty(value);
                 OnPropertyChanged();
                 UpdateIconPreview();
+                NotifyArtworkState();
             }
         }
     }
@@ -206,10 +209,12 @@ public partial class GameEditViewModel
             if (_customCoverPath != value)
             {
                 _customCoverPath = value;
+                _posterCustom = !string.IsNullOrEmpty(value);
                 // A manual pick or removal supersedes an earlier fetched cover from this session.
                 _fetchedCoverPath = null;
                 OnPropertyChanged();
                 UpdateCoverPreview();
+                NotifyArtworkState();
             }
         }
     }
@@ -242,7 +247,6 @@ public partial class GameEditViewModel
     public ICommand ResetIconCommand { get; }
     public ICommand BrowseCoverCommand { get; }
     public ICommand ResetCoverCommand { get; }
-    public ICommand LookUpCommand { get; }
     public ICommand UndoLookUpCommand { get; }
     public ICommand FetchBySteamIdCommand { get; }
     public ICommand RefreshPosterCommand { get; }

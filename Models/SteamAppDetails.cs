@@ -25,9 +25,19 @@ public class SteamAppDetails
     [JsonIgnore]
     public string StoreUrl => !string.IsNullOrWhiteSpace(AppId) ? $"https://store.steampowered.com/app/{AppId}" : string.Empty;
 
+    /// <summary>The developer's own site as Steam lists it; only an http or https address is kept.</summary>
+    public string? Website { get; set; }
+
     public int? MetacriticScore { get; set; }
     public string? MetacriticUrl { get; set; }
     public string? ReviewSummary { get; set; }
+
+    /// <summary>What a saved copy was fetched with. A copy older than <see cref="CurrentDataVersion"/> is missing something
+    /// the page now shows, so it is fetched again the next time the page opens, once, whatever the refresh interval says
+    /// (except Never). 1: before 1.7.6; 2: the review rating counted from Steam's histogram.</summary>
+    public int DataVersion { get; set; }
+
+    public const int CurrentDataVersion = 2;
     public int? ReviewScorePercent { get; set; }
 
     public List<string> Genres { get; set; } = new();

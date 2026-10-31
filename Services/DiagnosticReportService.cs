@@ -465,15 +465,7 @@ public static class DiagnosticReportService
         return "portable";
     }
 
-    internal static string PlatformOf(GameEntry g) =>
-        g.IsSteamGame ? "Steam"
-        : g.IsGogGame ? "GOG"
-        : g.IsEaGame ? "EA"
-        : g.IsEpicGame ? "Epic"
-        : g.IsUbisoftGame ? "Ubisoft"
-        : g.IsXboxGame ? "Xbox"
-        : g.IsBattleNetGame ? "Battle.net"
-        : "Local";
+    internal static string PlatformOf(GameEntry g) => g.PlatformLabel;
 
     private static bool IsElevated()
     {
