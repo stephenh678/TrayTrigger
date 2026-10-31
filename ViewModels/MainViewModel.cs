@@ -289,6 +289,13 @@ public class MainViewModel : ViewModelBase
             settings: _settings,
             saveSettings: () => _storageService.SaveSettings(_settings, source: "ActivityViewModel.Retention"));
         ActivityVM.CanOpenGameNamed = name => FindGameCard(name) != null;
+        Library.RequestShowActivity += game =>
+        {
+            // The same as Activity's "Show only this game": the game's name in the search box, on the tab that lists everything.
+            ActivityVM.Tab = ActivityTab.All;
+            ActivityVM.SearchText = game;
+            CurrentSection = NavSection.Activity;
+        };
         ActivityVM.OpenGameNamed = name =>
         {
             if (FindGameCard(name) is { } card) RequestEditGameDialog?.Invoke(card);

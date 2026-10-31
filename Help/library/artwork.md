@@ -2,15 +2,17 @@
 
 A game has three pictures, and each has its own card on Edit Game's **Artwork** tab (Game Details > Settings > Artwork):
 
-- **Banner**: the wide picture behind the game's name on Game Details. About 1920 by 620.
+- **Hero banner**: the wide picture behind the game's name on Game Details. About 1920 by 620.
 - **Poster**: the vertical picture on library cards. Tall, 2 by 3.
 - **Icon**: the small square one in the tray menu and the list view.
 
-Each card says whether the picture is **Automatic** (found for the game) or **Custom** (a file you chose). **Choose image...** makes it Custom; so does dropping a picture file on the card. **Use automatic** puts the automatic one back, and **Find again** (Automatic pictures only) looks for it again. The Banner card marks the part Game Details crops. The icon can also be an exe, which gives its icon.
+Each card says whether the picture is **Automatic** (found for the game) or **Custom** (a file you chose). **Choose image...** makes it Custom; so does dropping a picture file on the card. **Use automatic** puts the automatic one back, and **Find again** (Automatic pictures only) looks for it again. The Hero banner card marks the part Game Details crops. The icon can also be an exe, which gives its icon.
 
-## Banners
+A poster or icon you chose yourself before 1.7.6 shows as Automatic, because nothing marked it as yours then. It stays as it is until you press **Use automatic** or **Find again**, or run Refresh All Game Posters, which replace it with the automatic picture. Choose the picture again and it is marked Custom from then on.
 
-The banner is Steam's own wide banner for the game's App ID, from the same Steam servers as its poster. If Steam has none and you have given TrayTrigger a SteamGridDB key, SteamGridDB's banner for that App ID is used, and for a game with no Steam listing one is searched for by name (a title that doesn't closely match is refused). A game with no banner shows its poster, blurred, behind its name. A game nothing was found for is not asked about again for a week; **Find again** asks at once. A banner you choose is kept with your posters and goes with a backup.
+## Hero banners
+
+The hero banner is Steam's own wide hero banner for the game's App ID, from the same Steam servers as its poster. If Steam has none and you have given TrayTrigger a SteamGridDB key, SteamGridDB's hero banner for that App ID is used, and for a game with no Steam listing one is searched for by name (a title that doesn't closely match is refused). A game with no hero banner shows its poster, blurred, behind its name. A game nothing was found for is not asked about again for a week; **Find again** asks at once. A hero banner you choose is kept with your posters and goes with a backup.
 
 ## Posters: sources, in order
 
@@ -41,6 +43,6 @@ Re-checks every game, including ones that already have a cover. Use it after a g
 
 ## Where art is stored
 
-Downloaded posters and extracted icons are cached under the local app data folder shown in Settings > Diagnostics & Storage; banners are kept in a Heroes folder beside them. Clearing the cache forces everything to download again. Posters and banners you chose are kept with the covers and included in a backup.
+Downloaded posters and extracted icons are cached under the local app data folder shown in Settings > Diagnostics & Storage; hero banners are kept in a Heroes folder beside them. Clearing the cache forces everything to download again. Posters and hero banners you chose are kept with the covers and included in a backup.
 
 > SteamGridDB needs a free API key from steamgriddb.com; see SteamGridDB and RAWG keys for getting one. The key is stored encrypted in your settings file and only sent to SteamGridDB.

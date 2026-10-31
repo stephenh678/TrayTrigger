@@ -6,9 +6,11 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 1.7.6
 
-- **Artwork you can change** - Edit Game has an Artwork tab with the game's Banner, Poster and Icon, each Automatic or Custom: choose a picture or drop one on the card. Online match replaces Look Up, and says what a new match will change.
+- **Hero banners** - Click a game and its page opens on a big hero banner with the game's name, a Play button, and your playtime, last played and profile. Banners and fresh game info load in as you open each game, so the first visit may take a sec. Overview is the game; Settings is Edit Game right there in the same window. Save keeps you on the page, and Cancel puts everything back how it was.
 
-- **One page for each game** - Click a game and its Game Details is now the whole page: a header with the game's banner art behind its name, store, play time, last played and profile, and a Play button, then an Overview tab with what the game is and a card for each area TrayTrigger changes for it. The Settings tab is Edit Game, in the same window, so there is no second window to open: Save Changes keeps you on the page, and Cancel starts again from what is saved.
+- **A cleaner Overview** - Game details up top (with size on disk and quick links to the store page, PCGamingWiki and SteamDB), then Your setup and what TrayTrigger did last session and put back. The Steam rating sits right on the hero banner, and the system requirements sit at the bottom.
+
+- **Your art, your call** - The new Artwork tab has the hero banner, poster and icon, each Automatic or Custom: pick a picture or just drop one on the card. Online match replaces Look Up and tells you what a new match will change.
 
 ## 1.7.5
 

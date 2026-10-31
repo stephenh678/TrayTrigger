@@ -1,9 +1,19 @@
 # Where game info comes from
 
-The Game Details window (click a game card) is the page for one game. It opens on a header with the game's banner behind its name (Steam's wide banner art, or SteamGridDB's when you have given TrayTrigger a key and Steam has none; a blurred poster until it arrives or if there is none), its store and genres on one quiet line, how long you have played, when you last played and its performance profile, with a **Play** button, the favorite star and a **...** menu (the store pages, and Remove from library). Under it are two tabs, **Overview** and **Settings**.
+The Game Details window (click a game card) is the page for one game. It opens on a header with the game's hero banner behind its name (Steam's wide hero banner art, or SteamGridDB's when you have given TrayTrigger a key and Steam has none; a blurred poster until it arrives or if there is none), its store and genres on one quiet line (with a small tag for how Steam's players rated it, such as 91% positive, and a Playing tag while the game runs), how long you have played, when you last played and its performance profile, with a **Play** button, the favorite star and a **...** menu (the store pages, and Remove from library). Under it are two tabs, **Overview** and **Settings**.
 
-- **Overview** shows the developer, publisher, release date, synopsis, genres, play modes and scores for the game, with a card for each area TrayTrigger can change for it (Performance, DLSS, Display and sound, Scripts and Launch) saying what it is doing now and linking to the settings that change it. The cards read the game as it is saved.
+- **Overview** is what the game is and what TrayTrigger does for it; see The Overview below.
 - **Settings** is where you edit the game: its artwork, title, category, launch options, profile, display and scripts. Everything under "Edit Game" in this help is on this tab. Right-click a game and choose Edit Game Properties, or press Settings, to open it. **Save Changes** writes your edits and keeps the page open; **Cancel** throws them away and starts again from what is saved. Closing the window, Play, or Remove while edits are still open asks before it throws them away.
+
+## The Overview
+
+On the left: the synopsis, the three newest Steam news posts (with a PATCH tag on patch notes and a link to the rest), and last the PC system requirements, with buttons for the minimum and the recommended.
+
+On the right, in this order:
+
+- **Details** is the developer and publisher (one row when they are the same company), release date, the drive the game is installed on and **Size on disk**, then the scores, the play modes and the links: the store page, PCGamingWiki, SteamDB and the developer's website, each only when the game has one. Size on disk is counted on this PC from the game's own folder when the page opens, and left out when the folder cannot be found or is too big to be one game; nothing is sent anywhere. The links open in your browser.
+- **Your setup** is one card with a row for each area TrayTrigger changes for the game: Performance (always), DLSS while TrayTrigger holds an override, and Display and sound, Scripts and Launch when something is set for the game. Each row says what it is doing now and has a link to the settings that change it. Anything not listed is at its default: an area left alone has no row, and its tab on Settings is still there. The rows read the game as it is saved.
+- **Last session** is the game's most recent session as Activity & History wrote it, kept to three lines (when it ran, the profile, and that everything was put back). **See this game in Activity** closes the page and opens Activity & History with the game's name in the search box, so the list shows just this game. It is left out for a game with no session on record.
 
 The text on the Overview can come from one of two sources. Which one, and how fresh it is, are on the About card: its **Steam** or **RAWG** menu switches the source (RAWG only with a key), refreshes the info now, changes which listing the game is matched to, and opens this help.
 
@@ -29,7 +39,7 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 
 ## PCGamingWiki
 
-The **PCGamingWiki** button in the details window opens the game's page on pcgamingwiki.com, where the PC fixes are: ultrawide and FOV support, frame cap and save game location. A Steam game opens its page directly; any other game opens the wiki's search for its name, which lands on the page when the title matches. It shows for every game and does not follow the Steam | RAWG switch. The button itself downloads nothing: the link opens in your browser.
+The **PCGamingWiki** link in the Details card (and the ... menu) opens the game's page on pcgamingwiki.com, where the PC fixes are: ultrawide and FOV support, frame cap and save game location. A Steam game opens its page directly; any other game opens the wiki's search for its name, which lands on the page when the title matches. It shows for every game and does not follow the Steam | RAWG switch. The button itself downloads nothing: the link opens in your browser.
 
 ## The anti-cheat tag
 

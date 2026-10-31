@@ -170,6 +170,15 @@ public partial class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasMetacritic));
                 OnPropertyChanged(nameof(ReviewSummary));
                 OnPropertyChanged(nameof(HasReviewSummary));
+                OnPropertyChanged(nameof(HeroRatingChip));
+                OnPropertyChanged(nameof(HasHeroRatingChip));
+                OnPropertyChanged(nameof(DeveloperLabel));
+                OnPropertyChanged(nameof(ShowPublisherRow));
+                OnPropertyChanged(nameof(VisibleNews));
+                OnPropertyChanged(nameof(WebsiteUrl));
+                OnPropertyChanged(nameof(HasWebsite));
+                OnPropertyChanged(nameof(ShowLinks));
+                OnPropertyChanged(nameof(HasSteamDbPage));
                 OnPropertyChanged(nameof(PlayModes));
                 OnPropertyChanged(nameof(TagList));
                 OnPropertyChanged(nameof(HasPlayModes));
@@ -599,8 +608,12 @@ public partial class GameDetailsViewModel : ViewModelBase
         Action<GameEntry>? closeGameAction = null,
         Action<GameEntry>? forceCloseAction = null,
         GameEditHost? editHost = null,
-        HeroArtService? heroArt = null)
+        HeroArtService? heroArt = null,
+        ActivityService? activity = null,
+        Action? openActivityAction = null)
     {
+        _activity = activity;
+        _openActivityAction = openActivityAction;
         _editHost = editHost;
         _heroArt = heroArt;
         IsPlaying = isPlaying;
@@ -1004,7 +1017,9 @@ public partial class GameDetailsViewModel : ViewModelBase
             nameof(HasRawgPage), nameof(ShowSteamStoreButton),
             nameof(LastUpdatedCaption), nameof(ShowFreshness), nameof(RefreshNowToolTip),
             nameof(DisplayCoverImage), nameof(AmbientImage), nameof(Category),
-            nameof(HasRequirements), nameof(HasNews), nameof(NewsItems),
+            nameof(HasRequirements), nameof(HasNews), nameof(NewsItems), nameof(VisibleNews),
+            nameof(DeveloperLabel), nameof(ShowPublisherRow), nameof(HeroRatingChip), nameof(HasHeroRatingChip),
+            nameof(WebsiteUrl), nameof(HasWebsite), nameof(ShowLinks), nameof(HasSteamDbPage),
             nameof(ErrorMessage), nameof(HasError),
         })
         {
@@ -1069,7 +1084,7 @@ public partial class GameDetailsViewModel : ViewModelBase
             // and the rematch paths clear the cache or set the force flag to get past this.
             bool force = _forceSteamRefresh;
             _forceSteamRefresh = false;
-            if (_details != null && !force && !MetadataFreshness.IsStale(_details.FetchedUtc, _refreshInterval))
+            if (_details != null && !force && !MetadataFreshness.IsStale(_details.FetchedUtc, _refreshInterval) && !MetadataFreshness.IsOutdated(_details, _refreshInterval))
             {
                 if (_resyncRawgAfterSteamLoad)
                 {

@@ -5,8 +5,12 @@ using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
-/// <summary>One card in Game Details' "Your setup": what a settings area is doing for this game, and the Settings tab that edits it.</summary>
-public sealed record GameSetupCard(string Title, string Chip, bool ChipIsOn, string Summary, GameEditSection Section, string LinkText);
+/// <summary>One row in Game Details' "Your setup": what a settings area is doing for this game, and the Settings tab that edits it.</summary>
+public sealed record GameSetupCard(string Title, string Chip, bool ChipIsOn, string Summary, GameEditSection Section, string LinkText)
+{
+    /// <summary>Every row but the first has a line above it.</summary>
+    public bool HasLineAbove { get; init; }
+}
 
 /// <summary>
 /// Reads a game as it is saved and says, area by area, what TrayTrigger changes for it. Facts the app
@@ -20,10 +24,13 @@ public static class GameSetupSummary
     {
         var cards = new List<GameSetupCard> { Performance(game) };
         if (game.DlssSettings.Count > 0) cards.Add(Dlss());
-        cards.Add(Display(game));
-        cards.Add(Scripts(game, scriptsEnabled, defaultScriptsConfigured));
-        cards.Add(Launch(game));
-        return cards;
+        // An area left at its default has nothing to say, so it has no row; its tab in Settings is still there.
+        if (Display(game) is { ChipIsOn: true } display) cards.Add(display);
+        // Scripts that are on, or that are set but switched off in Settings (which is worth saying).
+        if (Scripts(game, scriptsEnabled, defaultScriptsConfigured) is { } scripts && (scripts.ChipIsOn || (!scriptsEnabled && game.HasScripts)))
+            cards.Add(scripts);
+        if (Launch(game) is { ChipIsOn: true } launch) cards.Add(launch);
+        return cards.Select((card, i) => card with { HasLineAbove = i > 0 }).ToList();
     }
 
     private static GameSetupCard Performance(GameEntry game)

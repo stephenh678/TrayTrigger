@@ -167,7 +167,7 @@
                                 <CheckBox Content="Title" IsChecked="{Binding UpdateTitleFromMatch}" Style="{StaticResource ModernCheckBox}" Margin="0,0,16,0"/>
                                 <CheckBox Content="Genre" IsChecked="{Binding UpdateGenreFromMatch}" Style="{StaticResource ModernCheckBox}" Margin="0,0,16,0"/>
                                 <CheckBox Content="Poster" IsChecked="{Binding UpdatePosterFromMatch}" Style="{StaticResource ModernCheckBox}"
-                                          ToolTip="The banner and the icon follow the match only while they are Automatic."/>
+                                          ToolTip="The hero banner and the icon follow the match only while they are Automatic."/>
                             </WrapPanel>
                             <WrapPanel>
                                 <Button Content="Change match..." Command="{Binding ChangeMatchCommand}" Margin="0,0,8,4"
@@ -225,7 +225,7 @@
                                     <DockPanel>
                                       <StackPanel DockPanel.Dock="Top">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="Banner" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Hero banner" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             <TextBlock Text="Game Details" Style="{StaticResource ArtUse}" Margin="8,0,0,0" VerticalAlignment="Bottom"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding HeroChip}" TextTrimming="CharacterEllipsis" ToolTip="{Binding HeroChip}">
@@ -241,11 +241,11 @@
                                 </TextBlock>
                                       </StackPanel>
                                         <WrapPanel DockPanel.Dock="Bottom">
-                                            <Button Content="Choose image..." Command="{Binding ChooseHeroCommand}" AutomationProperties.Name="Choose a banner"
+                                            <Button Content="Choose image..." Command="{Binding ChooseHeroCommand}" AutomationProperties.Name="Choose a hero banner"
                                                     Style="{StaticResource ModernOutlineButton}" Padding="12,4" Margin="0,0,6,0"/>
-                                            <Button Content="Use automatic" Command="{Binding UseAutomaticHeroCommand}" AutomationProperties.Name="Use the automatic banner"
+                                            <Button Content="Use automatic" Command="{Binding UseAutomaticHeroCommand}" AutomationProperties.Name="Use the automatic hero banner"
                                                     Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,2,0"/>
-                                            <Button Command="{Binding FindHeroAgainCommand}" AutomationProperties.Name="Look for the banner again" ToolTip="Find again"
+                                            <Button Command="{Binding FindHeroAgainCommand}" AutomationProperties.Name="Look for the hero banner again" ToolTip="Find again"
                                                     Style="{StaticResource ModernGhostButton}" Padding="8,4"
                                                     Visibility="{Binding HeroIsAutomatic, Converter={StaticResource BoolToVis}}">
                                                 <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"/>

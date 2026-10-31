@@ -129,7 +129,7 @@ public partial class GameEditViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Select a Banner (wide, about 1920×620)",
+            Title = "Select a Hero Banner (wide, about 1920×620)",
             Filter = "Image Files (*.jpg;*.jpeg;*.png;*.webp;*.bmp)|*.jpg;*.jpeg;*.png;*.webp;*.bmp|All Files (*.*)|*.*",
             CheckFileExists = true
         };
@@ -152,16 +152,16 @@ public partial class GameEditViewModel
     public async Task FindHeroAgainAsync(bool quiet = false)
     {
         IsRefreshingMetadata = true;
-        if (!quiet) StatusMessage = "Looking for a banner...";
+        if (!quiet) StatusMessage = "Looking for a hero banner...";
         try
         {
             string? path = await HeroArt.RefetchAsync(SourceGame, SteamAppId?.Trim(), _steamGridDbApiKey, _minConfidence);
             UpdateHeroPreview();
-            if (!quiet) StatusMessage = path != null ? "Found a banner." : "No banner found for this game. Game Details shows the blurred poster instead.";
+            if (!quiet) StatusMessage = path != null ? "Found a hero banner." : "No hero banner found for this game. Game Details shows the blurred poster instead.";
         }
         catch (Exception ex)
         {
-            ShowProblem($"Could not look for a banner: {ex.Message}");
+            ShowProblem($"Could not look for a hero banner: {ex.Message}");
             LoggingService.Warn("GameEdit", $"Banner look-up failed: {ex.Message}");
         }
         finally
@@ -240,7 +240,7 @@ public partial class GameEditViewModel
                 _heroCustom = true;
                 UpdateHeroPreview();
                 if (_heroPreview is { } p && p.PixelHeight > 0 && (double)p.PixelWidth / p.PixelHeight < 1.8)
-                    StatusMessage = "That picture isn't wide, so Game Details will crop it. Steam's banners are 1920 by 620.";
+                    StatusMessage = "That picture isn't wide, so Game Details will crop it. Steam's hero banners are 1920 by 620.";
                 break;
         }
         NotifyArtworkState();

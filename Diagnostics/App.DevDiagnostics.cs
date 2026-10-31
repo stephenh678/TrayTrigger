@@ -3526,7 +3526,19 @@ public partial class App
                 var searchService = new SteamSearchService();
                 // "--screenshot-details <out.png> playing": as while the game runs (Close Game, Force Close).
                 bool detailsPlaying = e.Args.Any(a => a.Equals("playing", StringComparison.OrdinalIgnoreCase));
-                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying, editHost: DiagnosticEditHost(), heroArt: new HeroArtService());
+                // "rich": some setup on the game and a Played row for it, to see Your setup with several rows and the Last session card.
+                bool detailsRich = e.Args.Any(a => a.Equals("rich", StringComparison.OrdinalIgnoreCase));
+                ActivityService? detailsActivity = null;
+                if (detailsRich)
+                {
+                    game.PerformanceProfile = PerformanceProfileMode.Aggressive;
+                    game.DisplayWidth = 2560; game.DisplayHeight = 1440; game.DisplayRefreshHz = 165;
+                    game.Hotkey = "Ctrl+Alt+H"; game.RunAsAdmin = true;
+                    detailsActivity = new ActivityService(Path.Combine(Path.GetTempPath(), "tt-details-activity"), readOnly: true);
+                    detailsActivity.Record(ActivityLevel.Change, $"Played {game.Name} · 48m", subject: game.Name,
+                        detail: "Played: from 18:02 to 18:50 · launched through Steam.\nProfile: Aggressive applied.\nPut back: the power plan and 6 background apps.");
+                }
+                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying, editHost: DiagnosticEditHost(), heroArt: new HeroArtService(), activity: detailsActivity);
 
                 var sampleDetails = new SteamAppDetails
                 {
@@ -3539,7 +3551,7 @@ public partial class App
                     ShortDescription = "Dawnwalker is a dark fantasy narrative-action RPG set in medieval Europe. Unravel ancient curses and wage tactical war against monstrous adversaries across a dynamic, blood-drenched open world.",
                     MetacriticScore = 88,
                     ReviewScorePercent = 91,
-                    ReviewSummary = "Very Positive (91% of 14,280 reviews)",
+                    ReviewSummary = "91% positive (14,280 reviews)",
                     PcRequirementsMin = "• OS: Windows 10/11 64-bit\n• Processor: Intel Core i5-8400 or AMD Ryzen 5 2600X\n• Memory: 16 GB RAM\n• Graphics: NVIDIA GeForce RTX 2060 (6GB) or AMD Radeon RX 5600 XT\n• DirectX: Version 12 (DirectX 12 Ultimate)\n• Storage: 85 GB available space (SSD required)",
                     PcRequirementsRec = "• OS: Windows 11 64-bit\n• Processor: Intel Core i7-12700K or AMD Ryzen 7 7800X3D\n• Memory: 32 GB RAM\n• Graphics: NVIDIA GeForce RTX 4070 (12GB) or AMD Radeon RX 7800 XT\n• DirectX: Version 12\n• Storage: 85 GB NVMe SSD"
                 };

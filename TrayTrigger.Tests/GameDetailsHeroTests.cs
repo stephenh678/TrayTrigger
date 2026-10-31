@@ -265,13 +265,17 @@ public class GameDetailsHeroTests : IDisposable
     public void Setup_ScriptsSayDefaults_WhenSettingsDefaultsRunForAGameWithNone()
     {
         var game = new GameEntry();
-        Assert.Equal("None set", GameSetupSummary.For(game, true, defaultScriptsConfigured: false).Single(c => c.Title == "Scripts").Chip);
+        // Nothing to say, so no row.
+        Assert.DoesNotContain(GameSetupSummary.For(game, true, defaultScriptsConfigured: false), c => c.Title == "Scripts");
 
         var card = GameSetupSummary.For(game, true, defaultScriptsConfigured: true).Single(c => c.Title == "Scripts");
         Assert.Equal("Defaults", card.Chip);
 
         game.SkipDefaultScripts = true;
-        Assert.Equal("None set", GameSetupSummary.For(game, true, true).Single(c => c.Title == "Scripts").Chip);
+        Assert.DoesNotContain(GameSetupSummary.For(game, true, true), c => c.Title == "Scripts");
+
+        // Switched off in Settings with no script of the game's own: nothing is lost by saying nothing.
+        Assert.DoesNotContain(GameSetupSummary.For(new GameEntry(), scriptsEnabled: false, defaultScriptsConfigured: false), c => c.Title == "Scripts");
     }
 
     [Fact]
@@ -288,9 +292,12 @@ public class GameDetailsHeroTests : IDisposable
         Assert.Contains("Ctrl+Alt+H", launch.Summary);
         Assert.Contains("administrator", launch.Summary);
 
+        // Every row but the first has a line above it.
+        Assert.Equal([false, true, true], cards.Select(c => c.HasLineAbove).ToArray());
+
+        // An area left at its default has no row; Performance is always there.
         var untouched = GameSetupSummary.For(new GameEntry(), true, false);
-        Assert.Equal("Default", untouched.Single(c => c.Title == "Display and sound").Chip);
-        Assert.Equal("Default", untouched.Single(c => c.Title == "Launch").Chip);
+        Assert.Equal(["Performance"], untouched.Select(c => c.Title).ToArray());
     }
 
     [Theory]
@@ -396,5 +403,150 @@ public class GameDetailsHeroTests : IDisposable
         vm.EditViewModel.SaveCommand.Execute(null);
 
         Assert.Equal("My Hades", vm.GameTitle);
+    });
+
+    // --- The Overview: details, links, chips, news and the last session ---
+
+    private static GameDetailsViewModel Page(GameEntry game, ActivityService? activity = null, Action? openActivity = null) =>
+        new(game, new SteamMetadataService(), new CatalogueSteamSearchService(), activity: activity, openActivityAction: openActivity);
+
+    [Fact]
+    public void DeveloperAndPublisher_AreOneRow_WhenTheyAreTheSameCompany() => Sta(() =>
+    {
+        var vm = Page(Game());
+        vm.Details = new SteamAppDetails { AppId = "1", Name = "X", Developers = "Saber Interactive", Publishers = "saber interactive" };
+        Assert.Equal("Made by", vm.DeveloperLabel);
+        Assert.False(vm.ShowPublisherRow);
+
+        vm.Details = new SteamAppDetails { AppId = "1", Name = "X2", Developers = "Rebel Wolves", Publishers = "Bandai Namco" };
+        Assert.Equal("Developer", vm.DeveloperLabel);
+        Assert.True(vm.ShowPublisherRow);
+
+        vm.Details = new SteamAppDetails { AppId = "1", Name = "X3", Publishers = "Bandai Namco" };
+        Assert.True(vm.ShowPublisherRow);
+    });
+
+    [Fact]
+    public void TheHeaderRatingChip_ShortensSteamsLine_AndHidesWithNoReviews() => Sta(() =>
+    {
+        var vm = Page(Game());
+        Assert.False(vm.HasHeroRatingChip);
+
+        vm.Details = new SteamAppDetails { AppId = "1", Name = "X", ReviewSummary = "91% positive (14,280 reviews)", ReviewScorePercent = 91 };
+        Assert.Equal("91% positive", vm.HeroRatingChip);
+        Assert.Equal("91% positive (14,280 reviews)", vm.ReviewSummary);
+
+        // A copy saved before Steam moved its review page still says what it said.
+        vm.Details = new SteamAppDetails { AppId = "1", Name = "X2", ReviewSummary = "Very Positive (91% of 14,280 reviews)", ReviewScorePercent = 91 };
+        Assert.Equal("Very Positive · 91%", vm.HeroRatingChip);
+
+        vm.Details = new SteamAppDetails { AppId = "1", Name = "X3", ReviewSummary = "7 user reviews" };
+        Assert.Equal("7 user reviews", vm.HeroRatingChip);
+    });
+
+    [Fact]
+    public void TheNewsShown_IsTheThreeNewest() => Sta(() =>
+    {
+        var vm = Page(Game());
+        var details = new SteamAppDetails { AppId = "1", Name = "X" };
+        for (int day = 1; day <= 5; day++)
+            details.NewsItems.Add(new SteamNewsItem { Title = $"Post {day}", Date = new DateTime(2026, 10, day), IsPatchNotes = day == 1 });
+        vm.Details = details;
+
+        Assert.Equal(["Post 5", "Post 4", "Post 3"], vm.VisibleNews.Select(n => n.Title).ToArray());
+        Assert.Equal(5, vm.NewsItems.Count);
+    });
+
+    [Fact]
+    public void TheLinksRow_HoldsOnlyWhatExists() => Sta(() =>
+    {
+        var local = Page(Game());
+        Assert.False(local.HasSteamDbPage);
+        Assert.False(local.HasWebsite);
+
+        var game = Game();
+        game.SteamAppId = "1145360";
+        var steam = Page(game);
+        Assert.True(steam.HasSteamDbPage);
+        Assert.True(steam.OpenSteamDbCommand.CanExecute(null));
+        Assert.True(steam.ShowLinks);
+
+        steam.Details = new SteamAppDetails { AppId = "1145360", Name = "X", Website = "https://www.supergiantgames.com/" };
+        Assert.True(steam.HasWebsite);
+        Assert.Equal("https://www.supergiantgames.com/", steam.WebsiteUrl);
+    });
+
+    [Fact]
+    public void TheLastSession_IsTheNewestPlayedRowOfThisGame_WithWhatWasDoneAndPutBack() => Sta(() =>
+    {
+        Directory.CreateDirectory(_root);
+        var log = new ActivityService(_root);
+        var game = Game("Hades");
+        log.Record(ActivityLevel.Activity, "Played " + game.Name + " · 10m", subject: game.Name, detail: "Played: from 09:00 to 09:10.");
+        log.Record(ActivityLevel.Change, "Played " + game.Name + " · 48m", subject: game.Name,
+            detail: "Played: from 18:02 to 18:50.\nProfile: Aggressive applied.\nPut back: everything.");
+        log.Record(ActivityLevel.Change, "Played Other · 5h", subject: "Other", detail: "Played: all night.");
+
+        var info = Page(game, log).LastSession;
+
+        Assert.NotNull(info);
+        Assert.EndsWith("· 48m", info!.Title);
+        Assert.Equal(3, info.Lines.Count);
+        Assert.Contains("Put back", info.Lines[2]);
+    });
+
+    [Fact]
+    public void WithNoPlayedRow_ThereIsNoLastSession_AndSeeAllInActivityClosesThePageThenOpensIt() => Sta(() =>
+    {
+        Directory.CreateDirectory(_root);
+        int opened = 0, closed = 0;
+        var vm = Page(Game(), new ActivityService(_root), () => opened++);
+        vm.RequestClose += () => closed++;
+
+        Assert.False(vm.HasLastSession);
+        Assert.True(vm.OpenActivityCommand.CanExecute(null));
+        vm.OpenActivityCommand.Execute(null);
+
+        Assert.Equal(1, closed);
+        Assert.Equal(1, opened);
+        Assert.False(Page(Game()).OpenActivityCommand.CanExecute(null));
+    });
+
+    [Fact]
+    public void TheLastSession_IsKeptShort_TheRestIsInActivity() => Sta(() =>
+    {
+        Directory.CreateDirectory(_root);
+        var log = new ActivityService(_root);
+        var game = Game("Hades");
+        log.Record(ActivityLevel.Change, "Played " + game.Name + " · 3m", subject: game.Name,
+            detail: "Played: from 08:53 to 08:57 · launched directly.\n"
+                + "Profile: Optimized · changed: Ultimate Performance power plan · HDR on · notifications off · speakers unmuted · NVIDIA power management: Prefer maximum performance.\n"
+                + "Skipped: Frame cap already 224 fps for the primary display's 240 Hz.\n"
+                + "Put back: everything.\n"
+                + "Game: exempt from Windows power throttling · kept on the 8 performance cores.\n"
+                + "Tools: Wise Care 365 wasn't running, nothing to close.");
+
+        var info = Page(game, log).LastSession;
+
+        Assert.NotNull(info);
+        Assert.Equal(
+            ["Played: from 08:53 to 08:57 · launched directly.", "Profile: Optimized", "Put back: everything."],
+            info!.Lines.ToArray());
+    });
+
+    [Fact]
+    public void ALongLine_EndsInAnEllipsis_AtAWordBreak() => Sta(() =>
+    {
+        Directory.CreateDirectory(_root);
+        var log = new ActivityService(_root);
+        var game = Game("Hades");
+        string longPlayed = "Played: from 08:53 to 08:57 · launched through a launcher with a very long description of how it started and what it did";
+        log.Record(ActivityLevel.Activity, "Played " + game.Name + " · 3m", subject: game.Name, detail: longPlayed);
+
+        string line = Assert.Single(Page(game, log).LastSession!.Lines);
+
+        Assert.EndsWith("…", line);
+        Assert.True(line.Length <= 91);
+        Assert.StartsWith("Played: from 08:53 to 08:57", line);
     });
 }

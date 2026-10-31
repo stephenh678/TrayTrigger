@@ -26,7 +26,7 @@ public partial class GameEditViewModel
         get
         {
             string id = SteamAppId?.Trim() ?? string.Empty;
-            if (!UrlProtocolHelper.IsValidSteamAppId(id)) return "Not matched to a Steam listing. A match gives this game Steam's title, genre, poster and banner.";
+            if (!UrlProtocolHelper.IsValidSteamAppId(id)) return "Not matched to a Steam listing. A match gives this game Steam's title, genre, poster and hero banner.";
             return SteamMetadataService.TryGetCached(id, out var details) && details != null && !string.IsNullOrWhiteSpace(details.Name)
                 ? $"{details.Name} · App ID {id}"
                 : $"Steam App ID {id}";

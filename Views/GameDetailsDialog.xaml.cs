@@ -51,7 +51,9 @@ public partial class GameDetailsDialog : Window
             WindowThemeService.CenterOverOwner(this);
             Activate();
             _ = _viewModel.LoadInstallDriveAsync();
+            _ = _viewModel.LoadInstallSizeAsync();
         };
+        Closed += (s, e) => _viewModel.StopBackgroundWork();
     }
 
     private bool _discardConfirmed;

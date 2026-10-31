@@ -151,6 +151,8 @@ public partial class LibraryViewModel : ViewModelBase
 
     /// <summary>The Settings tab saved a game: the library persists it, and everything that shows it refreshes.</summary>
     public event Action<GameCardViewModel>? GameEdited;
+    /// <summary>Game Details' "See this game in Activity" was pressed: the window shows Activity &amp; History, narrowed to the game's name.</summary>
+    public event Action<string>? RequestShowActivity;
     public event Action<GameCardViewModel>? RequestQuickRename;
     public event Action<GameCardViewModel>? RequestQuickCategory;
     public event Action<GameCardViewModel>? RequestEditSteamAppId;
@@ -698,6 +700,7 @@ public partial class LibraryViewModel : ViewModelBase
         bool requestedDelete = false;
         bool requestedCloseGame = false;
         bool requestedForceClose = false;
+        bool requestedActivity = false;
 
         var vm = new GameDetailsViewModel(
             card.Game,
@@ -721,7 +724,8 @@ public partial class LibraryViewModel : ViewModelBase
                 _ => GameEdited?.Invoke(card),
                 () => _settings.EnableGameScripts,
                 () => _settings.ScriptDefaults is { Enabled: true, HasAny: true }),
-            heroArt: HeroArtService.Shared);
+            heroArt: HeroArtService.Shared,
+            openActivityAction: () => requestedActivity = true);
         if (startOnSettings) vm.ShowSettings();
 
         var dlg = new Views.GameDetailsDialog(vm);
@@ -746,6 +750,10 @@ public partial class LibraryViewModel : ViewModelBase
         else if (requestedForceClose)
         {
             card.ForceCloseCommand.Execute(null);
+        }
+        else if (requestedActivity)
+        {
+            RequestShowActivity?.Invoke(card.Name);
         }
 
         card.RefreshProperties();

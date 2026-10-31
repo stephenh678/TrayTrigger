@@ -609,17 +609,6 @@ public partial class GameEditViewModel : ViewModelBase
         SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
         SourceGame.IsHidden = IsHidden;
 
-        var edit = LibraryChanges.DescribeEdit(settingsBefore, LibraryChanges.Capture(SourceGame));
-        if (edit != null)
-        {
-            ActivityService.Add(ActivityLevel.Change, edit.Value.Text, subject: SourceGame.Name, detail: edit.Value.Detail);
-        }
-        if (_convertToLocal)
-        {
-            ActivityService.Add(ActivityLevel.Change, $"{SourceGame.Name} is now a Local game", subject: SourceGame.Name,
-                detail: $"It was linked to {platformBefore}; it no longer is, and launches the way a Local game does.");
-        }
-
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))
         {
@@ -673,6 +662,19 @@ public partial class GameEditViewModel : ViewModelBase
         }
 
         CommitHero();
+
+        // Said last: the pictures are only in place once they have been committed.
+        var edit = LibraryChanges.DescribeEdit(settingsBefore, LibraryChanges.Capture(SourceGame));
+        if (edit != null)
+        {
+            ActivityService.Add(ActivityLevel.Change, edit.Value.Text, subject: SourceGame.Name, detail: edit.Value.Detail);
+        }
+        if (_convertToLocal)
+        {
+            ActivityService.Add(ActivityLevel.Change, $"{SourceGame.Name} is now a Local game", subject: SourceGame.Name,
+                detail: $"It was linked to {platformBefore}; it no longer is, and launches the way a Local game does.");
+        }
+
         RequestClose?.Invoke(true);
     }
 

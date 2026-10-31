@@ -67,6 +67,8 @@ public partial class LibraryViewModel
             string cachedIcon = _iconExtractorService.ExtractAndCacheIcon(card.Game.Id, dialog.FileName, card.Game.Name);
             if (!string.IsNullOrEmpty(cachedIcon))
             {
+                var changed = LibraryChanges.DescribeArtChosen(card.Name, "icon", card.Game.HasCustomIcon);
+                ActivityService.Add(ActivityLevel.Change, changed.Text, subject: card.Name, detail: changed.Detail);
                 card.Game.IconPath = cachedIcon;
                 card.Game.HasCustomIcon = true;
                 card.RefreshProperties();
@@ -101,6 +103,8 @@ public partial class LibraryViewModel
                 {
                     File.Copy(dialog.FileName, destFile, overwrite: true);
                 }
+                var changed = LibraryChanges.DescribeArtChosen(card.Name, "poster", card.Game.HasCustomPoster);
+                ActivityService.Add(ActivityLevel.Change, changed.Text, subject: card.Name, detail: changed.Detail);
                 card.Game.CoverImagePath = destFile;
                 card.Game.HasCustomPoster = true;
                 card.ReloadCover();
@@ -121,11 +125,19 @@ public partial class LibraryViewModel
         RequestEditSteamAppId?.Invoke(card);
     }
 
+    private static void RecordSteamIdChange(GameCardViewModel card, string? was, string? now)
+    {
+        if (LibraryChanges.DescribeSteamIdChange(card.Name, was, now) is { } changed)
+            ActivityService.Add(ActivityLevel.Change, changed.Text, subject: card.Name, detail: changed.Detail);
+    }
+
     public async Task UpdateGameSteamAppIdAsync(GameCardViewModel card, string? newAppId)
     {
         string trimmed = newAppId?.Trim() ?? string.Empty;
+        string? idBefore = card.Game.SteamAppId;
         if (string.IsNullOrWhiteSpace(trimmed))
         {
+            RecordSteamIdChange(card, idBefore, null);
             card.Game.SteamAppId = null;
             card.RefreshProperties();
             SaveLibrary();
@@ -140,6 +152,7 @@ public partial class LibraryViewModel
             return;
         }
 
+        RecordSteamIdChange(card, idBefore, trimmed);
         card.Game.SteamAppId = trimmed;
         // IsSteamGame is left alone: a Local game links an App ID purely for metadata and art,
         // and a Steam game set to launch its executable directly (a real path, not steam://)

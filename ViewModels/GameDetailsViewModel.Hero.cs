@@ -95,7 +95,11 @@ public partial class GameDetailsViewModel
     /// <summary>Save (true) has written onto the game; Cancel (false) leaves it as it was. Either way the form starts again from the game as it is now.</summary>
     private void OnEditorClosed(bool saved)
     {
-        if (saved && !string.Equals(Game.Name, _nameWhenEditorOpened, StringComparison.Ordinal)) _showLibraryTitle = true;
+        if (saved && !string.Equals(Game.Name, _nameWhenEditorOpened, StringComparison.Ordinal))
+        {
+            _showLibraryTitle = true;
+            _lastSessionRead = false;
+        }
         if (_editor != null) _editor.RequestClose -= OnEditorClosed;
         _editor = null;
         // Shown as nothing for a moment first, so the Settings tab is built again for the new editor. A

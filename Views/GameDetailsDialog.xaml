@@ -202,9 +202,25 @@
                                    Foreground="{DynamicResource BrushTextPrimary}" ToolTip="{Binding GameTitle}"/>
 
                         <!-- The store and the genres, as one quiet line: the name and Play are what the eye should find. -->
-                        <TextBlock Text="{Binding HeroMetaLine}" Margin="0,2,0,0" FontSize="{DynamicResource FontSizeBody}"
-                                   Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding HeroMetaLine}"/>
+                        <WrapPanel Margin="0,2,0,0">
+                            <TextBlock Text="{Binding HeroMetaLine}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding HeroMetaLine}"/>
+                            <!-- How Steam's players rated it, and whether it is running now: two quiet chips, only when there is something to say. -->
+                            <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusSmall}" Padding="7,1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding HasHeroRatingChip, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="{Binding ReviewSummary}">
+                                <TextBlock Text="{Binding HeroRatingChip}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Medium"
+                                           Foreground="{DynamicResource BrushAccentText}"/>
+                            </Border>
+                            <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusSmall}" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding HasHeroStateChip, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Playing" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Medium"
+                                           Foreground="{DynamicResource BrushSuccessText}"/>
+                            </Border>
+                        </WrapPanel>
 
                         <!-- Actions, and the figures TrayTrigger records for the game -->
                         <DockPanel Margin="0,12,0,0" LastChildFill="True">
@@ -402,36 +418,8 @@
                     </StackPanel>
                 </Border>
 
-                <!-- B. PC System Requirements Card -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasRequirements}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <DockPanel Margin="0,0,0,10">
-                            <TextBlock Text="PC SYSTEM REQUIREMENTS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                                <Button Content="Minimum" Command="{Binding ShowMinReqsCommand}" 
-                                        Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,6,0"/>
-                                <Button Content="Recommended" Command="{Binding ShowRecReqsCommand}" 
-                                        Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
-                            </StackPanel>
-                        </DockPanel>
-                        <TextBlock Text="{Binding CurrentRequirementsText}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
-                                   TextWrapping="Wrap" LineHeight="19" FontFamily="{StaticResource MonoFont}"/>
-                    </StackPanel>
-                </Border>
-
                 <!-- C. Latest Patch Notes & News Card -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -459,7 +447,7 @@
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </DockPanel>
 
-                        <ItemsControl ItemsSource="{Binding NewsItems}">
+                        <ItemsControl ItemsSource="{Binding VisibleNews}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,10" Margin="0,0,0,10">
@@ -507,19 +495,48 @@
                         </ItemsControl>
                     </StackPanel>
                 </Border>
+
+                <!-- B. PC System Requirements Card: always shown, in the app's own font like the rest of the page. -->
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasRequirements}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <!-- The buttons first, so they keep their width and the title is what wraps when the card is narrow. -->
+                        <DockPanel Margin="0,0,0,10" LastChildFill="True">
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="10,0,0,0">
+                                <Button Content="Minimum" Command="{Binding ShowMinReqsCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,6,0"/>
+                                <Button Content="Recommended" Command="{Binding ShowRecReqsCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
+                            </StackPanel>
+                            <TextBlock Text="PC SYSTEM REQUIREMENTS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock Text="{Binding CurrentRequirementsText}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                   FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" LineHeight="19"/>
+                    </StackPanel>
+                </Border>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1">
-                        <!-- Details: who made it, when, where it lives, how it was received -->
+                        <!-- Details: who made it, when, where it lives and how big it is, how it was received, and where to read more -->
                         <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                 CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                             <StackPanel>
                                 <TextBlock Text="DETAILS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,8"/>
                                 <DockPanel Margin="0,0,0,4" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="Developer" Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding DeveloperLabel}" Style="{StaticResource DetailLabel}"/>
                                     <TextBlock Text="{Binding Developers}" Style="{StaticResource DetailValue}" ToolTip="{Binding Developers}"/>
                                 </DockPanel>
-                                <DockPanel Margin="0,0,0,4" Visibility="{Binding HasPublishers, Converter={StaticResource BoolToVis}}">
+                                <DockPanel Margin="0,0,0,4" Visibility="{Binding ShowPublisherRow, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="Publisher" Style="{StaticResource DetailLabel}"/>
                                     <TextBlock Text="{Binding Publishers}" Style="{StaticResource DetailValue}" ToolTip="{Binding Publishers}"/>
                                 </DockPanel>
@@ -527,14 +544,14 @@
                                     <TextBlock Text="Release date" Style="{StaticResource DetailLabel}"/>
                                     <TextBlock Text="{Binding ReleaseDate}" Style="{StaticResource DetailValue}"/>
                                 </DockPanel>
-                                <DockPanel Margin="0,0,0,4">
-                                    <TextBlock Text="Category" Style="{StaticResource DetailLabel}"/>
-                                    <TextBlock Text="{Binding Category}" Style="{StaticResource DetailValue}"/>
-                                </DockPanel>
                                 <!-- The drive it loads from: a game on a hard drive loads slower than on an SSD. -->
                                 <DockPanel Margin="0,0,0,4" Visibility="{Binding HasInstallDrive, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="Installed on" Style="{StaticResource DetailLabel}"/>
                                     <TextBlock Text="{Binding InstallDrive}" Style="{StaticResource DetailValue}"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,0,0,4" Visibility="{Binding HasInstallSize, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Size on disk" Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding InstallSize}" Style="{StaticResource DetailValue}"/>
                                 </DockPanel>
                 <WrapPanel Orientation="Horizontal" Margin="0,4,0,8">
                     <!-- Metacritic Score -->
@@ -579,25 +596,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Steam Review Summary -->
-                    <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
-                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasReviewSummary}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8E1;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding ReviewSummary}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" FontWeight="Medium"/>
-                        </StackPanel>
-                    </Border>
                 </WrapPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,0" MaxHeight="90">
                     <ItemsControl ItemsSource="{Binding TagList}">
@@ -616,55 +614,95 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+
+                                <!-- Where to read more: only the links that exist for this game -->
+                                <WrapPanel Margin="0,8,0,0" Visibility="{Binding ShowLinks, Converter={StaticResource BoolToVis}}">
+                                    <Button Content="Store page" Command="{Binding OpenStorePageCommand}" Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"
+                                            Style="{StaticResource ModernGhostButton}" Padding="0" Margin="0,0,14,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
+                                    <Button Content="PCGamingWiki" Command="{Binding OpenPcGamingWikiCommand}" Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"
+                                            Style="{StaticResource ModernGhostButton}" Padding="0" Margin="0,0,14,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
+                                    <Button Content="SteamDB" Command="{Binding OpenSteamDbCommand}" Visibility="{Binding HasSteamDbPage, Converter={StaticResource BoolToVis}}"
+                                            Style="{StaticResource ModernGhostButton}" Padding="0" Margin="0,0,14,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
+                                    <Button Content="Website" Command="{Binding OpenWebsiteCommand}" Visibility="{Binding HasWebsite, Converter={StaticResource BoolToVis}}"
+                                            Style="{StaticResource ModernGhostButton}" Padding="0" Margin="0,0,14,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
 
-                        <!-- Your setup: what TrayTrigger changes for this game, each with a way to the settings that do it -->
-                        <ItemsControl ItemsSource="{Binding SetupCards}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                            CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,10">
-                                        <StackPanel>
-                                            <DockPanel>
-                                                <Border DockPanel.Dock="Right" CornerRadius="{DynamicResource RadiusSmall}" Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ChipIsOn}" Value="True">
-                                                                    <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <TextBlock Text="{Binding Chip}" FontSize="{DynamicResource FontSizeBody}">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+                        <!-- Your setup: one card, a row for each area TrayTrigger changes for this game, each with a way to the settings that do it.
+                             An area left at its default has no row. -->
+                        <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14"
+                                Visibility="{Binding HasSetupCards, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="YOUR SETUP" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                <ItemsControl ItemsSource="{Binding SetupCards}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <Border x:Name="Rule" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,1,0,0" Margin="0,10,0,0"
+                                                        Visibility="{Binding HasLineAbove, Converter={StaticResource BoolToVis}}"/>
+                                                <DockPanel Margin="0,10,0,0">
+                                                    <Border DockPanel.Dock="Right" CornerRadius="{DynamicResource RadiusSmall}" Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding ChipIsOn}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+                                                                        <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Border>
-                                                <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                            </DockPanel>
-                                            <TextBlock Text="{Binding Summary}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,6,0,6"
+                                                        </Border.Style>
+                                                        <TextBlock Text="{Binding Chip}" FontSize="{DynamicResource FontSizeBody}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding ChipIsOn}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding Summary}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,6,0,6"
+                                                           Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                <Button Content="{Binding LinkText}" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
+                                                        Foreground="{DynamicResource BrushAccentText}"
+                                                        Command="{Binding DataContext.EditSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding Section}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Last session: what Activity & History has for the game's latest session, kept short. Only when it has one. -->
+                        <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14"
+                                Visibility="{Binding HasLastSession, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="LAST SESSION" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                                <TextBlock Text="{Binding LastSession.Title}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                <ItemsControl ItemsSource="{Binding LastSession.Lines}" Margin="0,4,0,6">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,2,0,0"
                                                        Foreground="{DynamicResource BrushTextSecondary}"/>
-                                            <Button Content="{Binding LinkText}" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
-                                                    Foreground="{DynamicResource BrushAccentText}"
-                                                    Command="{Binding DataContext.EditSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding Section}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Content="See this game in Activity" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0"
+                                        FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
+                                        Command="{Binding OpenActivityCommand}"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Grid>
                 </StackPanel>

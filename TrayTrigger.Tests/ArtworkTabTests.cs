@@ -359,4 +359,28 @@ public class ArtworkTabTests : IDisposable
         vm.RemoveMatchCommand.Execute(null);
         Assert.Contains(nameof(GameEditViewModel.HeroPreview), seen);
     });
+
+    [Fact]
+    public void SavingAChosenHeroBanner_LeavesOneChangeLineInActivity() => Sta(() =>
+    {
+        Directory.CreateDirectory(_root);
+        var log = new ActivityService(Path.Combine(_root, "activity"), readOnly: true);
+        var previous = ActivityService.Current;
+        ActivityService.Current = log;
+        try
+        {
+            var vm = Create();
+            Assert.Null(vm.TryUseImage(ArtSlot.Banner, Picture("wide.jpg", 1920, 620)));
+            vm.SaveCommand.Execute(null);
+
+            var line = Assert.Single(log.Entries, e => e.Subject == "Hades");
+            Assert.Equal(ActivityLevel.Change, line.Level);
+            Assert.Equal("Hades: hero banner changed", line.Text);
+            Assert.Equal("Hero banner: automatic -> a chosen one", line.Detail);
+        }
+        finally
+        {
+            ActivityService.Current = previous;
+        }
+    });
 }
