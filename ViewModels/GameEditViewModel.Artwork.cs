@@ -162,72 +162,7 @@ public partial class GameEditViewModel
         }
     }
 
-    /// <summary>
-    /// "Look Up": find this game online and fully populate it. First tries Steam by title - on a
-    /// hit it links the App ID and pulls the poster and genre in one step (the same as "Fetch by
-    /// ID", not just the title as the old "Search Online" did). When Steam has nothing (Roblox,
-    /// Fortnite, a Game Pass exclusive, an obscure indie) it falls back to SteamGridDB for a poster
-    /// by name - art only, no genre - and reports which game the art came from so a loose match is
-    /// visible. The typed title is left as-is on the fallback path since there's no authoritative
-    /// title source there.
-    /// </summary>
-    public async Task LookUpAsync()
-    {
-        LookUpState before = CurrentLookUpState();
-        try
-        {
-            string term = !string.IsNullOrWhiteSpace(Name) ? Name : Path.GetFileNameWithoutExtension(ExecutablePath);
-            if (string.IsNullOrWhiteSpace(term) && !string.IsNullOrWhiteSpace(ExecutablePath))
-            {
-                term = Path.GetFileName(Path.GetDirectoryName(ExecutablePath) ?? "");
-            }
-
-            if (string.IsNullOrWhiteSpace(term))
-            {
-                StatusMessage = "Enter a title or select an executable first.";
-                return;
-            }
-
-            IsRefreshingMetadata = true;
-            StatusMessage = $"Looking up \"{term}\"...";
-
-            var steamSearch = new SteamSearchService();
-            var match = await steamSearch.FindBestMatchAsync(term, _minConfidence);
-            if (match != null && !string.IsNullOrWhiteSpace(match.AppId))
-            {
-                // Steam hit: pull full details (title, poster, genre) exactly like Fetch by ID.
-                var metadataService = SharedMetadataService.Value;
-                var details = await metadataService.GetAppDetailsAsync(match.AppId, _steamGridDbApiKey, forceRefresh: true);
-                if (details != null && !string.IsNullOrWhiteSpace(details.Name))
-                {
-                    ApplySteamDetails(details, match.AppId);
-                    StatusMessage = $"Found on Steam: \"{details.Name}\"";
-                    return;
-                }
-
-                // Details fetch failed but the search matched a title - keep at least that.
-                Name = match.Name;
-                SteamAppId = match.AppId;
-                StatusMessage = $"Found Steam match: \"{match.Name}\" (details unavailable).";
-                return;
-            }
-
-            // No Steam match: fall back to SteamGridDB poster art by name.
-            await LookUpGridArtByNameAsync(term);
-        }
-        catch (Exception ex)
-        {
-            ShowProblem($"Look up failed: {ex.Message}");
-            LoggingService.Warn("GameEdit", $"Look up failed: {ex.Message}");
-        }
-        finally
-        {
-            IsRefreshingMetadata = false;
-            OfferUndo(before);
-        }
-    }
-
-    /// <summary>The SteamGridDB-by-name fallback for Look Up. Applies a poster only when the matched
+    /// <summary>The SteamGridDB-by-name look for a poster, for a game with no App ID (Find again, Use automatic). Applies a poster only when the matched
     /// community title resembles what was searched, so a stray autocomplete hit isn't pinned.</summary>
     private async Task LookUpGridArtByNameAsync(string term)
     {
@@ -258,25 +193,23 @@ public partial class GameEditViewModel
         }
     }
 
-    /// <summary>Applies a full Steam details fetch to the edit fields - shared by "Look Up" and
+    /// <summary>Applies a full Steam details fetch to the edit fields - shared by Change match and
     /// "Fetch by ID" so both routes to an App ID populate title, poster and genre identically.</summary>
     private void ApplySteamDetails(SteamAppDetails details, string appId)
     {
-        Name = details.Name;
+        if (UpdateTitleFromMatch) Name = details.Name;
         SteamAppId = appId;
         // IsSteamGame is left as it is: a Local game links an App ID purely for metadata and
         // art, and a Steam game set to launch its executable directly (a real path, not
         // steam://) must not be demoted to Local by a lookup.
-        ApplyFetchedCover(details.CoverImagePath);
+        if (UpdatePosterFromMatch) ApplyFetchedCover(details.CoverImagePath);
         // The same placeholder rule as the library's enrichment: a platform's default category
         // ("Steam", "GOG") is replaced like Uncategorized; a category the user chose is kept.
-        if (LibraryConstants.IsEnrichableCategory(Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+        if (UpdateGenreFromMatch && LibraryConstants.IsEnrichableCategory(Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
         {
             Category = details.PrimaryGenre;
         }
     }
-
-    public void LookUp() => _ = LookUpAsync();
 
     /// <summary>
     /// Corrects a misidentified game by fetching name + poster art directly from Steam for an
@@ -285,7 +218,10 @@ public partial class GameEditViewModel
     /// (e.g. from a bad automatic match) doesn't get served back out of the in-memory cache.
     /// Note: Does NOT modify IsSteamGame; local executables remain local executable games.
     /// </summary>
-    public async Task FetchBySteamIdAsync()
+    public Task FetchBySteamIdAsync() => FetchBySteamIdCoreAsync(CurrentLookUpState());
+
+    /// <param name="before">The state Undo puts back: taken before the App ID was set, when the match was picked rather than typed.</param>
+    private async Task FetchBySteamIdCoreAsync(LookUpState before)
     {
         string id = SteamAppId?.Trim() ?? string.Empty;
         if (!UrlProtocolHelper.IsValidSteamAppId(id))
@@ -297,7 +233,7 @@ public partial class GameEditViewModel
 
         IsRefreshingMetadata = true;
         StatusMessage = $"Fetching Steam details for App ID {id}...";
-        LookUpState before = CurrentLookUpState();
+        bool matched = false;
         try
         {
             SteamMetadataService.InvalidateCache(id);
@@ -311,6 +247,7 @@ public partial class GameEditViewModel
             }
 
             ApplySteamDetails(details, id);
+            matched = true;
             StatusMessage = $"Successfully matched with \"{details.Name}\"!";
         }
         catch (Exception ex)
@@ -323,16 +260,19 @@ public partial class GameEditViewModel
             IsRefreshingMetadata = false;
             OfferUndo(before);
         }
+
+        // The banner follows the match while it is Automatic: look under the new App ID.
+        if (matched && !_heroCustom) await FindHeroAgainAsync(quiet: true);
     }
 
     public void FetchBySteamId() => _ = FetchBySteamIdAsync();
 
     /// <summary>What Look Up and Fetch by ID can replace, kept from before the last one that did, for Undo.</summary>
-    private sealed record LookUpState(string Name, string? SteamAppId, string Category, string? FetchedCoverPath, string? CustomCoverPath);
+    private sealed record LookUpState(string Name, string? SteamAppId, string Category, string? FetchedCoverPath, string? CustomCoverPath, bool PosterCustom);
 
     private LookUpState? _lookUpUndo;
 
-    private LookUpState CurrentLookUpState() => new(Name, SteamAppId, Category, _fetchedCoverPath, _customCoverPath);
+    private LookUpState CurrentLookUpState() => new(Name, SteamAppId, Category, _fetchedCoverPath, _customCoverPath, _posterCustom);
 
     /// <summary>The last Look Up or Fetch by ID replaced something, and Undo can put it back.</summary>
     public bool CanUndoLookUp => _lookUpUndo != null;
@@ -356,8 +296,11 @@ public partial class GameEditViewModel
         Category = before.Category;
         _fetchedCoverPath = before.FetchedCoverPath;
         _customCoverPath = before.CustomCoverPath;
+        _posterCustom = before.PosterCustom;
         OnPropertyChanged(nameof(CustomCoverPath));
         UpdateCoverPreview();
+        NotifyArtworkState();
+        RefreshBannerPreview();
         StatusMessage = "Put back the title, Steam App ID, category and poster from before the look-up.";
     }
 
@@ -406,7 +349,7 @@ public partial class GameEditViewModel
 
     public void RefreshPoster() => _ = RefreshPosterAsync();
 
-    private void ApplyFetchedCover(string? coverPath)
+    internal void ApplyFetchedCover(string? coverPath)
     {
         if (string.IsNullOrWhiteSpace(coverPath) || !File.Exists(coverPath)) return;
 
@@ -417,6 +360,8 @@ public partial class GameEditViewModel
         // Clear any earlier manual "Change..." pick so the freshly fetched official art wins,
         // both in the preview and in Save()'s custom-cover-copy check.
         _customCoverPath = null;
+        _posterCustom = false;
+        NotifyArtworkState();
         OnPropertyChanged(nameof(CustomCoverPath));
         UpdateCoverPreview();
     }

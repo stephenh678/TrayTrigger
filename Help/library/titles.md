@@ -21,4 +21,4 @@ With Automatically categorize on, a newly added game that matched a Steam listin
 
 ## Fixing a wrong result
 
-Open Edit Game. Type the correct name, or enter the Steam App ID and click Fetch by ID to pull the official title and art. Fetch name from exe re-runs the local guess.
+Open Edit Game. Type the correct name, or use Identity & Library > Online match: Change match... picks the right Steam listing, and Enter an App ID takes one from the store page URL (click Fetch by ID). The ticked boxes (Title, Genre, Poster) are what it replaces. Fetch name from exe re-runs the local guess.

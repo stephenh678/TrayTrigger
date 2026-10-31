@@ -115,6 +115,8 @@
     <SolidColorBrush x:Key="BrushBadgePurpleWash" Color="{StaticResource ColorBadgePurpleWash}"/>
     <Color x:Key="ColorScrim">#CC000000</Color>
     <SolidColorBrush x:Key="BrushScrim" Color="{StaticResource ColorScrim}"/>
+    <!-- Only the alpha of an OpacityMask is read, so this opaque black is never seen as a color: it is the "fully there" end of a fade. -->
+    <Color x:Key="ColorMask">#FF000000</Color>
     <Color x:Key="ColorOverlayLine">#33FFFFFF</Color>
     <SolidColorBrush x:Key="BrushOverlayLine" Color="{StaticResource ColorOverlayLine}"/>
     <Color x:Key="ColorHighlight">#66FFC400</Color>

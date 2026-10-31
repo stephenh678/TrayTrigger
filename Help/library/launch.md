@@ -2,7 +2,7 @@
 
 Edit Game's Launch card has two parts: the route at the top (which client, if any, starts the game), then how the executable is run (from where, with what, and as whom). This is what each field does and, just as important, when it is ignored.
 
-Edit Game opens on its All tab, with every card in one scrolling column. The Launch tab shows this card on its own; Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and nothing you type is lost when you switch.
+Edit Game is the Settings tab of a game's Game Details window. It opens on its own All tab, with every card in one scrolling column. The Launch tab shows this card on its own; Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and nothing you type is lost when you switch.
 
 Pressing Play (or the game's hotkey) on a game that is already running, starting or suspended does not launch it again: no scripts run, no profile is applied twice, and there is no "Launching" popup. The game's window comes forward (a suspended game resumes), and the status line says so.
 

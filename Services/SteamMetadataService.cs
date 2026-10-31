@@ -791,7 +791,7 @@ public partial class SteamMetadataService
     /// Guards against caching a non-image response body (e.g. an HTML error/rate-limit page
     /// that happened to come back with a 200 status and exceed the byte-size check) as a poster.
     /// </summary>
-    private static bool IsDecodableImage(byte[] bytes)
+    internal static bool IsDecodableImage(byte[] bytes)
     {
         try
         {

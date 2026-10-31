@@ -97,7 +97,7 @@ public sealed class GameEditDisplayTests : IDisposable
         var vm = Open(new GameEntry { Name = "Hades", Category = "Action" });
 
         Assert.Equal(
-            [GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts],
+            [GameEditSection.All, GameEditSection.Identity, GameEditSection.Artwork, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts],
             vm.AvailableSections);
 
         vm.SelectedSection = GameEditSection.Display;

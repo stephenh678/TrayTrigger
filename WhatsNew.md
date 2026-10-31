@@ -4,6 +4,12 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.7.6
+
+- **Artwork you can change** - Edit Game has an Artwork tab with the game's Banner, Poster and Icon, each Automatic or Custom: choose a picture or drop one on the card. Online match replaces Look Up, and says what a new match will change.
+
+- **One page for each game** - Click a game and its Game Details is now the whole page: a header with the game's banner art behind its name, store, play time, last played and profile, and a Play button, then an Overview tab with what the game is and a card for each area TrayTrigger changes for it. The Settings tab is Edit Game, in the same window, so there is no second window to open: Save Changes keeps you on the page, and Cancel starts again from what is saved.
+
 ## 1.7.5
 
 - **Display and sound per game** - In Edit Game's new Display & Sound tab, pick a resolution, refresh rate, monitor, sound output or microphone for a game. TrayTrigger sets them when it starts and puts them back when it ends, even after a crash.

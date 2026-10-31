@@ -34,6 +34,8 @@ public partial class App
 
         GameEntry SampleGame() => new() { Name = "Key Test Game", Category = "Action" };
         var categories = new[] { "Action", "RPG" };
+        // Game Details on its Settings tab, as Edit opens it: the cases focus the name box, the category list and the hotkey box.
+        GameDetailsDialog NewGameEdit() => NewEditGameWindow(SampleGame());
         var tool = new ToolEntry { Name = "Key Test Tool", Category = "Mods", TargetPath = @"C:\Tools\missing.exe" };
         ThemeEditDialog NewThemeEdit() => new(new TrayTrigger.ViewModels.ThemeEditorViewModel(
             TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance));
@@ -45,17 +47,17 @@ public partial class App
             new("ModernDialog (confirm)", "button", "Enter", Confirm, w => ButtonNamed(w, "Remove"), new[] { Key.Enter }),
             new("QuickInputDialog", "text box", "Esc", () => new QuickInputDialog("Rename", "Rename", "Name", "abc"), w => Find<TextBox>(w), new[] { Key.Escape }),
             new("QuickInputDialog", "text box", "Enter", () => new QuickInputDialog("Rename", "Rename", "Name", "abc"), w => Find<TextBox>(w), new[] { Key.Enter }),
-            new("GameEditDialog, no changes", "text box", "Esc", () => new GameEditDialog(SampleGame(), categories, _iconExtractorService), w => Find<TextBox>(w), new[] { Key.Escape }),
-            new("GameEditDialog, no changes", "button", "Esc", () => new GameEditDialog(SampleGame(), categories, _iconExtractorService), w => ButtonNamed(w, "Cancel"), new[] { Key.Escape }),
-            new("GameEditDialog, name edited", "text box", "Esc, then Esc on the prompt", () => new GameEditDialog(SampleGame(), categories, _iconExtractorService), w => Find<TextBox>(w), new[] { Key.Escape },
+            new("Game Details Settings, no changes", "text box", "Esc", NewGameEdit, w => Find<TextBox>(w), new[] { Key.Escape }),
+            new("Game Details Settings, no changes", "button", "Esc", NewGameEdit, w => ButtonNamed(w, "Cancel"), new[] { Key.Escape }),
+            new("Game Details Settings, name edited", "text box", "Esc, then Esc on the prompt", NewGameEdit, w => Find<TextBox>(w), new[] { Key.Escape },
                 w => Find<TextBox>(w).Text = "Edited name"),
-            new("GameEditDialog, name edited", "text box", "Enter", () => new GameEditDialog(SampleGame(), categories, _iconExtractorService), w => Find<TextBox>(w), new[] { Key.Enter },
+            new("Game Details Settings, name edited", "text box", "Enter", NewGameEdit, w => Find<TextBox>(w), new[] { Key.Enter },
                 w => Find<TextBox>(w).Text = "Edited name"),
-            new("GameEditDialog, category drop-down open", "combo box", "Enter", () => new GameEditDialog(SampleGame(), categories, _iconExtractorService),
+            new("Game Details Settings, category drop-down open", "combo box", "Enter", NewGameEdit,
                 w => Find<ComboBox>(w, c => c.IsEditable), new[] { Key.Enter }, w => Find<ComboBox>(w, c => c.IsEditable).IsDropDownOpen = true),
-            new("GameEditDialog, hotkey recording", "hotkey box", "Esc", () => new GameEditDialog(SampleGame(), categories, _iconExtractorService),
+            new("Game Details Settings, hotkey recording", "hotkey box", "Esc", NewGameEdit,
                 w => Find<HotkeyRecorderBox>(w), new[] { Key.Escape }),
-            new("GameEditDialog, hotkey recording", "hotkey box", "Enter", () => new GameEditDialog(SampleGame(), categories, _iconExtractorService),
+            new("Game Details Settings, hotkey recording", "hotkey box", "Enter", NewGameEdit,
                 w => Find<HotkeyRecorderBox>(w), new[] { Key.Enter }),
             new("ToolEditDialog, no changes", "text box", "Esc", () => new ToolEditDialog(tool, categories, _iconExtractorService), w => Find<TextBox>(w), new[] { Key.Escape }),
             new("ToolEditDialog, name edited", "text box", "Esc, then Esc on the prompt", () => new ToolEditDialog(tool, categories, _iconExtractorService), w => Find<TextBox>(w), new[] { Key.Escape },
@@ -148,6 +150,8 @@ public partial class App
             if (dialog.IsVisible)
             {
                 forced = true;
+                // Game Details asks before it closes over open edits, and nobody is here to answer: throw them away first.
+                if (dialog is GameDetailsDialog details) details.EditViewModel?.CancelCommand.Execute(null);
                 dialog.Close();
             }
         };

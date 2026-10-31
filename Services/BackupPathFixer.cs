@@ -60,6 +60,7 @@ public static class BackupPathFixer
         {
             game.IconPath = MoveTrayTriggerPath(game.IconPath, context);
             game.CoverImagePath = game.CoverImagePath == null ? null : MoveTrayTriggerPath(game.CoverImagePath, context);
+            game.HeroImagePath = game.HeroImagePath == null ? null : MoveTrayTriggerPath(game.HeroImagePath, context);
             game.PreLaunchScriptPath = FixPath(game.PreLaunchScriptPath, isFile: true, context, report);
             game.PostExitScriptPath = FixPath(game.PostExitScriptPath, isFile: true, context, report);
 

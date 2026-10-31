@@ -41,7 +41,7 @@ Right-click a row for more:
 
 - **Copy details** and **Copy this line**: the whole entry for a bug report, or just its one-line title to paste into a chat.
 - **Show only this game**: puts the row's game or tool in the search box, so the list shows only that.
-- **Open this game**: opens Edit Game for the row's game, when it is still in your library.
+- **Open this game**: opens the game's Game Details on its Settings tab, when it is still in your library.
 - **Open the log**: opens debug.log in your editor. It opens the file, not the place the entry is in; the log is cleared and rolls over, so an old entry may have no lines left, and some lines only appear with Verbose logging on.
 - **Remove this entry**: after a confirmation, removes the row and every time it happened (a row that says 7 TIMES removes all seven). It isn't offered for a Critical row while its setting is still under Needs attention, because that is a PC left changed; once the setting is back, the row can go, even if an older entry in it was never marked FIXED. Only the entries the row shows go: with a search or tab narrowing the list, the times it hides stay. Removing can't be undone.
 

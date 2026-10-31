@@ -21,6 +21,7 @@
         <converters:TabForegroundConverter x:Key="TabForegroundConverter"/>
         <converters:ScrollEdgeConverter x:Key="ScrollEdgeConverter"/>
         <converters:RoundedClipConverter x:Key="RoundedClipConverter"/>
+        <converters:RatioHeightConverter x:Key="RatioHeightConverter"/>
         <converters:PosterCardRadiusConverter x:Key="PosterCardRadiusConverter"/>
         <converters:PosterShadeClipConverter x:Key="PosterShadeClipConverter"/>
         <converters:AnyTrueConverter x:Key="AnyTrueConverter"/>

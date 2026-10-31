@@ -20,6 +20,7 @@ public enum GameEditSection
 {
     All,
     Identity,
+    Artwork,
     Launch,
     Performance,
     Display,
@@ -211,7 +212,6 @@ public partial class GameEditViewModel : ViewModelBase
         ResetIconCommand = new RelayCommand(ResetIcon);
         BrowseCoverCommand = new RelayCommand(BrowseCover);
         ResetCoverCommand = new RelayCommand(ResetCover);
-        LookUpCommand = new RelayCommand(LookUp, () => !IsRefreshingMetadata);
         UndoLookUpCommand = new RelayCommand(UndoLookUp, () => CanUndoLookUp && !IsRefreshingMetadata);
         FetchBySteamIdCommand = new RelayCommand(FetchBySteamId, () => !IsRefreshingMetadata);
         RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
@@ -225,7 +225,8 @@ public partial class GameEditViewModel : ViewModelBase
 
         UpdateIconPreview();
         UpdateCoverPreview();
-        _showAdvancedLaunchOptions = !string.IsNullOrWhiteSpace(_workingDirectory) || !string.IsNullOrWhiteSpace(_arguments);
+        InitArtworkTab(game);
+        _showScriptRunOptions = game.HasScripts;
         _initialEditState = EditState();
     }
 
@@ -247,7 +248,7 @@ public partial class GameEditViewModel : ViewModelBase
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
-        CustomIconPath, CustomCoverPath, _fetchedCoverPath,
+        CustomIconPath, CustomCoverPath, _fetchedCoverPath, _customHeroSource, _posterCustom, _iconCustom,
     });
 
     public string Name
@@ -671,6 +672,7 @@ public partial class GameEditViewModel : ViewModelBase
             SourceGame.CoverImagePath = _fetchedCoverPath;
         }
 
+        CommitHero();
         RequestClose?.Invoke(true);
     }
 

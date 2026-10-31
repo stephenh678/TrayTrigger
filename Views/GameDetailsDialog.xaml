@@ -4,35 +4,165 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
+        xmlns:views="clr-namespace:TrayTrigger.Views"
         xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="Game Details"
-        Height="680" Width="880"
-        MinHeight="560" MinWidth="720"
+        Height="860" Width="960"
+        MinHeight="660" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BrushSurface}"
         Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="{DynamicResource AppFont}">
 
+    <Window.Resources>
+        <!-- The Settings tab: Game Details' own editor for the game, loaded only once the tab is opened. -->
+        <DataTemplate DataType="{x:Type vm:GameEditViewModel}">
+            <views:GameEditPanel/>
+        </DataTemplate>
+
+        <!-- The hero's layers: the banner and the fades over it show once there is a banner; the blurred poster until then. -->
+        <Style x:Key="HeroBannerLayer" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasHeroImage}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HeroFallbackLayer" TargetType="Border">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasHeroImage}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A tab as a word with a line under it while it is the one on show (Tag is true): quieter than a boxed segmented control. -->
+        <Style x:Key="UnderlineTabButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeSubhead}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Tag" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="line" BorderBrush="Transparent" BorderThickness="0,0,0,2" Padding="2,8,2,8" Margin="0,0,0,-1" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+                            </Trigger>
+                            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+                                <Setter TargetName="line" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <!-- The tab on show says so to a screen reader too, since a Button has no selected state of its own. -->
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="AutomationProperties.ItemStatus" Value="selected"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A figure in the header: a small label over a value. -->
+        <Style x:Key="HeroFigureLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+        </Style>
+        <Style x:Key="HeroFigureValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeSubhead}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        </Style>
+        <Style x:Key="DetailLabel" TargetType="TextBlock">
+            <Setter Property="Width" Value="96"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+        </Style>
+        <Style x:Key="DetailValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="20,16,20,16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Top Hero / Poster & Meta -->
-            <RowDefinition Height="Auto"/> <!-- Divider -->
-            <RowDefinition Height="*"/>    <!-- Scrollable Details (Synopsis, Specs, News) -->
-            <RowDefinition Height="Auto"/> <!-- Bottom Actions & Status -->
+            <RowDefinition Height="Auto"/> <!-- Hero: the game, its figures and Play -->
+            <RowDefinition Height="Auto"/> <!-- Tabs: Overview | Settings -->
+            <RowDefinition Height="*"/>    <!-- The tab on show -->
+            <RowDefinition Height="Auto"/> <!-- Bottom bar -->
         </Grid.RowDefinitions>
 
         <!-- ============================================================== -->
-        <!-- 1. TOP HERO SECTION: POSTER + METADATA                         -->
+        <!-- 1. HERO: THE GAME'S ART BEHIND ITS NAME, FIGURES AND ACTIONS   -->
+        <!-- The same on both tabs, so the top of the page never moves when you switch. -->
         <!-- ============================================================== -->
-        <Grid Grid.Row="0" Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/> <!-- Poster Art (170px) -->
-                <ColumnDefinition Width="*"/>    <!-- Metadata, Scores & Actions -->
-            </Grid.ColumnDefinitions>
+        <Border Grid.Row="0" Margin="0,0,0,12" CornerRadius="{DynamicResource RadiusCard}" BorderThickness="1"
+                BorderBrush="{DynamicResource BrushBorder}" Background="{DynamicResource BrushBackground}"
+                MinHeight="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource RatioHeightConverter}, ConverterParameter='0.24,210,260'}">
+            <!-- A little taller as the window gets wider (the art is cropped from the bottom, under the fade), between 210 and 260: a wider window
+                 grows the hero a little rather than cropping the art to a strip. -->
+            <Border.Clip>
+                <MultiBinding Converter="{StaticResource RoundedClipConverter}"><Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}"/><Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/><Binding Path="CornerRadius" RelativeSource="{RelativeSource Self}"/><Binding Path="BorderThickness" RelativeSource="{RelativeSource Self}"/></MultiBinding>
+            </Border.Clip>
+            <Grid>
+                <!-- Until the game's banner is found (or when there is none): its atmosphere, the blurred poster
+                     (RAWG's screenshot when that source is showing). A brush, not an Image: a picture would size
+                     the hero to itself, and a brush takes no room. -->
+                <Border Style="{StaticResource HeroFallbackLayer}">
+                    <Border.Background>
+                        <ImageBrush ImageSource="{Binding AmbientImage}" Stretch="UniformToFill"/>
+                    </Border.Background>
+                    <Border.Effect>
+                        <BlurEffect Radius="28" RenderingBias="Performance"/>
+                    </Border.Effect>
+                </Border>
+                <Border Style="{StaticResource HeroFallbackLayer}" Background="{DynamicResource BrushScrim}"/>
 
+                <!-- The game's banner, from Steam or SteamGridDB, kept sharp and to the right -->
+                <Border Style="{StaticResource HeroBannerLayer}">
+                    <Border.Background>
+                        <ImageBrush ImageSource="{Binding HeroImage}" Stretch="UniformToFill" AlignmentX="Right" AlignmentY="Top"/>
+                    </Border.Background>
+                </Border>
+                <!-- The page's own background fades in from the left and up from the bottom, so the name, the buttons and the figures stay readable on any art and any theme. -->
+                <Border Style="{StaticResource HeroBannerLayer}" Background="{DynamicResource BrushBackground}" Opacity="0.96">
+                    <Border.OpacityMask>
+                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                            <GradientStop Color="{DynamicResource ColorMask}" Offset="0"/>
+                            <GradientStop Color="{DynamicResource ColorMask}" Offset="0.2"/>
+                            <GradientStop Color="Transparent" Offset="0.85"/>
+                        </LinearGradientBrush>
+                    </Border.OpacityMask>
+                </Border>
+                <Border Style="{StaticResource HeroBannerLayer}" Background="{DynamicResource BrushBackground}" Opacity="0.9">
+                    <Border.OpacityMask>
+                        <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                            <GradientStop Color="Transparent" Offset="0.3"/>
+                            <GradientStop Color="{DynamicResource ColorMask}" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.OpacityMask>
+                </Border>
+
+                <Grid Margin="20,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/> <!-- Hero poster -->
+                        <ColumnDefinition Width="*"/>    <!-- Name, actions, figures -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- The poster stands in for the banner until there is one. -->
             <!-- Poster Artwork Container -->
-            <Border Grid.Column="0" Width="170" Height="255" CornerRadius="{DynamicResource RadiusCard}"
+            <Border x:Name="HeroPoster" Style="{StaticResource HeroFallbackLayer}" Grid.Column="0" Width="140" Height="210" CornerRadius="{DynamicResource RadiusCard}"
                     Background="{DynamicResource BrushBackground}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" Margin="0,0,20,0">
                 <Border.Clip>
@@ -66,302 +196,118 @@
                 </Grid>
             </Border>
 
-            <!-- Metadata Column -->
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/> <!-- Title & Genres -->
-                    <RowDefinition Height="Auto"/> <!-- Dev, Pub & Release Date -->
-                    <RowDefinition Height="Auto"/> <!-- Ratings & Sentiment Badges -->
-                    <RowDefinition Height="*"/>    <!-- Play Mode Tags -->
-                    <RowDefinition Height="Auto"/> <!-- Action Buttons -->
-                </Grid.RowDefinitions>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom">
+                        <!-- Name -->
+                        <TextBlock Text="{Binding GameTitle}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FontSizeDisplay}"
+                                   Foreground="{DynamicResource BrushTextPrimary}" ToolTip="{Binding GameTitle}"/>
 
-                <!-- Title & Genre Pill -->
-                <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                    <Button AutomationProperties.Name="{Binding FavoriteButtonLabel}" DockPanel.Dock="Left" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
-                            VerticalAlignment="Top" Margin="0,2,10,0"/>
-                    <StackPanel>
-                        <TextBlock Text="{Binding GameTitle}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding GenresDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
-                                   Margin="0,4,0,0" FontWeight="Medium"/>
-                    </StackPanel>
-                </DockPanel>
+                        <!-- The store and the genres, as one quiet line: the name and Play are what the eye should find. -->
+                        <TextBlock Text="{Binding HeroMetaLine}" Margin="0,2,0,0" FontSize="{DynamicResource FontSizeBody}"
+                                   Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding HeroMetaLine}"/>
 
-                <!-- Dev, Pub, Release Date, Playtime & Category -->
-                <Grid Grid.Row="1" Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <DockPanel Margin="0,0,0,3" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Developer:" Width="104" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding Developers}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                        </DockPanel>
-                        <DockPanel Margin="0,0,0,3" Visibility="{Binding HasPublishers, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Publisher:" Width="104" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding Publishers}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                        </DockPanel>
-                        <DockPanel Visibility="{Binding HasReleaseDate, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Release Date:" Width="104" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding ReleaseDate}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
-                        </DockPanel>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                        <DockPanel Margin="0,0,0,3">
-                            <TextBlock Text="Playtime:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="Medium"/>
-                        </DockPanel>
-                        <DockPanel Margin="0,0,0,3">
-                            <TextBlock Text="Last Played:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
-                        </DockPanel>
-                        <DockPanel>
-                            <TextBlock Text="Category:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
-                        </DockPanel>
-                        <!-- The drive it loads from: a game on a hard drive loads slower than on an SSD. -->
-                        <DockPanel Margin="0,3,0,0" Visibility="{Binding HasInstallDrive, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Installed on:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding InstallDrive}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                        <!-- Actions, and the figures TrayTrigger records for the game -->
+                        <DockPanel Margin="0,12,0,0" LastChildFill="True">
+                            <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="16,0,0,0">
+                                <StackPanel Margin="22,0,0,0">
+                                    <TextBlock Text="Played" Style="{StaticResource HeroFigureLabel}"/>
+                                    <TextBlock Text="{Binding PlayedStat}" Style="{StaticResource HeroFigureValue}"/>
+                                </StackPanel>
+                                <StackPanel Margin="22,0,0,0">
+                                    <TextBlock Text="Last played" Style="{StaticResource HeroFigureLabel}"/>
+                                    <TextBlock Text="{Binding LastPlayedStat}" Style="{StaticResource HeroFigureValue}"/>
+                                </StackPanel>
+                                <StackPanel Margin="22,0,0,0">
+                                    <TextBlock Text="Profile" Style="{StaticResource HeroFigureLabel}"/>
+                                    <TextBlock Text="{Binding ProfileStat}" Style="{StaticResource HeroFigureValue}"/>
+                                </StackPanel>
+                            </WrapPanel>
+
+                            <WrapPanel Orientation="Horizontal">
+                                <Button AutomationProperties.Name="Play" Command="{Binding LaunchGameCommand}"
+                                        Style="{StaticResource ModernAccentButton}" Padding="22,8" Margin="0,0,10,6"
+                                        FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSubhead}"
+                                        ToolTip="Launch this game">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Play" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <!-- While the game is playing: the card menu's two session actions (UX-14h). -->
+                                <Button AutomationProperties.Name="Close Game" Command="{Binding CloseGameCommand}"
+                                        Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="13,8" Margin="0,0,10,6" FontSize="{DynamicResource FontSizeBody}"
+                                        ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE7E8;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Close Game" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button AutomationProperties.Name="Force Close Game" Command="{Binding ForceCloseCommand}"
+                                        Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="13,8" Margin="0,0,10,6" FontSize="{DynamicResource FontSizeBody}"
+                                        Foreground="{DynamicResource BrushDanger}"
+                                        ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Force Close" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button AutomationProperties.Name="{Binding FavoriteButtonLabel}" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
+                                        Margin="0,0,10,6" VerticalAlignment="Center"/>
+                                <!-- Store pages and Remove: the actions a player reaches for rarely. -->
+                                <Button x:Name="MoreButton" AutomationProperties.Name="More actions" Click="OpenMenu_Click"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="12,8" Margin="0,0,0,6" FontSize="{DynamicResource FontSizeBody}"
+                                        ToolTip="Store pages, and Remove from library">
+                                    <TextBlock Text="&#xE712;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"/>
+                                    <Button.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="Open the Steam store page" Command="{Binding OpenStorePageCommand}"
+                                                      Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"/>
+                                            <MenuItem Header="Open this game on RAWG" Command="{Binding OpenRawgPageCommand}"
+                                                      Visibility="{Binding HasRawgPage, Converter={StaticResource BoolToVis}}"/>
+                                            <MenuItem Header="Open the PCGamingWiki page" Command="{Binding OpenPcGamingWikiCommand}"
+                                                      Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Remove from library" Command="{Binding DeleteGameCommand}" Foreground="{DynamicResource BrushDanger}"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                            </WrapPanel>
                         </DockPanel>
                     </StackPanel>
                 </Grid>
-
-                <!-- Scores & Sentiment Badges -->
-                <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
-                    <!-- Metacritic Score -->
-                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" 
-                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasMetacritic}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding MetacriticScore}" FontWeight="Bold" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" Margin="0,0,6,0"/>
-                            <TextBlock Text="Metascore" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- RAWG community rating (RAWG source only; fills in where Metacritic is absent) -->
-                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
-                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
-                            Visibility="{Binding HasRawgRating, Converter={StaticResource BoolToVis}}"
-                            ToolTip="Community rating on rawg.io">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushSuccessText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding RawgRatingDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="Medium" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- ESRB rating (RAWG source only) -->
-                    <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
-                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
-                            Visibility="{Binding HasEsrbRating, Converter={StaticResource BoolToVis}}"
-                            ToolTip="ESRB age rating">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="ESRB" FontSize="{DynamicResource FontSizeBody}" FontWeight="Bold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding EsrbRating}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" FontWeight="Medium" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Steam Review Summary -->
-                    <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
-                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasReviewSummary}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8E1;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding ReviewSummary}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" FontWeight="Medium"/>
-                        </StackPanel>
-                    </Border>
-                </WrapPanel>
-
-                <!-- Play Mode Tags, then the anti-cheat tag when the last launch saw one -->
-                <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,12" MaxHeight="60">
-                    <ItemsControl ItemsSource="{Binding TagList}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" 
-                                        BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="8,3" Margin="0,0,6,6">
-                                    <TextBlock Text="{Binding}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-
-                <!-- Action Buttons: Primary & Constructive on Left, Destructive on Far Right -->
-                <DockPanel Grid.Row="4" VerticalAlignment="Bottom" Margin="0,4,0,0" LastChildFill="False">
-                    <!-- Destructive Action (Safely Isolated on Far Right) -->
-                    <Button AutomationProperties.Name="Remove from library" DockPanel.Dock="Right" Command="{Binding DeleteGameCommand}"
-                            Style="{StaticResource ModernOutlineButton}" Foreground="{DynamicResource BrushDanger}" BorderBrush="{DynamicResource BrushDangerBorder}"
-                            Padding="12,7" Margin="0,0,0,6" FontSize="{DynamicResource FontSizeBody}"
-                            VerticalAlignment="Top">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Remove" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Primary & Constructive Actions (Left Aligned). MDL2 glyphs rather than
-                         emoji so the buttons match the rest of the app on every Windows build. -->
-                    <WrapPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                        <Button AutomationProperties.Name="Launch Game" Command="{Binding LaunchGameCommand}"
-                                Style="{StaticResource ModernAccentButton}" Padding="16,7" Margin="0,0,10,6"
-                                FontWeight="SemiBold" FontSize="{DynamicResource FontSizeBody}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Launch Game" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <!-- While the game is playing: the card menu's two session actions (UX-14h). -->
-                        <Button AutomationProperties.Name="Close Game" Command="{Binding CloseGameCommand}"
-                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="{DynamicResource FontSizeBody}"
-                                ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE7E8;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Close Game" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button AutomationProperties.Name="Force Close Game" Command="{Binding ForceCloseCommand}"
-                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="{DynamicResource FontSizeBody}"
-                                Foreground="{DynamicResource BrushDanger}"
-                                ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Force Close" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button AutomationProperties.Name="Open the Steam store page" Command="{Binding OpenStorePageCommand}"
-                                Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="{DynamicResource FontSizeBody}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Steam Store" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <!-- The RAWG counterpart of Steam Store while RAWG is showing: the game's
-                             rawg.io page, i.e. where the data on screen came from. -->
-                        <Button AutomationProperties.Name="Open the RAWG page" Command="{Binding OpenRawgPageCommand}"
-                                Visibility="{Binding HasRawgPage, Converter={StaticResource BoolToVis}}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="{DynamicResource FontSizeBody}" ToolTip="Open this game's page on rawg.io">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Open on RAWG" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <!-- Where to find a game's PC fixes (ultrawide, FOV, frame cap, save location).
-                             Follows neither source: Steam App ID when there is one, else a name search. -->
-                        <Button AutomationProperties.Name="Open the PCGamingWiki page" Command="{Binding OpenPcGamingWikiCommand}"
-                                Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="{DynamicResource FontSizeBody}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="PCGamingWiki" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button AutomationProperties.Name="Edit game" Command="{Binding EditGameCommand}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="{DynamicResource FontSizeBody}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Edit Properties" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </WrapPanel>
-                </DockPanel>
             </Grid>
-        </Grid>
-
-        <!-- Divider -->
-        <Separator Grid.Row="1" Background="{DynamicResource BrushSurfaceHover}" Margin="0,0,0,14"/>
+        </Border>
 
         <!-- ============================================================== -->
-        <!-- 2. SCROLLABLE DETAILS: SYNOPSIS, SPECS & NEWS                  -->
+        <!-- 2. TABS                                                        -->
         <!-- ============================================================== -->
-        <ScrollViewer x:Name="DetailsScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
-            <StackPanel Margin="0,0,10,0">
+        <Border Grid.Row="1" Margin="0,0,0,14" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1"
+                Visibility="{Binding CanEdit, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Overview" Command="{Binding SelectTabCommand}" CommandParameter="Overview"
+                        Style="{StaticResource UnderlineTabButton}" Tag="{Binding IsOverviewTab}"/>
+                <Button Content="Settings" Command="{Binding SelectTabCommand}" CommandParameter="Settings" Margin="22,0,0,0"
+                        Style="{StaticResource UnderlineTabButton}" Tag="{Binding IsSettingsTab}"/>
+            </StackPanel>
+        </Border>
 
-                <!-- Info source row. The Steam | RAWG switch is only present when RAWG is enabled
-                     with a key (CanToggleSource); otherwise every game simply shows Steam and the
-                     row carries just the "Matched to" caption and Change match. The source choice
-                     is remembered per game (GameEntry.PreferredMetadataSource) and drives the text
-                     fields above and the synopsis below - never the category, art or sorting. -->
-                <DockPanel Margin="0,0,0,10" LastChildFill="True">
-                    <Border DockPanel.Dock="Left" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" VerticalAlignment="Center" Margin="0,0,12,0"
-                            Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}">
-                        <StackPanel Orientation="Horizontal">
-                            <Button Command="{Binding SelectSteamSourceCommand}" Content="Steam" Padding="12,4"
-                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSteamActive}"
-                                    ToolTip="Show this game's info from the Steam store"
-                                    AutomationProperties.Name="Show Steam info"/>
-                            <Button Command="{Binding SelectRawgSourceCommand}" Content="RAWG" Padding="12,4" Margin="2,0,0,0"
-                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsRawgActive}"
-                                    ToolTip="Show this game's info from RAWG (rawg.io)"
-                                    AutomationProperties.Name="Show RAWG info"/>
-                        </StackPanel>
-                    </Border>
-                    <Button AutomationProperties.Name="Change which game this matches" DockPanel.Dock="Right" Command="{Binding ChangeMatchCommand}"
-                            Visibility="{Binding CanChangeMatch, Converter={StaticResource BoolToVis}}"
-                            Style="{StaticResource ModernGhostButton}" Padding="8,4" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"
-                            Foreground="{DynamicResource BrushAccentText}"
-                            ToolTip="{Binding ChangeMatchToolTip}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Change match" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="Where this info comes from"
-                            VerticalAlignment="Center" Margin="0,0,12,0"
-                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
-                    <!-- Cache age for the active source and a manual re-fetch. The window always
-                         paints from the disk cache; "Refresh game info" in Settings decides when
-                         it re-fetches on its own, and this link does it on demand. -->
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0"
-                                Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding LastUpdatedCaption}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
-                                   VerticalAlignment="Center"/>
-                        <Button Command="{Binding RefreshNowCommand}"
-                                Style="{StaticResource ModernGhostButton}" Padding="8,4" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"
-                                Foreground="{DynamicResource BrushAccentText}" Margin="2,0,0,0"
-                                ToolTip="{Binding RefreshNowToolTip}" AutomationProperties.Name="Refresh game info now">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </DockPanel>
+        <!-- ============================================================== -->
+        <!-- 3. THE TAB ON SHOW                                             -->
+        <!-- ============================================================== -->
+        <Grid Grid.Row="2" Margin="0,0,0,12">
+            <!-- OVERVIEW: what is known about the game, and what TrayTrigger does for it -->
+            <ScrollViewer x:Name="DetailsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding IsOverviewTab, Converter={StaticResource BoolToVis}}">
+                <StackPanel Margin="0,0,10,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="300"/>
+                    </Grid.ColumnDefinitions>
 
+                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
                 <!-- Loading State -->
                 <StackPanel Margin="0,30,0,30" HorizontalAlignment="Center">
                     <StackPanel.Style>
@@ -404,7 +350,48 @@
                 <!-- A. About / Synopsis Card -->
                 <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                     <StackPanel>
-                        <TextBlock Text="ABOUT THE GAME" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                        <!-- The words below come from Steam, or from RAWG when a key is set: where they came from, how fresh they are and how to
+                             change that are said here, in the card they are about, and not in a row of their own. -->
+                        <DockPanel Margin="0,0,0,6" LastChildFill="True">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding LastUpdatedCaption}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                           VerticalAlignment="Center" Margin="0,0,6,0" TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}"/>
+                                <Button x:Name="SourceButton" AutomationProperties.Name="Where this info comes from" Click="OpenMenu_Click"
+                                        Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="{DynamicResource FontSizeBody}"
+                                        Foreground="{DynamicResource BrushAccentText}" ToolTip="Where this info comes from, how fresh it is, and how to change it">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding SourceName}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}" VerticalAlignment="Center" Margin="5,1,0,0"/>
+                                    </StackPanel>
+                                    <Button.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="Steam" IsChecked="{Binding IsSteamActive, Mode=OneWay}" Command="{Binding SelectSteamSourceCommand}"
+                                                      Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}"/>
+                                            <MenuItem Header="RAWG" IsChecked="{Binding IsRawgActive, Mode=OneWay}" Command="{Binding SelectRawgSourceCommand}"
+                                                      Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}"/>
+                                            <MenuItem Header="RAWG needs a key in Settings" IsEnabled="False">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanToggleSource}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                            <Separator/>
+                                            <MenuItem Header="Refresh now" Command="{Binding RefreshNowCommand}" ToolTip="{Binding RefreshNowToolTip}"
+                                                      Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}"/>
+                                            <MenuItem Header="Change match..." Command="{Binding ChangeMatchCommand}" ToolTip="{Binding ChangeMatchToolTip}"/>
+                                            <MenuItem Header="Where this info comes from" Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="ABOUT THE GAME" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                        </DockPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                                    TextWrapping="Wrap" LineHeight="20"/>
                         <!-- Required RAWG attribution: an active link wherever RAWG data is shown. -->
@@ -494,7 +481,7 @@
                                                     <TextBlock Text="PATCH" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushSuccessText}"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                                           Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap"/>
                                             </DockPanel>
 
                                             <!-- News Snippet -->
@@ -520,17 +507,218 @@
                         </ItemsControl>
                     </StackPanel>
                 </Border>
-            </StackPanel>
-        </ScrollViewer>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1">
+                        <!-- Details: who made it, when, where it lives, how it was received -->
+                        <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="DETAILS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,8"/>
+                                <DockPanel Margin="0,0,0,4" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Developer" Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding Developers}" Style="{StaticResource DetailValue}" ToolTip="{Binding Developers}"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,0,0,4" Visibility="{Binding HasPublishers, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Publisher" Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding Publishers}" Style="{StaticResource DetailValue}" ToolTip="{Binding Publishers}"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,0,0,4" Visibility="{Binding HasReleaseDate, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Release date" Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding ReleaseDate}" Style="{StaticResource DetailValue}"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,0,0,4">
+                                    <TextBlock Text="Category" Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding Category}" Style="{StaticResource DetailValue}"/>
+                                </DockPanel>
+                                <!-- The drive it loads from: a game on a hard drive loads slower than on an SSD. -->
+                                <DockPanel Margin="0,0,0,4" Visibility="{Binding HasInstallDrive, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Installed on" Style="{StaticResource DetailLabel}"/>
+                                    <TextBlock Text="{Binding InstallDrive}" Style="{StaticResource DetailValue}"/>
+                                </DockPanel>
+                <WrapPanel Orientation="Horizontal" Margin="0,4,0,8">
+                    <!-- Metacritic Score -->
+                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" 
+                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasMetacritic}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding MetacriticScore}" FontWeight="Bold" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" Margin="0,0,6,0"/>
+                            <TextBlock Text="Metascore" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- RAWG community rating (RAWG source only; fills in where Metacritic is absent) -->
+                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
+                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
+                            Visibility="{Binding HasRawgRating, Converter={StaticResource BoolToVis}}"
+                            ToolTip="Community rating on rawg.io">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushSuccessText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding RawgRatingDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ESRB rating (RAWG source only) -->
+                    <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
+                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
+                            Visibility="{Binding HasEsrbRating, Converter={StaticResource BoolToVis}}"
+                            ToolTip="ESRB age rating">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="ESRB" FontSize="{DynamicResource FontSizeBody}" FontWeight="Bold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding EsrbRating}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Steam Review Summary -->
+                    <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
+                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasReviewSummary}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8E1;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding ReviewSummary}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Border>
+                </WrapPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,0" MaxHeight="90">
+                    <ItemsControl ItemsSource="{Binding TagList}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" 
+                                        BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="8,3" Margin="0,0,6,6">
+                                    <TextBlock Text="{Binding}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Your setup: what TrayTrigger changes for this game, each with a way to the settings that do it -->
+                        <ItemsControl ItemsSource="{Binding SetupCards}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                            CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,10">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Right" CornerRadius="{DynamicResource RadiusSmall}" Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding ChipIsOn}" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding Chip}" FontSize="{DynamicResource FontSizeBody}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ChipIsOn}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                                <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding Summary}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,6,0,6"
+                                                       Foreground="{DynamicResource BrushTextSecondary}"/>
+                                            <Button Content="{Binding LinkText}" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
+                                                    Foreground="{DynamicResource BrushAccentText}"
+                                                    Command="{Binding DataContext.EditSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding Section}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- SETTINGS: the same cards Edit Properties used to open in a window of its own -->
+            <ContentControl Content="{Binding EditViewModel}" IsTabStop="False"
+                            Visibility="{Binding IsSettingsTab, Converter={StaticResource BoolToVis}}"/>
+        </Grid>
 
         <!-- ============================================================== -->
-        <!-- 3. BOTTOM ACTIONS                                              -->
+        <!-- 4. BOTTOM BAR                                                  -->
+        <!-- The game's path on the Overview; on Settings the editor's status and Save / Cancel. -->
         <!-- ============================================================== -->
         <DockPanel Grid.Row="3">
-            <TextBlock Text="{Binding Game.ExecutablePath}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
-                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="580"/>
-            <Button Content="_Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}" 
-                    Padding="18,6" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+            <Button Content="_Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}"
+                    Padding="18,6" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="12,0,0,0"/>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsSettingsTab, Converter={StaticResource BoolToVis}}">
+                <Button Content="Cancel" Command="{Binding EditViewModel.CancelCommand}"
+                        ToolTip="Throw away the changes and start again from the saved settings"
+                        Style="{StaticResource ModernGhostButton}" MinWidth="85" Margin="0,0,8,0"/>
+                <!-- The default button only while the Settings tab is on show, so Enter on the Overview never saves. -->
+                <Button Content="_Save Changes" Command="{Binding EditViewModel.SaveCommand}"
+                        IsDefault="{Binding IsVisible, RelativeSource={RelativeSource Self}, Mode=OneWay}"
+                        Style="{StaticResource ModernAccentButton}" MinWidth="110"/>
+            </StackPanel>
+            <Grid>
+                <TextBlock Text="{Binding Game.ExecutablePath}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Game.ExecutablePath}" Visibility="{Binding IsOverviewTab, Converter={StaticResource BoolToVis}}"/>
+                <!-- Status: a busy bar while a look-up or a script test runs, and the editor's message in the accent, or in the problem colour when it is a failure. -->
+                <DockPanel VerticalAlignment="Center" Margin="0,0,16,0" LastChildFill="True"
+                           Visibility="{Binding IsSettingsTab, Converter={StaticResource BoolToVis}}">
+                    <ProgressBar DockPanel.Dock="Left" IsIndeterminate="True" Width="36" Height="3" Margin="0,0,10,0"
+                                 VerticalAlignment="Center" BorderThickness="0"
+                                 Foreground="{DynamicResource BrushAccent}" Background="{DynamicResource BrushBorder}"
+                                 AutomationProperties.Name="Working"
+                                 Visibility="{Binding EditViewModel.IsBusy, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Text="{Binding EditViewModel.StatusMessage}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="36" VerticalAlignment="Center"
+                               AutomationProperties.LiveSetting="Polite"
+                               ToolTip="{Binding EditViewModel.StatusMessage}" ToolTipService.IsEnabled="{Binding EditViewModel.HasStatusMessage}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding EditViewModel.StatusIsProblem}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource BrushDanger}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </DockPanel>
+            </Grid>
         </DockPanel>
     </Grid>
 </Window>

@@ -327,6 +327,15 @@ public class StorageService : IProfileSnapshotStore
                     changed = true;
                 }
             }
+            if (!string.IsNullOrEmpty(g.HeroImagePath) && !File.Exists(g.HeroImagePath))
+            {
+                string candidate = Path.Combine(_coversDirectory, Path.GetFileName(g.HeroImagePath));
+                if (File.Exists(candidate))
+                {
+                    g.HeroImagePath = candidate;
+                    changed = true;
+                }
+            }
         }
 
         if (changed)

@@ -109,7 +109,9 @@ public partial class App
             }
 
             var game = _mainViewModel.Games.FirstOrDefault()?.Game ?? new GameEntry { Name = "Audit Game" };
-            Dialog("Edit Game", new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true));
+            // Game Details has two tabs, and only the one on show is laid out: the Overview, then the Settings tab (all of the editor's cards).
+            Dialog("Game Details", new GameDetailsDialog(new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService(), editHost: DiagnosticEditHost()) { IsLoading = false }));
+            Dialog("Game Details Settings", NewEditGameWindow(game));
             Dialog("Edit Tool", new ToolEditDialog(new ToolEntry { Name = "Audit Tool", TargetPath = @"C:\Windows\notepad.exe" }, new[] { "Mods" }, _iconExtractorService));
             var themeEditor = new ThemeEditorViewModel(TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance);
             Dialog("Edit Theme", new ThemeEditDialog(themeEditor));
@@ -119,8 +121,6 @@ public partial class App
             themeEditorWithPreview.IsPreviewOpen = true;
             Dialog("Edit Theme (preview open)", previewDialog);
             Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()));
-            var details = new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService()) { IsLoading = false };
-            Dialog("Game Details", new GameDetailsDialog(details));
             Dialog("Welcome", new WelcomeDialog());
             Dialog("Confirm", new ModernDialog("Remove game", "Remove this game from your library?", "This only removes it from TrayTrigger. The game's files are not touched.", "Remove", "Cancel", DialogIconType.Warning));
             Dialog("Quick input", new QuickInputDialog("Rename", "Rename the category", "Name", "Favorites", null));

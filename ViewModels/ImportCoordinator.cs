@@ -366,6 +366,7 @@ public partial class ImportCoordinator : ViewModelBase
                     if (details != null && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                     {
                         card.Game.CoverImagePath = details.CoverImagePath;
+                        card.Game.HasCustomPoster = false;
                         card.RefreshProperties();
                         Interlocked.Increment(ref updated);
                     }

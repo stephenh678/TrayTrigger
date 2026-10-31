@@ -42,6 +42,7 @@ public partial class LibraryViewModel
             if (!string.IsNullOrEmpty(newIcon))
             {
                 card.Game.IconPath = newIcon;
+                card.Game.HasCustomIcon = false;
             }
 
             card.RefreshProperties();
@@ -67,6 +68,7 @@ public partial class LibraryViewModel
             if (!string.IsNullOrEmpty(cachedIcon))
             {
                 card.Game.IconPath = cachedIcon;
+                card.Game.HasCustomIcon = true;
                 card.RefreshProperties();
                 SaveLibrary();
                 LoggingService.Info("Library", $"'{card.Name}' icon updated from '{dialog.FileName}'.");
@@ -100,6 +102,7 @@ public partial class LibraryViewModel
                     File.Copy(dialog.FileName, destFile, overwrite: true);
                 }
                 card.Game.CoverImagePath = destFile;
+                card.Game.HasCustomPoster = true;
                 card.ReloadCover();
                 SaveLibrary();
                 LoggingService.Info("Library", $"'{card.Name}' poster artwork updated from '{dialog.FileName}'.");
@@ -154,6 +157,7 @@ public partial class LibraryViewModel
             if (!string.IsNullOrWhiteSpace(details.CoverImagePath))
             {
                 card.Game.CoverImagePath = details.CoverImagePath;
+                card.Game.HasCustomPoster = false;
             }
             // The same setting and rule as the enrichment pass and Game Details.
             if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game.Category) &&
@@ -193,6 +197,7 @@ public partial class LibraryViewModel
             if (details != null && !string.IsNullOrWhiteSpace(details.CoverImagePath))
             {
                 card.Game.CoverImagePath = details.CoverImagePath;
+                card.Game.HasCustomPoster = false;
             }
             // Same RAWG fallback as the background pass for a still-uncategorized game.
             if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game.Category))
@@ -227,6 +232,7 @@ public partial class LibraryViewModel
                             entry.Category = details.PrimaryGenre;
                         if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                             entry.CoverImagePath = details.CoverImagePath;
+                            entry.HasCustomPoster = false;
                     }
 
                     // A Steam App ID with no store page (delisted, region-locked) or a page that
@@ -274,6 +280,7 @@ public partial class LibraryViewModel
                         entry.Category = details.PrimaryGenre;
                     if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                         entry.CoverImagePath = details.CoverImagePath;
+                        entry.HasCustomPoster = false;
                 }
                 return;
             }
@@ -328,6 +335,7 @@ public partial class LibraryViewModel
             if (similarity >= _settings.OnlineMatchConfidenceThreshold)
             {
                 entry.CoverImagePath = art.Value.Path;
+                entry.HasCustomPoster = false;
                 LoggingService.Info("Library", $"Applied SteamGridDB poster for '{entry.Name}' (searched '{query}', matched '{art.Value.MatchedName}', similarity {similarity:F2}).");
                 return;
             }

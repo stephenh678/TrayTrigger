@@ -923,10 +923,10 @@ public partial class App
                     var modes = DisplayModeService.Shared.AvailableModes();
                     var mode = modes[1];
                     var game = new GameEntry { Id = "t", Name = "Test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz, DisplayMonitorId = monitors[0].Id };
-                    var dialog = new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                    var dialog = NewEditGameWindow(game, GameEditSection.Display);
                     dialog.Show();
                     dialog.UpdateLayout();
-                    var vm = (ViewModels.GameEditViewModel)dialog.DataContext;
+                    var vm = dialog.EditViewModel!;
                     var combo = FindVisualChild<ComboBox>(dialog, c => System.Windows.Automation.AutomationProperties.GetName(c) == "Monitor");
                     string State(string label) => $"{label}: monitor='{vm.SelectedMonitor.Label}' resolution='{vm.SelectedResolution.Label}' rate='{vm.SelectedRate?.Label}' (saved {mode})";
                     lines.Add(State("opened"));
@@ -2126,9 +2126,9 @@ public partial class App
                 if (kind == "editgame")
                 {
                     var game = _mainViewModel.Games.FirstOrDefault()?.Game ?? new GameEntry { Name = "Audit Game" };
-                    dialog = new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
-                    dialog.Width = 820;
-                    dialog.Height = 675;
+                    dialog = NewEditGameWindow(game);
+                    dialog.Width = 960;
+                    dialog.Height = 760;
                 }
                 else
                 {
@@ -2235,13 +2235,13 @@ public partial class App
                 {
                     sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz, KeepMouseOnGameScreen = true, DimOtherScreens = true, DisplayMonitorId = DisplayModeService.Shared.AvailableMonitors().Select(m => m.Id).FirstOrDefault() ?? string.Empty, AudioOutputDeviceId = AudioOutputService.Shared.AvailableDevices().Select(d => d.Id).FirstOrDefault() ?? string.Empty };
                 }
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                var dlg = NewEditGameWindow(sampleGame);
                 dlg.Show();
                 dlg.UpdateLayout();
-                var sv = FindVisualChild<ScrollViewer>(dlg, s => s.ScrollableHeight > 0);
+                var sv = FindVisualChild<ScrollViewer>(dlg, s => s.Name == "EditScroll");
                 if (scrollOffset is double offset) sv?.ScrollToVerticalOffset(offset); else sv?.ScrollToBottom();
                 dlg.UpdateLayout();
-                CaptureVisual(dlg, 820, 660, targetPng);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -2309,9 +2309,8 @@ public partial class App
                 var sampleGame = source == null
                     ? new GameEntry { Name = "DOOM Eternal", Category = "Action", ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe" }
                     : new GameEntry { Name = source.Name, Category = source.Category, ExecutablePath = source.ExecutablePath, WorkingDirectory = source.WorkingDirectory, Arguments = source.Arguments, IconPath = source.IconPath, CoverImagePath = source.CoverImagePath, SteamAppId = source.SteamAppId, IsSteamGame = source.IsSteamGame };
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true,
-                    profileTweaks: _mainViewModel.SystemVM.EnabledTweaksFor);
-                var editVm = (GameEditViewModel)dlg.DataContext;
+                var dlg = NewEditGameWindow(sampleGame, section, withHero: true);
+                var editVm = dlg.EditViewModel!;
                 if (invalid) editVm.SteamAppId = "not-a-number";
                 // The Performance tab shows the tier summary; Aggressive lists the most.
                 if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
@@ -2327,7 +2326,6 @@ public partial class App
                     editVm.UseSameScriptForBoth = true;
                     editVm.ScriptArguments = "recommended";
                 }
-                editVm.SelectedSection = section;
                 dlg.Show();
                 // The DLSS card loads asynchronously, so a capture taken straight after Show()
                 // would omit it and quietly misrepresent the tab. Pump the dispatcher until the
@@ -2347,7 +2345,7 @@ public partial class App
                     Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                     dlg.UpdateLayout();
                 }
-                CaptureVisual(dlg, 820, 675, targetPng);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -2532,8 +2530,8 @@ public partial class App
                     sampleGame.IconPath = _iconExtractorService.ExtractAndCacheIcon(sampleGame.Id, fallbackExe, sampleGame.Name);
                 }
 
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
-                CaptureVisual(dlg, 550, 640, targetPng);
+                var dlg = NewEditGameWindow(sampleGame);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -2559,8 +2557,8 @@ public partial class App
 
                 using var mainBmp = CaptureVisualBitmap(_mainWindow, 960, 700);
                 var sampleGame = _mainViewModel.Games.First().Game;
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
-                using var dlgBmp = CaptureVisualBitmap(dlg, 550, 640);
+                var dlg = NewEditGameWindow(sampleGame);
+                using var dlgBmp = CaptureVisualBitmap(dlg, 960, 760);
 
                 using var composite = new System.Drawing.Bitmap(mainBmp.Width, mainBmp.Height);
                 using (var g = System.Drawing.Graphics.FromImage(composite))
@@ -2609,7 +2607,6 @@ public partial class App
                 var search = new SteamSearchService();
 
                 bool launched = false;
-                bool edited = false;
                 bool deleted = false;
                 int closeCount = 0;
 
@@ -2618,8 +2615,8 @@ public partial class App
                     meta,
                     search,
                     launchAction: g => launched = true,
-                    editAction: g => edited = true,
-                    deleteAction: g => deleted = true
+                    deleteAction: g => deleted = true,
+                    editHost: DiagnosticEditHost()
                 );
 
                 testVm.RequestClose += () => closeCount++;
@@ -2628,13 +2625,13 @@ public partial class App
                 testVm.LaunchGameCommand.Execute(null);
                 if (!launched || closeCount != 1) throw new Exception("Launch failed or didn't request close!");
 
-                // Test Edit
+                // Test Edit: the page stays open and shows its Settings tab
                 testVm.EditGameCommand.Execute(null);
-                if (!edited || closeCount != 2) throw new Exception("Edit failed or didn't request close!");
+                if (!testVm.IsSettingsTab || testVm.EditViewModel == null || closeCount != 1) throw new Exception("Edit didn't open the Settings tab in place!");
 
                 // Test Delete
                 testVm.DeleteGameCommand.Execute(null);
-                if (!deleted || closeCount != 3) throw new Exception("Delete failed or didn't request close!");
+                if (!deleted || closeCount != 2) throw new Exception("Delete failed or didn't request close!");
 
                 // Test Properties
                 if (testVm.PlaytimeDisplay != "1.5h played") throw new Exception($"Playtime mismatch: {testVm.PlaytimeDisplay}");
@@ -3529,7 +3526,7 @@ public partial class App
                 var searchService = new SteamSearchService();
                 // "--screenshot-details <out.png> playing": as while the game runs (Close Game, Force Close).
                 bool detailsPlaying = e.Args.Any(a => a.Equals("playing", StringComparison.OrdinalIgnoreCase));
-                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying);
+                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying, editHost: DiagnosticEditHost(), heroArt: new HeroArtService());
 
                 var sampleDetails = new SteamAppDetails
                 {
@@ -3572,12 +3569,15 @@ public partial class App
                 vm.IsLoading = false;
 
                 var dlg = new GameDetailsDialog(vm);
+                WaitForHero(dlg);
+                // "--screenshot-details <out.png> settings": the Settings tab.
+                if (e.Args.Any(a => a.Equals("settings", StringComparison.OrdinalIgnoreCase))) dlg.ShowSettings();
                 // "--screenshot-details <out.png> scroll": scrolled to the end of the details, to see the cards below the fold.
                 if (e.Args.Any(a => a.Equals("scroll", StringComparison.OrdinalIgnoreCase)))
                 {
                     dlg.ContentRendered += (_, _) => (dlg.FindName("DetailsScroll") as ScrollViewer)?.ScrollToEnd();
                 }
-                CaptureVisual(dlg, 820, 680, targetPng);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -3957,8 +3957,8 @@ public partial class App
                     sampleGame.IconPath = _iconExtractorService.ExtractAndCacheIcon(sampleGame.Id, fallbackExe, sampleGame.Name);
                 }
 
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
-                CaptureVisual(dlg, 560, 680, targetPng);
+                var dlg = NewEditGameWindow(sampleGame);
+                CaptureVisual(dlg, 960, 760, targetPng);
                 ExitApplication();
                 return;
             }
@@ -4408,6 +4408,29 @@ public partial class App
                 return;
             }
         }
+    }
+
+    /// <summary>What Game Details needs to edit a game on its Settings tab, as the library gives it: scripts on, the System page's tweaks, nothing persisted.</summary>
+    private GameEditHost DiagnosticEditHost() => new(
+        g => new GameEditViewModel(g, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true, profileTweaks: _mainViewModel.SystemVM.EnabledTweaksFor),
+        _ => { }, () => true, () => false);
+
+    /// <summary>Game Details on its Settings tab, as Edit Properties opens it, showing one of the editor's tabs (All by default).</summary>
+    private GameDetailsDialog NewEditGameWindow(GameEntry game, GameEditSection section = GameEditSection.All, bool withHero = false)
+    {
+        var details = new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService(), editHost: DiagnosticEditHost(),
+            heroArt: withHero ? new HeroArtService() : null) { IsLoading = false };
+        var dialog = new GameDetailsDialog(details);
+        dialog.ShowSettings(section);
+        if (withHero) WaitForHero(dialog);
+        return dialog;
+    }
+
+    /// <summary>Lets the banner finish arriving (the page asks for it as it opens), up to a limit, so a capture shows it.</summary>
+    private void WaitForHero(GameDetailsDialog dialog, int seconds = 20)
+    {
+        var until = DateTime.UtcNow.AddSeconds(seconds);
+        while (!dialog.HasHeroImage && DateTime.UtcNow < until) PumpDispatcher(TimeSpan.FromMilliseconds(250));
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent, Func<T, bool> predicate) where T : DependencyObject

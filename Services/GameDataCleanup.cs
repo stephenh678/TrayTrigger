@@ -16,6 +16,8 @@ namespace TrayTrigger.Services;
 /// <item><c>Covers\{SteamAppId}.jpg</c> - the Steam poster, shared by every entry with that App ID.</item>
 /// <item><c>{key}_{ticks}.jpg</c> - the name <see cref="SteamMetadataService.WritePosterFileSafelyAsync"/>
 /// falls back to when the normal file is locked.</item>
+/// <item><c>Heroes\{SteamAppId or Id}.jpg</c> (and <c>.none</c>, the note that none was found) - the wide
+/// banner Game Details shows behind the game's name.</item>
 /// <item><c>steam-cache.json[SteamAppId]</c> and <c>rawg-cache.json[RawgId]</c> - fetched details,
 /// again shared by every entry with that id.</item>
 /// </list>
@@ -35,7 +37,8 @@ public static class GameDataCleanup
         IReadOnlyCollection<GameEntry> removed,
         IReadOnlyCollection<GameEntry> remaining,
         string iconsDirectory,
-        string coversDirectory)
+        string coversDirectory,
+        string? heroesDirectory = null)
     {
         if (removed.Count == 0) return default;
 
@@ -68,10 +71,12 @@ public static class GameDataCleanup
 
             AddIfDirectlyInside(candidates, game.IconPath, iconsDirectory);
             AddIfDirectlyInside(candidates, game.CoverImagePath, coversDirectory);
+            AddIfDirectlyInside(candidates, game.HeroImagePath, coversDirectory);
         }
 
         candidates.UnionWith(FilesWithKeys(iconsDirectory, iconKeys));
         candidates.UnionWith(FilesWithKeys(coversDirectory, coverKeys));
+        if (heroesDirectory != null) candidates.UnionWith(FilesWithKeys(heroesDirectory, coverKeys));
 
         int files = 0;
         foreach (var path in candidates)
@@ -118,6 +123,7 @@ public static class GameDataCleanup
             {
                 AddPath(game.IconPath);
                 AddPath(game.CoverImagePath);
+                AddPath(game.HeroImagePath);
                 if (!string.IsNullOrWhiteSpace(game.Id)) _keys.Add(game.Id);
 
                 string? appId = game.SteamAppId?.Trim();

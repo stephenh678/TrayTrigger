@@ -143,7 +143,14 @@ public partial class LibraryViewModel : ViewModelBase
     /// <summary>Clears every filter tick - the empty state's escape hatch and the flyout's button.</summary>
     public void ClearFilters() => Filter.ClearAll();
 
+    /// <summary>Edit Properties and the card menu's Edit: open the game's page on its Settings tab.</summary>
     public event Action<GameCardViewModel>? RequestEditGameDialog;
+
+    /// <summary>Makes the editor Game Details' Settings tab hosts. Set by the main view model, which holds what an editor needs.</summary>
+    public Func<GameEntry, GameEditViewModel>? CreateGameEditor { get; set; }
+
+    /// <summary>The Settings tab saved a game: the library persists it, and everything that shows it refreshes.</summary>
+    public event Action<GameCardViewModel>? GameEdited;
     public event Action<GameCardViewModel>? RequestQuickRename;
     public event Action<GameCardViewModel>? RequestQuickCategory;
     public event Action<GameCardViewModel>? RequestEditSteamAppId;
@@ -685,10 +692,9 @@ public partial class LibraryViewModel : ViewModelBase
     /// and poster-replacement bookkeeping a rematch triggers, stay in GameDetailsViewModel; there
     /// is no second copy of that logic at the library level.
     /// </summary>
-    public void OpenGameDetails(GameCardViewModel card, bool openMatchPicker = false)
+    public void OpenGameDetails(GameCardViewModel card, bool openMatchPicker = false, bool startOnSettings = false)
     {
         bool requestedLaunch = false;
-        bool requestedEdit = false;
         bool requestedDelete = false;
         bool requestedCloseGame = false;
         bool requestedForceClose = false;
@@ -698,7 +704,6 @@ public partial class LibraryViewModel : ViewModelBase
             _steamMetadataService,
             _steamSearchService,
             launchAction: _ => requestedLaunch = true,
-            editAction: _ => requestedEdit = true,
             deleteAction: _ => requestedDelete = true,
             steamGridDbApiKey: _getSteamGridDbApiKeyOrNull(),
             minConfidence: _settings.OnlineMatchConfidenceThreshold,
@@ -709,7 +714,15 @@ public partial class LibraryViewModel : ViewModelBase
             refreshInterval: _settings.MetadataRefreshInterval,
             isPlaying: card.IsPlaying,
             closeGameAction: _ => requestedCloseGame = true,
-            forceCloseAction: _ => requestedForceClose = true);
+            forceCloseAction: _ => requestedForceClose = true,
+            editHost: CreateGameEditor == null ? null : new GameEditHost(
+                CreateGameEditor,
+                // Save has written onto the game: the page stays open, and the library and its card follow at once.
+                _ => GameEdited?.Invoke(card),
+                () => _settings.EnableGameScripts,
+                () => _settings.ScriptDefaults is { Enabled: true, HasAny: true }),
+            heroArt: HeroArtService.Shared);
+        if (startOnSettings) vm.ShowSettings();
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
@@ -721,10 +734,6 @@ public partial class LibraryViewModel : ViewModelBase
         if (requestedLaunch)
         {
             LaunchGame(card);
-        }
-        else if (requestedEdit)
-        {
-            RequestEditGameDialog?.Invoke(card);
         }
         else if (requestedDelete)
         {
