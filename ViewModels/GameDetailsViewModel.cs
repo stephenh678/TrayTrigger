@@ -802,6 +802,8 @@ public partial class GameDetailsViewModel : ViewModelBase
         // A previously cached (possibly wrong) result for this id must not be served back.
         SteamMetadataService.InvalidateCache(appId);
         Game.SteamAppId = appId;
+        // The banner behind the name is the old listing's until it is looked for again under the new App ID.
+        _ = LoadHeroAsync(replace: true);
 
         // The Steam listing is the game's identity, so the RAWG side must describe the same
         // game: drop the old RAWG match and let it re-resolve from the new Steam title.
@@ -849,6 +851,7 @@ public partial class GameDetailsViewModel : ViewModelBase
             SteamMetadataService.InvalidateCache(match.AppId);
             Game.SteamAppId = match.AppId;
             _saveGame?.Invoke(Game);
+            _ = LoadHeroAsync(replace: true);
 
             Details = null;
             _replaceCoverOnNextLoad = true;

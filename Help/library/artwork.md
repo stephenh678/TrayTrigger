@@ -12,7 +12,7 @@ A poster or icon you chose yourself before 1.7.6 shows as Automatic, because not
 
 ## Hero banners
 
-The hero banner is Steam's own wide hero banner for the game's App ID, from the same Steam servers as its poster. If Steam has none and you have given TrayTrigger a SteamGridDB key, SteamGridDB's hero banner for that App ID is used, and for a game with no Steam listing one is searched for by name (a title that doesn't closely match is refused). A game with no hero banner shows its poster, blurred, behind its name. A game nothing was found for is not asked about again for a week; **Find again** asks at once. A hero banner you choose is kept with your posters and goes with a backup.
+The hero banner is Steam's own wide hero banner for the game's App ID, from the same Steam servers as its poster. If Steam has none and you have given TrayTrigger a SteamGridDB key, SteamGridDB's hero banner for that App ID is used, and for a game with no Steam listing one is searched for by name (a title that doesn't closely match is refused). A game with no hero banner shows its poster, blurred, behind its name. A game nothing was found for is not asked about again for a week, unless you have since added a SteamGridDB key; **Find again** asks at once. A hero banner you choose is kept with your posters and goes with a backup.
 
 ## Posters: sources, in order
 

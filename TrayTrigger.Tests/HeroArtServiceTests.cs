@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using TrayTrigger.Models;
 using TrayTrigger.Services;
@@ -244,4 +245,48 @@ public class HeroArtServiceTests : IDisposable
         Assert.Null(await service.GetHeroPathAsync(game, game.SteamAppId, "key", 0.5));
         Assert.False(File.Exists(Path.Combine(_dir, "1145360.none")));
     }
+
+    [Fact]
+    public async Task ANoteMadeWithoutAKey_DoesNotStand_OnceThereIsOne()
+    {
+        var game = Game();
+        var (without, _) = Make();
+        Assert.Null(await without.GetHeroPathAsync(game, game.SteamAppId, null, 0.5));
+        Assert.True(File.Exists(Path.Combine(_dir, "1145360.none")));
+
+        // The same folder, now with a key and a site that has what Steam has not.
+        var (withKey, _) = Make(gridById: Jpeg(1920, 620));
+        Assert.NotNull(await withKey.GetHeroPathAsync(game, game.SteamAppId, "key", 0.5));
+    }
+
+    [Fact]
+    public async Task ANoteMadeWithAKey_StandsForTheWeek()
+    {
+        var game = Game();
+        var (service, calls) = Make();
+        Assert.Null(await service.GetHeroPathAsync(game, game.SteamAppId, "key", 0.5));
+        int asked = calls.Urls.Count + calls.GridById + calls.GridByName;
+
+        Assert.Null(await service.GetHeroPathAsync(game, game.SteamAppId, "key", 0.5));
+        Assert.Equal(asked, calls.Urls.Count + calls.GridById + calls.GridByName);
+    }
+
+    [Fact]
+    public async Task ANameSearch_IsOnlyForAGameWithNoSteamListing()
+    {
+        // Steam lists this game, so its banner is looked for under its App ID; a title that merely resembles its name is not asked about.
+        var (service, calls) = Make(gridByName: new NamedGridArt(Jpeg(1920, 620), "Hades"));
+        var game = Game("Hades");
+        Assert.Null(await service.GetHeroPathAsync(game, game.SteamAppId, "key", 0.5));
+        Assert.Equal(0, calls.GridByName);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests, true)]
+    [InlineData(HttpStatusCode.InternalServerError, true)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, true)]
+    [InlineData(HttpStatusCode.NotFound, false)]
+    [InlineData(HttpStatusCode.Unauthorized, false)]
+    public void ARateLimitOrAStrugglingServer_IsNotAnAnswerOfNone(HttpStatusCode status, bool transient) =>
+        Assert.Equal(transient, SteamGridDbService.IsTransient(status));
 }

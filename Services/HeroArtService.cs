@@ -110,12 +110,14 @@ public sealed class HeroArtService
         if (key == null) return null;
 
         string miss = Path.Combine(_directory, $"{key}.none");
+        bool hasKey = !string.IsNullOrWhiteSpace(steamGridDbApiKey);
         if (!ignoreKept)
         {
             if (CachedPath(steamAppId, game.Id) is { } cached) return cached;
             try
             {
-                if (File.Exists(miss) && DateTime.UtcNow - File.GetLastWriteTimeUtc(miss) < RetryAfter) return null;
+                // A note made before there was a SteamGridDB key does not stand once there is one: that site may have what Steam has not.
+                if (File.Exists(miss) && DateTime.UtcNow - File.GetLastWriteTimeUtc(miss) < RetryAfter && !(hasKey && !NoteWasMadeWithKey(miss))) return null;
             }
             catch (IOException)
             {
@@ -129,7 +131,7 @@ public sealed class HeroArtService
             if (found.Bytes is not { } bytes)
             {
                 // Only an answer of "none" is remembered. A look that could not finish (offline, a server error) is asked again next time.
-                if (!found.Incomplete) RememberMiss(miss);
+                if (!found.Incomplete) RememberMiss(miss, hasKey);
                 return ignoreKept ? CachedPath(steamAppId, game.Id) : null;
             }
 
@@ -186,7 +188,9 @@ public sealed class HeroArtService
                 return new Found(byId, false);
         }
 
-        if (!string.IsNullOrWhiteSpace(gridKey) && !string.IsNullOrWhiteSpace(game.Name)
+        // A game Steam lists has its banner under its App ID; a name search is for a game with no listing, where a loose hit could be another title's art.
+        if (!UrlProtocolHelper.IsValidSteamAppId(steamAppId)
+            && !string.IsNullOrWhiteSpace(gridKey) && !string.IsNullOrWhiteSpace(game.Name)
             && await Ask(async () => (object?)await GridByName(game.Name, gridKey, ct).ConfigureAwait(false)).ConfigureAwait(false) is NamedGridArt named)
         {
             // The community search can hand back a loosely related game; a wrong banner is worse than none.
@@ -215,12 +219,23 @@ public sealed class HeroArtService
         }
     }
 
-    private void RememberMiss(string path)
+    /// <summary>The note says whether the look that made it had a SteamGridDB key (its last line is "key"); an older note does not.</summary>
+    private static bool NoteWasMadeWithKey(string path)
+    {
+        try { return File.ReadAllText(path).EndsWith("\nkey", StringComparison.Ordinal); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A note that cannot be read stands: asking again is not worth a guess.
+            return true;
+        }
+    }
+
+    private void RememberMiss(string path, bool hadKey)
     {
         try
         {
             Directory.CreateDirectory(_directory);
-            File.WriteAllText(path, DateTime.UtcNow.ToString("O"));
+            File.WriteAllText(path, DateTime.UtcNow.ToString("O") + (hadKey ? "\nkey" : "\nnokey"));
         }
         catch (Exception ex)
         {

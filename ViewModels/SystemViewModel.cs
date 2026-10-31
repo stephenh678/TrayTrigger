@@ -734,7 +734,7 @@ public class SystemViewModel : ViewModelBase
     }
 
     // Game-Level Performance Profiles: per-game Optimized/Aggressive tweak sets (see
-    // GameEditDialog). Aggressive always applies every tweak Optimized has enabled, plus its own
+    // Edit Game on Game Details' Settings tab). Aggressive always applies every tweak Optimized has enabled, plus its own
     // extras below - a tweak is only ever configured once, under whichever tier introduces it.
     // Add a new bool to OptimizedProfileTweakConfig or AggressiveProfileTweakConfig (plus a
     // matching apply/restore pair in PerformanceProfileService) and one more toggle entry below

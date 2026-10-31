@@ -140,7 +140,8 @@ public partial class GameEditViewModel
 
     private void UseAutomaticHero()
     {
-        _customHeroSource = string.Empty;
+        // A game with no banner of its own is back to how it was opened; one with a banner of its own has it let go on Save.
+        _customHeroSource = string.IsNullOrWhiteSpace(SourceGame.HeroImagePath) ? null : string.Empty;
         _heroCustom = false;
         UpdateHeroPreview();
         // Nothing found yet for the game: look, so the card shows what Automatic gives.
@@ -281,7 +282,7 @@ public partial class GameEditViewModel
             && string.Equals(Path.GetDirectoryName(old), Path.TrimEndingDirectorySeparator(CoversDirectory), StringComparison.OrdinalIgnoreCase))
         {
             try { File.Delete(old); }
-            catch (IOException ex) { LoggingService.Swallowed("GameEdit", ex, "removing the banner this one replaced"); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { LoggingService.Swallowed("GameEdit", ex, "removing the banner this one replaced"); }
         }
         _customHeroSource = null;
     }

@@ -9,6 +9,8 @@ using TrayTrigger.ViewModels;
 namespace TrayTrigger.Tests;
 
 /// <summary>Edit Game's Artwork tab (Banner, Poster, Icon: Automatic or Custom), the Online match card, and the banner the player chose.</summary>
+/// <remarks>A Save writes to Activity & History through the static <see cref="ActivityService.Current"/>, so these run apart from the tests that set it.</remarks>
+[Collection(ActivityCurrentCollection.Name)]
 public class ArtworkTabTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N"));
@@ -382,5 +384,36 @@ public class ArtworkTabTests : IDisposable
         {
             ActivityService.Current = previous;
         }
+    });
+
+    [Fact]
+    public void ChoosingABanner_AndThenUsingAutomatic_IsNotAnEditToAskAboutLeaving() => Sta(() =>
+    {
+        var vm = Create();
+        Assert.False(vm.HasUnsavedChanges);
+
+        Assert.Null(vm.TryUseImage(ArtSlot.Banner, Picture("wide.jpg", 1920, 620)));
+        Assert.True(vm.HasUnsavedChanges);
+
+        vm.UseAutomaticHeroCommand.Execute(null);
+        Assert.False(vm.HasUnsavedChanges);
+    });
+
+    [Fact]
+    public void AGameWithABannerOfItsOwn_LetsItGoOnSave_WhenUseAutomaticWasPressed() => Sta(() =>
+    {
+        string covers = Path.Combine(_root, "Covers");
+        Directory.CreateDirectory(covers);
+        string mine = Path.Combine(covers, "mine_1.jpg");
+        File.Copy(Picture("wide.jpg", 1920, 620), mine);
+        var game = new GameEntry { Name = "Hades", Category = "Action", HeroImagePath = mine };
+
+        var vm = Create(game);
+        vm.UseAutomaticHeroCommand.Execute(null);
+        Assert.True(vm.HasUnsavedChanges);
+        vm.SaveCommand.Execute(null);
+
+        Assert.Null(game.HeroImagePath);
+        Assert.False(File.Exists(mine));
     });
 }

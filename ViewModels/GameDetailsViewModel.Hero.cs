@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -123,6 +124,9 @@ public partial class GameDetailsViewModel
     private readonly HeroArtService? _heroArt;
     private ImageSource? _heroImage;
     private string? _heroPath;
+    private DateTime _heroStamp;
+    private int _heroLookups;
+    private string? _heroLookupAppId;
 
     /// <summary>The wide banner behind the game's name, once found; the page shows the blurred poster until then (and if there is none).</summary>
     public ImageSource? HeroImage => _heroImage;
@@ -136,14 +140,22 @@ public partial class GameDetailsViewModel
     internal async Task LoadHeroAsync(bool replace = false)
     {
         if (_heroArt == null || (_heroImage != null && !replace)) return;
+        string? appId = Game.SteamAppId;
+        // The page asks as it opens and again when its details arrive: a first look already on its way for the same listing is not started twice.
+        if (!replace && _heroLookups > 0 && string.Equals(_heroLookupAppId, appId, StringComparison.Ordinal)) return;
+        _heroLookups++;
+        _heroLookupAppId = appId;
         try
         {
-            string? path = await _heroArt.GetHeroPathAsync(Game, Game.SteamAppId, _steamGridDbApiKey, _minConfidenceForRawg).ConfigureAwait(true);
-            if (path == _heroPath && (path != null || _heroImage == null)) return;
+            string? path = await _heroArt.GetHeroPathAsync(Game, appId, _steamGridDbApiKey, _minConfidenceForRawg).ConfigureAwait(true);
+            // Find again keeps the file's name and replaces what is in it, so the time it was written is part of what is shown.
+            DateTime stamp = path == null ? default : WrittenAt(path);
+            if (path == _heroPath && stamp == _heroStamp && (path != null || _heroImage == null)) return;
             if (path == null)
             {
                 // The banner was taken away (Use automatic found none): back to the blurred poster.
                 _heroPath = null;
+                _heroStamp = default;
                 _heroImage = null;
             }
             else
@@ -151,6 +163,7 @@ public partial class GameDetailsViewModel
                 var image = await Task.Run(() => IconExtractorService.LoadBitmapSafely(path, decodePixelWidth: 1920)).ConfigureAwait(true);
                 if (image == null) return;
                 _heroPath = path;
+                _heroStamp = stamp;
                 _heroImage = image;
             }
             OnPropertyChanged(nameof(HeroImage));
@@ -161,6 +174,20 @@ public partial class GameDetailsViewModel
         catch (Exception ex)
         {
             LoggingService.Warn("GameDetails", $"Error loading the banner for '{Game.Name}': {ex.Message}");
+        }
+        finally
+        {
+            _heroLookups--;
+        }
+    }
+
+    private static DateTime WrittenAt(string path)
+    {
+        try { return File.GetLastWriteTimeUtc(path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A file that cannot be asked about is shown as it was found.
+            return default;
         }
     }
 

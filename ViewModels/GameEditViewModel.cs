@@ -248,7 +248,7 @@ public partial class GameEditViewModel : ViewModelBase
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
-        CustomIconPath, CustomCoverPath, _fetchedCoverPath, _customHeroSource, _posterCustom, _iconCustom,
+        CustomIconPath, CustomCoverPath, _fetchedCoverPath, _customHeroSource, _heroCustom, _posterCustom, _iconCustom,
     });
 
     public string Name

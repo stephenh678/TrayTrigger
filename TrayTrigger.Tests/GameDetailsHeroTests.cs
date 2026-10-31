@@ -464,9 +464,10 @@ public class GameDetailsHeroTests : IDisposable
         Assert.False(local.HasSteamDbPage);
         Assert.False(local.HasWebsite);
 
+        // Linked after the page is made: a page opened on a game that has an App ID starts a real lookup on Steam.
         var game = Game();
-        game.SteamAppId = "1145360";
         var steam = Page(game);
+        game.SteamAppId = "1145360";
         Assert.True(steam.HasSteamDbPage);
         Assert.True(steam.OpenSteamDbCommand.CanExecute(null));
         Assert.True(steam.ShowLinks);
@@ -549,4 +550,93 @@ public class GameDetailsHeroTests : IDisposable
         Assert.True(line.Length <= 91);
         Assert.StartsWith("Played: from 08:53 to 08:57", line);
     });
+
+    // --- The banner follows the listing and the file ---
+
+    private HeroArtService BannerService(byte[] bytes, Action? onDownload = null, int delayMs = 0) => new(Path.Combine(_root, "Heroes"))
+    {
+        DownloadBytes = async (url, _) =>
+        {
+            onDownload?.Invoke();
+            if (delayMs > 0) await Task.Delay(delayMs);
+            return url.Contains("/apps/111/") || url.Contains("/apps/222/") ? bytes : null;
+        },
+    };
+
+    [Fact]
+    public async Task TheBanner_IsLookedForAgainUnderANewAppId_AsAPageRematchGivesIt()
+    {
+        var service = BannerService(File.ReadAllBytes(WidePicture("a.jpg")));
+        var game = Game();
+        var vm = new GameDetailsViewModel(game, new SteamMetadataService(), new CatalogueSteamSearchService(), heroArt: service);
+
+        game.SteamAppId = "111";
+        await vm.LoadHeroAsync(replace: true);
+        Assert.True(vm.HasHeroImage);
+        var first = vm.HeroImage;
+
+        // The page's own Change match gives the game another listing: the old one's banner must not stay behind the name.
+        game.SteamAppId = "222";
+        await vm.LoadHeroAsync(replace: true);
+        Assert.NotSame(first, vm.HeroImage);
+        Assert.True(File.Exists(Path.Combine(_root, "Heroes", "222.jpg")));
+
+        game.SteamAppId = "333";   // a listing with no banner: back to the blurred poster
+        await vm.LoadHeroAsync(replace: true);
+        Assert.False(vm.HasHeroImage);
+    }
+
+    [Fact]
+    public async Task TheBanner_IsShownAgain_WhenFindAgainReplacesItsFile()
+    {
+        byte[] first = File.ReadAllBytes(WidePicture("one.jpg"));
+        byte[] current = first;
+        var service = new HeroArtService(Path.Combine(_root, "Heroes"))
+        {
+            DownloadBytes = (url, _) => Task.FromResult<byte[]?>(url.Contains("/apps/111/") ? current : null),
+        };
+        var game = Game();
+        var vm = new GameDetailsViewModel(game, new SteamMetadataService(), new CatalogueSteamSearchService(), heroArt: service);
+        game.SteamAppId = "111";
+        await vm.LoadHeroAsync(replace: true);
+        var before = vm.HeroImage;
+        Assert.NotNull(before);
+
+        // A new banner under the same file name.
+        using (var bmp = new System.Drawing.Bitmap(1600, 520))
+        {
+            var rng = new Random(11);
+            using (var g = System.Drawing.Graphics.FromImage(bmp))
+            {
+                g.Clear(System.Drawing.Color.Maroon);
+                for (int i = 0; i < 300; i++)
+                    g.FillRectangle(new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(rng.Next(256), rng.Next(256), rng.Next(256))), rng.Next(1500), rng.Next(500), 30, 30);
+            }
+            using var ms = new MemoryStream();
+            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
+            current = ms.ToArray();
+        }
+        await service.RefetchAsync(game, "111", null, 0.5);
+        await vm.LoadHeroAsync(replace: true);
+
+        Assert.NotSame(before, vm.HeroImage);
+    }
+
+    [Fact]
+    public async Task AFirstLookAlreadyOnItsWay_IsNotStartedAgainForTheSameListing()
+    {
+        int downloads = 0;
+        var service = BannerService(File.ReadAllBytes(WidePicture("a.jpg")), () => Interlocked.Increment(ref downloads), delayMs: 120);
+        var game = Game();
+        var vm = new GameDetailsViewModel(game, new SteamMetadataService(), new CatalogueSteamSearchService(), heroArt: service);
+        game.SteamAppId = "111";
+
+        // The page asks as it opens and again when its details arrive.
+        var first = vm.LoadHeroAsync();
+        var second = vm.LoadHeroAsync();
+        await Task.WhenAll(first, second);
+
+        Assert.Equal(1, downloads);
+        Assert.True(vm.HasHeroImage);
+    }
 }

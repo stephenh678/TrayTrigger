@@ -160,7 +160,7 @@ public class SteamGridDbService
 
         try
         {
-            string? url = await FindBestGridUrlAsync($"{BaseUrl}/heroes/steam/{Uri.EscapeDataString(appId)}?dimensions={HeroDimensions}", $"hero for AppId {appId}", apiKey, ct).ConfigureAwait(false);
+            string? url = await FindBestGridUrlAsync($"{BaseUrl}/heroes/steam/{Uri.EscapeDataString(appId)}?dimensions={HeroDimensions}", $"hero for AppId {appId}", apiKey, ct, transientIsAnError: true).ConfigureAwait(false);
             return url == null ? null : await DownloadImageAsync(url, ct).ConfigureAwait(false);
         }
         // An unreachable server is not "no hero": it goes to the caller, which asks again later.
@@ -186,7 +186,7 @@ public class SteamGridDbService
             if (gameId == null)
                 return null;
 
-            string? url = await FindBestGridUrlAsync($"{BaseUrl}/heroes/game/{gameId.Value}?dimensions={HeroDimensions}", $"hero for game {gameId.Value}", apiKey, ct).ConfigureAwait(false);
+            string? url = await FindBestGridUrlAsync($"{BaseUrl}/heroes/game/{gameId.Value}?dimensions={HeroDimensions}", $"hero for game {gameId.Value}", apiKey, ct, transientIsAnError: true).ConfigureAwait(false);
             byte[]? bytes = url == null ? null : await DownloadImageAsync(url, ct).ConfigureAwait(false);
             return bytes == null ? null : new NamedGridArt(bytes, matchedName ?? gameName);
         }
@@ -202,7 +202,10 @@ public class SteamGridDbService
         using var timeoutCts = LinkedTimeoutCts(ct, ImageDownloadTimeout);
         using var response = await HttpClient.GetAsync(url, timeoutCts.Token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
+        {
+            if (IsTransient(response.StatusCode)) throw new HttpRequestException($"HTTP {(int)response.StatusCode}");
             return null;
+        }
         return await response.Content.ReadAsByteArrayAsync(timeoutCts.Token).ConfigureAwait(false);
     }
 
@@ -227,7 +230,11 @@ public class SteamGridDbService
     private async Task<string?> FindBestGridUrlAsync(string appId, string apiKey, CancellationToken ct)
         => await FindBestGridUrlAsync($"{BaseUrl}/grids/steam/{appId}?dimensions=600x900", $"AppId {appId}", apiKey, ct).ConfigureAwait(false);
 
-    private async Task<string?> FindBestGridUrlAsync(string requestUrl, string logLabel, string apiKey, CancellationToken ct)
+    /// <summary>A rate limit or a server that is struggling: not an answer about the art, so the caller asks again later.</summary>
+    internal static bool IsTransient(System.Net.HttpStatusCode status) => (int)status >= 500 || status == System.Net.HttpStatusCode.TooManyRequests;
+
+    /// <param name="transientIsAnError">Throw for a rate limit or a 5xx instead of answering "none", so a banner is not noted as missing for a week.</param>
+    private async Task<string?> FindBestGridUrlAsync(string requestUrl, string logLabel, string apiKey, CancellationToken ct, bool transientIsAnError = false)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
@@ -237,6 +244,7 @@ public class SteamGridDbService
         if (!response.IsSuccessStatusCode)
         {
             LoggingService.Verbose("SteamGridDb", $"Grid lookup for {logLabel} returned HTTP {(int)response.StatusCode}.");
+            if (transientIsAnError && IsTransient(response.StatusCode)) throw new HttpRequestException($"HTTP {(int)response.StatusCode}");
             return null;
         }
 

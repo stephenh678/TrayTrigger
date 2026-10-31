@@ -244,8 +244,10 @@ public partial class LibraryViewModel
                         if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                             entry.Category = details.PrimaryGenre;
                         if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
+                        {
                             entry.CoverImagePath = details.CoverImagePath;
                             entry.HasCustomPoster = false;
+                        }
                     }
 
                     // A Steam App ID with no store page (delisted, region-locked) or a page that
@@ -292,8 +294,10 @@ public partial class LibraryViewModel
                     if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                         entry.Category = details.PrimaryGenre;
                     if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
+                    {
                         entry.CoverImagePath = details.CoverImagePath;
                         entry.HasCustomPoster = false;
+                    }
                 }
                 return;
             }
