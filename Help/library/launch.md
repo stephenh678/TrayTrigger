@@ -81,3 +81,5 @@ Click the box and press the keys. The combination is recorded from what you pres
 - Escape keeps the old value; Backspace, Delete or the × clears it.
 
 Hotkeys stay active while the window is hidden, and a hidden game's hotkey still works.
+
+About > Shortcuts lists every game and tool that has a hotkey, in one place. Choose a name to open its editor at the hotkey, outlined. One Windows could not give to it, because something else holds the key, is marked "Not active: already in use". Tool hotkeys are left out of the list while Enable Tools is off.

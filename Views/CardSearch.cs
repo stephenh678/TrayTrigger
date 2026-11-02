@@ -311,7 +311,7 @@ public static class CardSearch
     private static readonly DependencyProperty OutlineProperty = DependencyProperty.RegisterAttached(
         "Outline", typeof(Adorner), typeof(CardSearch), new PropertyMetadata(null));
 
-    private static void ClearOutline(Panel host)
+    internal static void ClearOutline(DependencyObject host)
     {
         if (host.GetValue(OutlineProperty) is not Adorner old) return;
         (old as OutlineAdorner)?.Detach();
@@ -319,7 +319,7 @@ public static class CardSearch
         host.ClearValue(OutlineProperty);
     }
 
-    private static void Outline(Panel host, FrameworkElement target)
+    internal static void Outline(DependencyObject host, FrameworkElement target)
     {
         ClearOutline(host);
         if (AdornerLayer.GetAdornerLayer(target) is not { } layer) return;

@@ -6,10 +6,13 @@ using TrayTrigger.Services;
 namespace TrayTrigger.ViewModels;
 
 /// <summary>One row in Game Details' "Your setup": what a settings area is doing for this game, and the Settings tab that edits it.</summary>
-public sealed record GameSetupCard(string Title, string Chip, bool ChipIsOn, string Summary, GameEditSection Section, string LinkText)
+public sealed record GameSetupCard(string Title, string Chip, bool ChipIsOn, string Summary, GameEditViewModel.EditField Field, string LinkText)
 {
     /// <summary>Every row but the first has a line above it.</summary>
     public bool HasLineAbove { get; init; }
+
+    /// <summary>The Settings tab that edits the area; the link lands on the area's card on it, outlined.</summary>
+    public GameEditSection Section => GameEditViewModel.SectionOf(Field);
 }
 
 /// <summary>
@@ -46,11 +49,11 @@ public static class GameSetupSummary
         string chip = profileOn ? game.PerformanceProfile.ToString() : on ? "Custom" : "Off";
         return new GameSetupCard("Performance", chip, on,
             on ? string.Join(". ", parts) + "." : "Nothing is changed when this game runs.",
-            GameEditSection.Performance, "Edit performance");
+            GameEditViewModel.EditField.ProfileCard, "Edit performance");
     }
 
     private static GameSetupCard Dlss() =>
-        new("NVIDIA DLSS", "On", true, "TrayTrigger holds a DLSS override for this game.", GameEditSection.Performance, "Edit DLSS");
+        new("NVIDIA DLSS", "On", true, "TrayTrigger holds a DLSS override for this game.", GameEditViewModel.EditField.DlssCard, "Edit DLSS");
 
     private static GameSetupCard Display(GameEntry game)
     {
@@ -71,7 +74,7 @@ public static class GameSetupSummary
         bool on = parts.Count > 0;
         return new GameSetupCard("Display and sound", on ? "Custom" : "Default", on,
             on ? string.Join(". ", parts) + "." : "The display and sound are left as they are.",
-            GameEditSection.Display, "Edit display and sound");
+            GameEditViewModel.EditField.DisplayCard, "Edit display and sound");
     }
 
     private static GameSetupCard Scripts(GameEntry game, bool scriptsEnabled, bool defaultScriptsConfigured)
@@ -81,7 +84,7 @@ public static class GameSetupSummary
         {
             return new GameSetupCard("Scripts", "Off", false,
                 game.HasScripts ? "Scripts are turned off in Settings, so the ones set for this game do not run." : "Scripts are turned off in Settings.",
-                GameEditSection.Scripts, "Edit scripts");
+                GameEditViewModel.EditField.ScriptsCard, "Edit scripts");
         }
 
         bool pre = !string.IsNullOrWhiteSpace(game.PreLaunchScriptPath), post = !string.IsNullOrWhiteSpace(game.PostExitScriptPath);
@@ -90,8 +93,8 @@ public static class GameSetupSummary
         if (count == 0)
         {
             return defaultScriptsConfigured && !game.SkipDefaultScripts
-                ? new GameSetupCard("Scripts", "Defaults", true, "No script of its own. The default scripts from Settings run for this game.", GameEditSection.Scripts, "Edit scripts")
-                : new GameSetupCard("Scripts", "None set", false, "No script is set for this game.", GameEditSection.Scripts, "Edit scripts");
+                ? new GameSetupCard("Scripts", "Defaults", true, "No script of its own. The default scripts from Settings run for this game.", GameEditViewModel.EditField.ScriptsCard, "Edit scripts")
+                : new GameSetupCard("Scripts", "None set", false, "No script is set for this game.", GameEditViewModel.EditField.ScriptsCard, "Edit scripts");
         }
 
         string summary = (pre, post) switch
@@ -101,7 +104,7 @@ public static class GameSetupSummary
             (true, false) => "One runs before launch.",
             _ => "One runs after exit.",
         };
-        return new GameSetupCard("Scripts", count == 1 ? "1 script" : $"{count} scripts", true, summary, GameEditSection.Scripts, "Edit scripts");
+        return new GameSetupCard("Scripts", count == 1 ? "1 script" : $"{count} scripts", true, summary, GameEditViewModel.EditField.ScriptsCard, "Edit scripts");
     }
 
     private static GameSetupCard Launch(GameEntry game)
@@ -115,6 +118,6 @@ public static class GameSetupSummary
 
         bool on = parts.Count > 0;
         return new GameSetupCard("Launch", on ? "Custom" : "Default", on,
-            on ? string.Join(". ", parts) + "." : "Starts the usual way.", GameEditSection.Launch, "Edit launch");
+            on ? string.Join(". ", parts) + "." : "Starts the usual way.", GameEditViewModel.EditField.RunOptionsCard, "Edit launch");
     }
 }

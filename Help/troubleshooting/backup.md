@@ -29,7 +29,7 @@ Tick **Back up automatically** beside Back Up and TrayTrigger makes a backup for
 
 ## Restoring
 
-Press **Restore...** and choose a backup. TrayTrigger says what is in it and asks first. Then:
+Press **Restore...** and choose a backup. The window opens in the Backups folder, where the automatic backups are. TrayTrigger says what is in it and asks first. Then:
 
 - What you have now is backed up first, to the Backups folder in TrayTrigger's data folder, so a restore can be undone by restoring that file. The last five are kept.
 - TrayTrigger restarts and puts the backup in place.

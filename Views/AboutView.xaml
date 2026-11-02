@@ -477,8 +477,8 @@
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,12">
-                                <Button DockPanel.Dock="Right" Content="Configure Hotkeys..." 
-                                        Command="{Binding NavigateToGeneralSettingsCommand}" 
+                                <Button DockPanel.Dock="Right" Content="App Hotkeys..."
+                                        Command="{Binding ShowHotkeySettingsCommand}"
                                         Style="{StaticResource ModernOutlineButton}" 
                                         VerticalAlignment="Center" Padding="11,5"/>
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
@@ -634,6 +634,48 @@
                                     </DockPanel>
                                 </StackPanel>
                             </Border>
+
+                            <!-- Game and tool hotkeys: each opens the editor where it is set -->
+                            <TextBlock Text="Game and tool hotkeys" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,16,0,0"/>
+                            <TextBlock Text="Set in Edit Game and Edit Tool. Choose a name to go to its hotkey."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,2,0,8" TextWrapping="Wrap"/>
+                            <TextBlock Text="No game or tool has a hotkey yet."
+                                       Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasLaunchHotkeys}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border Background="{DynamicResource BrushDialogCard}" CornerRadius="{DynamicResource RadiusControl}" Padding="14,10"
+                                    Visibility="{Binding HasLaunchHotkeys, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl ItemsSource="{Binding LaunchHotkeys}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,0,0,6">
+                                                <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
+                                                    <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2">
+                                                        <TextBlock Text="{Binding Hotkey}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentText}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Style="{StaticResource HelpLinkButton}" Content="{Binding Name}" Command="{Binding EditCommand}"
+                                                            AutomationProperties.Name="{Binding Name, StringFormat='Edit {0}'}"/>
+                                                    <TextBlock Text="{Binding KindLabel}" Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Note}" Foreground="{DynamicResource BrushWarning}" FontSize="{DynamicResource FontSizeBody}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                               Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -728,7 +770,7 @@
                         <DockPanel LastChildFill="True">
                             <Button AutomationProperties.Name="Open Diagnostics &amp; Storage" DockPanel.Dock="Right"
                                     Command="{Binding OpenDiagnosticsSettingsCommand}"
-                                    Style="{StaticResource ModernAccentButton}"
+                                    Style="{StaticResource ModernOutlineButton}"
                                     VerticalAlignment="Center" Padding="12,5">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Open Diagnostics &amp; Storage" VerticalAlignment="Center"/>

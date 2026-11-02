@@ -454,7 +454,7 @@
                     </Border>
 
                     <!-- RUN OPTIONS: what is passed to the exe and how it is run - the working folder, arguments, administrator and the hotkey -->
-                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                    <Border x:Name="RunOptionsCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowLaunchCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
@@ -497,7 +497,7 @@
                             <!-- The box is docked first so it keeps its 160px; the label then fills what is
                                  left and wraps. Docking the label first let its one-line hint claim the whole
                                  row and push the box underneath it. -->
-                            <StackPanel>
+                            <StackPanel x:Name="LaunchHotkeyRow">
                                 <DockPanel>
                                     <!-- Recorded from real key presses, and refused on the spot if another game, the
                                          window hotkey, or another app already has the combo. Its message is rendered
@@ -518,7 +518,7 @@
 
                     <!-- CARD 3: PERFORMANCE (session-scoped tweaks) - its own card so the profile
                          is explained where it is chosen instead of only on the System page. -->
-                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                    <Border x:Name="ProfileCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowPerformanceCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
@@ -625,7 +625,7 @@
                          not used. Two versions, one switch, no per-feature breakdown: the override
                          covers all three features in one write, so a table of them was mechanism
                          on display. -->
-                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                    <Border x:Name="DlssCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding Dlss.IsVisible, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
@@ -711,7 +711,7 @@
                          which monitor, its resolution and refresh rate, making it the main display, keeping the mouse on it,
                          dimming the others, the sound output and the microphone. The lists are always there and disabled, with a note
                          saying why, when there is nothing to choose between; the options that need two monitors show only with two. -->
-                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                    <Border x:Name="DisplayCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowDisplayCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
@@ -840,7 +840,7 @@
 
                     <!-- CARD 4: PRE-LAUNCH / POST-EXIT SCRIPTS (opt-in via Settings > Launch &
                          Performance, or always shown for a game that already has a script) -->
-                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                    <Border x:Name="ScriptsCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
@@ -927,13 +927,27 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- HOW THEY RUN: arguments and options, advanced and optional, so it starts shut unless the game already has a script. -->
+                    <!-- SCRIPT OPTIONS: arguments and how the scripts run. A card like the others, not a disclosure. -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
-                        <Expander Header="How the scripts run" Style="{StaticResource DisclosureExpander}"
-                                  IsExpanded="{Binding ShowScriptRunOptions}">
-                            <StackPanel Margin="0,8,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Script options" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <!-- The options below belong to this game's own scripts, so say why they are off while it has none. -->
+                            <TextBlock Text="These apply to this game's own scripts, so they are off until you set one above."
+                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasAnyScript}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
 
                             <!-- Script arguments: free text appended after the five positional
                                  arguments, so one generic script can be parameterised per game. -->
@@ -998,8 +1012,7 @@
                                         Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger-Scripts"
                                         ToolTip="The TrayTrigger-Scripts catalogue on GitHub: ready-made scripts to drop into the scripts folder, and where to share yours"/>
                             </WrapPanel>
-                            </StackPanel>
-                        </Expander>
+                        </StackPanel>
                     </Border>
 
                     <!-- Scripts stub: when the scripts feature is off, say so instead of silently

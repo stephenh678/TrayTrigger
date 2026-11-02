@@ -686,6 +686,10 @@ public partial class LibraryViewModel : ViewModelBase
         catch (InvalidOperationException) { /* the app is shutting down */ }
     }
 
+    /// <summary>Opens the game's Settings on its Launch tab, at the hotkey, outlined (About's list of hotkeys).</summary>
+    public void ShowGameHotkey(GameCardViewModel card) =>
+        OpenGameDetails(card, startOnSettings: true, showField: GameEditViewModel.EditField.LaunchHotkey);
+
     /// <summary>
     /// Opens the details dialog for <paramref name="card"/>. With
     /// <paramref name="openMatchPicker"/> it goes straight into the Steam/RAWG match picker on
@@ -694,7 +698,8 @@ public partial class LibraryViewModel : ViewModelBase
     /// and poster-replacement bookkeeping a rematch triggers, stay in GameDetailsViewModel; there
     /// is no second copy of that logic at the library level.
     /// </summary>
-    public void OpenGameDetails(GameCardViewModel card, bool openMatchPicker = false, bool startOnSettings = false)
+    public void OpenGameDetails(GameCardViewModel card, bool openMatchPicker = false, bool startOnSettings = false,
+        GameEditViewModel.EditField? showField = null)
     {
         bool requestedLaunch = false;
         bool requestedDelete = false;
@@ -726,7 +731,7 @@ public partial class LibraryViewModel : ViewModelBase
                 () => _settings.ScriptDefaults is { Enabled: true, HasAny: true }),
             heroArt: HeroArtService.Shared,
             openActivityAction: () => requestedActivity = true);
-        if (startOnSettings) vm.ShowSettings();
+        if (startOnSettings) vm.ShowSettings(field: showField);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();

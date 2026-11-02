@@ -12,7 +12,7 @@ On the left: the synopsis, the three newest Steam news posts (with a PATCH tag o
 On the right, in this order:
 
 - **Details** is the developer and publisher (one row when they are the same company), release date, the drive the game is installed on and **Size on disk**, then the scores, the play modes and the links: the store page, PCGamingWiki, SteamDB and the developer's website, each only when the game has one. Size on disk is counted on this PC from the game's own folder when the page opens, and left out when the folder cannot be found or is too big to be one game; nothing is sent anywhere. The links open in your browser.
-- **Your setup** is one card with a row for each area TrayTrigger changes for the game: Performance (always), DLSS while TrayTrigger holds an override, and Display and sound, Scripts and Launch when something is set for the game. Each row says what it is doing now and has a link to the settings that change it. Anything not listed is at its default: an area left alone has no row, and its tab on Settings is still there. The rows read the game as it is saved.
+- **Your setup** is one card with a row for each area TrayTrigger changes for the game: Performance (always), DLSS while TrayTrigger holds an override, and Display and sound, Scripts and Launch when something is set for the game. Each row says what it is doing now and has a link that opens the settings for it, scrolled to the right card and outlined. Anything not listed is at its default: an area left alone has no row, and its tab on Settings is still there. The rows read the game as it is saved.
 - **Last session** is the game's most recent session as Activity & History wrote it, kept to three lines (when it ran, the profile, and that everything was put back). **See this game in Activity** closes the page and opens Activity & History with the game's name in the filter box, so the list shows just this game. It is left out for a game with no session on record.
 
 The text on the Overview can come from one of two sources. Which one, and how fresh it is, are on the About card: its **Steam** or **RAWG** menu switches the source (RAWG only with a key), refreshes the info now, changes which listing the game is matched to, and opens this help.
@@ -69,7 +69,7 @@ Both sources are saved to disk beside the poster cache, so Game Details opens in
 - Steam news, review counts and RAWG ratings change over time, so a longer interval means fewer requests and slightly older numbers. Text, genres and art rarely change.
 - If a background refresh fails (offline, quota, bad key) the saved copy stays on screen.
 - Right-click > Refresh metadata and Change match always fetch fresh info.
-- "Clear Cached Game Info" under the setting forgets every game's saved details. Posters are kept.
+- "Clear Cached Game Info" under the setting forgets every game's saved details. Posters and banners are kept.
 - Removing a game from the library also deletes its saved details, poster and icon once the ten-second undo has passed. Anything another game in the library still uses, such as a second entry for the same Steam game, is kept.
 
 > RAWG needs a free API key from rawg.io/apidocs. The key is stored encrypted in your settings file and only sent to RAWG. RAWG's terms require the "Data from RAWG" link shown under the synopsis whenever their data is on screen.

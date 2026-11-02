@@ -749,9 +749,9 @@ public sealed class ToolsViewModel : ViewModelBase
         CommitChanges();
     }
 
-    public void Edit(ToolCardViewModel card)
+    public void Edit(ToolCardViewModel card, bool showHotkey = false)
     {
-        var dialog = new ToolEditDialog(card.Tool, ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)), _icons);
+        var dialog = new ToolEditDialog(card.Tool, ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)), _icons, showHotkey);
         if (dialog.ShowDialog() == true)
         {
             card.Refresh();

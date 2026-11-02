@@ -873,7 +873,7 @@
                             <Button Content="Clear Cached Game Info" Command="{Binding ClearMetadataCacheCommand}"
                                     Style="{StaticResource ModernOutlineButton}" Padding="10,5"
                                     HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                            <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters are kept."
+                            <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters and banners are kept."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="0,4,0,2" TextWrapping="Wrap"/>
                         </StackPanel>

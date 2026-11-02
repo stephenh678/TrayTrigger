@@ -321,6 +321,21 @@ public partial class SettingsViewModel
         }
     }
 
+    /// <summary>Restore opens on the automatic backups folder once it exists, since that is where the backups are; otherwise Documents.</summary>
+    private string RestoreStartFolder()
+    {
+        try
+        {
+            string folder = new AutoBackupService(_storageService).BackupFolder;
+            if (Directory.Exists(folder)) return folder;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Info("Restore", $"The automatic backups folder wasn't used as the start folder: {ex.Message}");
+        }
+        return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+    }
+
     private async Task RestoreAsync()
     {
         var owner = WindowHelper.ActiveOwner();
@@ -335,7 +350,7 @@ public partial class SettingsViewModel
         {
             Title = "Restore TrayTrigger from a Backup",
             Filter = "TrayTrigger backup (*.zip)|*.zip|All files (*.*)|*.*",
-            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            InitialDirectory = RestoreStartFolder(),
         };
         if (FileDialogCloak.Show(dialog) != true) return;
         string path = dialog.FileName;

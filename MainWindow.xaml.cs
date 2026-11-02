@@ -36,6 +36,7 @@ public partial class MainWindow : Window
             }
         };
 
+        _viewModel.ShowSettingsCardRequested += ShowSettingsCard;
         SearchOverlay.Search = RunGlobalSearch;
         SearchOverlay.Chosen = ChooseGlobalHit;
         // The pages the search reads are laid out once, when the window is idle after it first shows, so
@@ -588,6 +589,23 @@ public partial class MainWindow : Window
         return lines;
     }
 #endif
+
+    /// <summary>
+    /// Shows the Settings card with this heading, scrolled to and outlined, the way choosing it in Search
+    /// everything does. The caller has already put Settings on screen on the card's tab. A heading that is no
+    /// longer found leaves the tab as it is.
+    /// </summary>
+    private void ShowSettingsCard(string title)
+    {
+        RealizeSearchPages();
+        var hit = CardSearch.Find(SettingsPage.CardsPanel, title).FirstOrDefault(h => h.Title == title);
+        if (hit == null)
+        {
+            LoggingService.Warn("MainWindow", $"The Settings card '{title}' was not found to show.");
+            return;
+        }
+        CardSearch.GoTo(hit);
+    }
 
     /// <summary>Goes where a result points: a game opens its Game Details, a tool is selected on Tools, a card is shown on its page, tab and row.</summary>
     private void ChooseGlobalHit(GlobalHit hit, string query)

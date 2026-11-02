@@ -675,7 +675,7 @@
                                                 <Button Content="{Binding LinkText}" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
                                                         Foreground="{DynamicResource BrushAccentText}"
                                                         Command="{Binding DataContext.EditSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding Section}"/>
+                                                        CommandParameter="{Binding Field}"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

@@ -1546,9 +1546,17 @@ public partial class App
                     WaitBeforeGame = true,
                     CloseAfterGames = true
                 };
-                var dlg = new ToolEditDialog(tool, ["Graphics"], _iconExtractorService);
+                // "hotkey" opens it at the hotkey, outlined, as About's list of hotkeys does.
+                bool showHotkey = e.Args.Any(a => a.Equals("hotkey", StringComparison.OrdinalIgnoreCase));
+                var dlg = new ToolEditDialog(tool, ["Graphics"], _iconExtractorService, showHotkey);
                 dlg.Show();
                 dlg.UpdateLayout();
+                if (showHotkey)
+                {
+                    dlg.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    dlg.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    dlg.UpdateLayout();
+                }
                 if (e.Args.Any(a => a.Equals("bottom", StringComparison.OrdinalIgnoreCase)))
                 {
                     FindVisualChild<ScrollViewer>(dlg, _ => true)?.ScrollToEnd();
@@ -2235,6 +2243,26 @@ public partial class App
                 _mainViewModel.CurrentSection = NavSection.About;
                 _mainViewModel.CurrentAboutSection = AboutSubSection.Features;
                 _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // About > Shortcuts' "App Hotkeys...": Settings on its Hotkeys card, outlined.
+            if (e.Args[i].Equals("--screenshot-app-hotkeys", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.CurrentSection = NavSection.About;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                string which = i + 2 < e.Args.Length ? e.Args[i + 2] : string.Empty;
+                var jump = which.Equals("diagnostics", StringComparison.OrdinalIgnoreCase) ? _mainViewModel.OpenDiagnosticsSettingsCommand
+                    : which.Equals("keys", StringComparison.OrdinalIgnoreCase) ? _mainViewModel.OpenLibrarySettingsCommand
+                    : _mainViewModel.ShowHotkeySettingsCommand;
+                jump.Execute(null);
+                _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);
                 ExitApplication();
@@ -3954,6 +3982,10 @@ public partial class App
                 WaitForHero(dlg);
                 // "--screenshot-details <out.png> settings": the Settings tab.
                 if (e.Args.Any(a => a.Equals("settings", StringComparison.OrdinalIgnoreCase))) dlg.ShowSettings();
+                // "--screenshot-details <out.png> hotkey": the Settings tab at the launch hotkey, outlined (About's list of hotkeys).
+                if (e.Args.Any(a => a.Equals("hotkey", StringComparison.OrdinalIgnoreCase))) vm.ShowSettings(field: GameEditViewModel.EditField.LaunchHotkey);
+                // "--screenshot-details <out.png> scripts-link": the Overview's "Edit scripts" link, which lands on the Scripts card.
+                if (e.Args.Any(a => a.Equals("scripts-link", StringComparison.OrdinalIgnoreCase))) vm.EditSectionCommand.Execute(GameEditViewModel.EditField.ScriptsCard);
                 // "--screenshot-details <out.png> scroll": scrolled to the end of the details, to see the cards below the fold.
                 if (e.Args.Any(a => a.Equals("scroll", StringComparison.OrdinalIgnoreCase)))
                 {

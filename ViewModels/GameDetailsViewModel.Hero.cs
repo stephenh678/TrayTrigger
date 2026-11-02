@@ -77,11 +77,12 @@ public partial class GameDetailsViewModel
     private bool CanLeave() => ConfirmLeave?.Invoke() ?? true;
 
     /// <summary>Opens the Settings tab, on one of its own tabs when given.</summary>
-    public void ShowSettings(GameEditSection? section = null)
+    public void ShowSettings(GameEditSection? section = null, GameEditViewModel.EditField? field = null)
     {
         if (!CanEdit) return;
         SelectedTab = GameDetailsTab.Settings;
         if (section is { } s && _editor != null) _editor.SelectedSection = s;
+        if (field is { } f) _editor?.ShowField(f);
     }
 
     private void EnsureEditor()
@@ -224,10 +225,11 @@ public partial class GameDetailsViewModel
             ? Array.Empty<GameSetupCard>()
             : GameSetupSummary.For(Game, _editHost.ScriptsEnabled(), _editHost.DefaultScriptsConfigured());
 
-    /// <summary>A card's button: the Settings tab, on the tab that edits that area.</summary>
+    /// <summary>A card's button: the Settings tab that edits that area, scrolled to the area's card and outlined.</summary>
     public ICommand EditSectionCommand => _editSectionCommand ??= new RelayCommand(p =>
     {
-        if (p is GameEditSection section) ShowSettings(section);
+        if (p is GameEditViewModel.EditField target) ShowSettings(GameEditViewModel.SectionOf(target), target);
+        else if (p is GameEditSection section) ShowSettings(section);
     });
     private ICommand? _editSectionCommand;
 }

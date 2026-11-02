@@ -226,7 +226,6 @@ public partial class GameEditViewModel : ViewModelBase
         UpdateIconPreview();
         UpdateCoverPreview();
         InitArtworkTab(game);
-        _showScriptRunOptions = game.HasScripts;
         _initialEditState = EditState();
     }
 

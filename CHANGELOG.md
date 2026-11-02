@@ -15,6 +15,10 @@ stable version they lead to.
 - **Search everything with Ctrl+K** - the magnifier at the top of the left bar, or Ctrl+K on any page, opens one search over the window that finds games, tools and settings together. A game opens its Game Details, a tool is selected on Tools, and a setting is shown on its page and tab, outlined. More than five games matching adds a line that opens the Library with that word in its filter.
 - **Ctrl+F works on Activity** - Ctrl+F puts the cursor in the box on the Activity page, as it does in the Library and Tools, and Esc clears it.
 - **The list pages say "Filter"** - the boxes on the Library, Tools and Activity are now called filters (they narrow the list you are looking at), while Settings, About and System keep "Search" (they find a card and take you to it). Leaving a page clears its filter or search.
+- **Every game and tool hotkey in one place** - About > Shortcuts now lists the hotkey of each game and tool, and choosing a name opens its editor at the hotkey, outlined. A hotkey Windows could not give to it, because something else holds the key, is marked "Not active: already in use". The button beside it is now "App Hotkeys...", since it covers TrayTrigger's own three, and it opens Settings on the Hotkeys card, outlined, instead of the top of General. "Open Diagnostics & Storage" does the same for the first card on that tab.
+- **Links land on the setting** - a link that points at a setting now takes you to it: the "Edit performance", "Edit scripts" and similar links in Game Details' Your setup scroll to and outline the card they edit, and the keys reminder's Open Settings lands on Art & Info Sources, as the About links do.
+- **Script options is a card, not a fold-away** - in Edit Game, the arguments and run options under Scripts (formerly "How the scripts run") are always shown, like the other cards. A game with no script of its own says why they are greyed out.
+- **Restore opens in your automatic backups** - Restore... now starts in the Backups folder, where the automatic backups are saved, instead of Documents.
 
 ## 1.7.6
 
