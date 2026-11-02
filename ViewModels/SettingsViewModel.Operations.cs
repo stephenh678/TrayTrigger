@@ -84,6 +84,9 @@ public partial class SettingsViewModel
             nameof(AppSettings.LibraryFilterKeys),
             // Filters the player named and saved: curated by hand, like the library itself.
             nameof(AppSettings.SavedLibraryFilters),
+            // The Tools page's filter, the same two buckets.
+            nameof(AppSettings.ToolFilterKeys),
+            nameof(AppSettings.SavedToolFilters),
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),

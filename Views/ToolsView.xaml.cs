@@ -41,6 +41,16 @@ public partial class ToolsView : UserControl
     /// </summary>
     public void SelectAllTools() => ToolsList.SelectAll();
 
+    /// <summary>True while the filter flyout is open, so the window can leave Escape to it.</summary>
+    public bool IsFilterFlyoutOpen => FilterFlyoutControl.IsOpen;
+
+    /// <summary>Selects one tool in the list and brings it into view (a result of the window's search).</summary>
+    public void ShowTool(ToolCardViewModel tool)
+    {
+        ToolsList.SelectedItem = tool;
+        Dispatcher.InvokeAsync(() => ToolsList.ScrollIntoView(tool), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
     /// <summary>Puts the caret in the tools search box and selects what is there (Ctrl+F).</summary>
     public void FocusSearchBox() => ToolsSearchBox.FocusBox();
 

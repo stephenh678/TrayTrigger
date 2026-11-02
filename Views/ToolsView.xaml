@@ -351,18 +351,23 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="190"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- The library's search box, clear x and all. -->
+            <!-- The library's filter box, clear x and all. -->
             <views:SearchBox x:Name="ToolsSearchBox" Grid.Column="0" Width="Auto" Margin="0,0,10,0"
-                             Text="{Binding SearchText}" Placeholder="Search tools by name, category, or path..."/>
+                             Text="{Binding SearchText}" Placeholder="Filter tools by name, category, or path..." ClearText="Clear filter"/>
 
             <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
                       ItemsSource="{Binding SortOptions}"
                       SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                       Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
 
-            <Border Grid.Column="2" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+            <!-- The library's filter flyout (Views/FilterFlyout), with the options that are true of a tool. -->
+            <views:FilterFlyout x:Name="FilterFlyoutControl" Grid.Column="2" Margin="0,0,10,0"
+                                DataContext="{Binding Filter}" HelpTopic="tools/filtering"/>
+
+            <Border Grid.Column="3" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
                 <StackPanel Orientation="Horizontal">
                     <Button Command="{Binding SetViewModeCommand}" CommandParameter="Large Icons"
@@ -556,9 +561,17 @@
                            Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                 <TextBlock Text="No tools match" FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                            FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
-                <TextBlock Text="Nothing in this tab matches your search. Press Esc to clear the search, or pick another tab."
+                <TextBlock Text="Nothing in this tab matches your filter. Press Esc to clear the filter box, or pick another tab."
                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                            FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                <!-- A filter kept from an earlier run can empty the list on its own: say so, and offer the way out. -->
+                <StackPanel Visibility="{Binding IsEmptyBecauseOfFilters, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center">
+                    <TextBlock Text="The filters you have set hide your tools. Filters stay put between sessions; the filter button shows how many are on."
+                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                               FontFamily="{DynamicResource AppFont}" Margin="0,6,0,10"/>
+                    <Button Content="Clear filters" Command="{Binding Filter.ClearCommand}" HorizontalAlignment="Center"
+                            Style="{StaticResource ModernAccentButton}" Padding="14,6"/>
+                </StackPanel>
             </StackPanel>
         </Grid>
 

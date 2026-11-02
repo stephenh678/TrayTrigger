@@ -1859,6 +1859,7 @@ public partial class App
                 _mainWindow.UpdateLayout();
                 // Search once the page has been laid out, so the help topic rows it reads exist.
                 _mainViewModel.AboutSearchText = e.Args[i + 2];
+                _mainWindow.ChooseFirstSearchResult();
                 _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);
@@ -1866,8 +1867,9 @@ public partial class App
                 return;
             }
 
-            // --screenshot-settings-search <out.png> <query> [tab]: the card search on the General tab
-            // (or the named one, e.g. Library or All), which only searches that tab's cards.
+            // --screenshot-settings-search <out.png> <query> [tab]: the card search typed on the General tab
+            // (or the named one, e.g. Library or All), with its best match chosen: the page shows that card
+            // on its own tab, outlined, with the words marked.
             if ((e.Args[i].Equals("--screenshot-settings-search", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-search", StringComparison.OrdinalIgnoreCase)) &&
                 i + 2 < e.Args.Length)
@@ -1884,7 +1886,267 @@ public partial class App
                 // Typed once the page is on screen, as a person would: a search that's already set when
                 // the page appears highlights without moving.
                 _mainViewModel.SettingsVM.SettingsSearchText = e.Args[i + 2];
-                // Let the deferred highlight pass (and its scroll to the first match) run first.
+                _mainWindow.ChooseFirstSearchResult();
+                // Let the deferred pass (the jump, the outline and the marked words) run first.
+                _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-search-list <out.png> <query> [Settings|About|System]: a real screen grab (popups
+            // don't render into a RenderTargetBitmap) of the page's search with its results list open.
+            if ((e.Args[i].Equals("--screenshot-search-list", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-search-list", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                string query = e.Args[i + 2];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = i + 3 < e.Args.Length && Enum.TryParse<NavSection>(e.Args[i + 3], ignoreCase: true, out var listPage)
+                    ? listPage
+                    : NavSection.Settings;
+                _mainWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+                _mainWindow.Left = 0;
+                _mainWindow.Top = 0;
+                _mainWindow.Width = 1020;
+                _mainWindow.Height = 750;
+                // On top, so the screen grab is this window and not whatever is in front of it.
+                _mainWindow.Topmost = true;
+                _mainWindow.Show();
+                WindowThemeService.WhenContentRendered(_mainWindow, () =>
+                {
+                    var type = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                    type.Tick += (s, args) =>
+                    {
+                        type.Stop();
+                        _mainWindow.TypeInPageSearch(query);
+                        var grab = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+                        grab.Tick += (s2, args2) =>
+                        {
+                            grab.Stop();
+                            CaptureScreen(_mainWindow, targetPng);
+                            ExitApplication();
+                        };
+                        grab.Start();
+                    };
+                    type.Start();
+                });
+                return;
+            }
+
+            // --test-global-search <out.txt> <query>: what the window's search lists for the query, and where
+            // choosing the first result of each group goes (a game's details dialog is not opened here).
+            if ((e.Args[i].Equals("--test-global-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-test-global-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                _skipSettingsSaveOnExit = true;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                File.WriteAllLines(e.Args[i + 1], _mainWindow.DescribeGlobalSearch(e.Args[i + 2]));
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-tools-filter <out.png> [option keys...]: the Tools page with sample tools, the given filter
+            // ticks on (a key such as status:favorite, or !status:hotkey for its opposite) and the flyout open.
+            // A real screen grab, since a popup doesn't render into a RenderTargetBitmap.
+            if ((e.Args[i].Equals("--screenshot-tools-filter", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-tools-filter", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                string system = Environment.SystemDirectory;
+                string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                _mainViewModel.Tools.ReplaceToolsForCapture(new[]
+                {
+                    new ToolEntry { Name = "DLSS Swapper", TargetPath = System.IO.Path.Combine(system, "notepad.exe"), Category = "Graphics", IsFavorite = true, Hotkey = "Ctrl+Alt+D" },
+                    new ToolEntry { Name = "MSI Afterburner", TargetPath = System.IO.Path.Combine(system, "calc.exe"), Category = "Graphics", RunAsAdmin = true, StartWithGames = true, CloseAfterGames = true },
+                    new ToolEntry { Name = "Vortex", TargetPath = System.IO.Path.Combine(windows, "explorer.exe"), Category = "Mods", IsFavorite = true },
+                    new ToolEntry { Name = "Discord", TargetPath = System.IO.Path.Combine(system, "cmd.exe"), Category = "Chat", CloseForGames = true, ReopenAfterGames = true },
+                    new ToolEntry { Name = "Cleanup", TargetPath = System.IO.Path.Combine(system, "cleanup.ps1"), Category = "Chat" },
+                    new ToolEntry { Name = "Xbox", AppId = "Microsoft.GamingApp_8wekyb3d8bbwe!Microsoft.Xbox.App", Category = "Chat" },
+                    new ToolEntry { Name = "Old Trainer", TargetPath = @"C:\Missing\trainer.exe", Category = "Mods" },
+                });
+                // From a clean filter, so a capture never inherits ticks an earlier one left in the settings file.
+                _mainViewModel.Tools.Filter.ClearAll();
+                var wanted = e.Args.Skip(i + 2).ToHashSet(StringComparer.Ordinal);
+                foreach (var option in _mainViewModel.Tools.Filter.Groups.SelectMany(g => g.Options))
+                {
+                    if (wanted.Contains(option.Key)) option.IsChecked = true;
+                    else if (wanted.Contains("!" + option.Key)) option.IsExcluded = true;
+                }
+                _mainViewModel.CurrentSection = NavSection.Tools;
+                _mainWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+                _mainWindow.Left = 0;
+                _mainWindow.Top = 0;
+                _mainWindow.Width = 1020;
+                _mainWindow.Height = 760;
+                _mainWindow.Topmost = true;
+                _mainWindow.Show();
+                WindowThemeService.WhenContentRendered(_mainWindow, () =>
+                {
+                    var open = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                    open.Tick += (s1, a1) =>
+                    {
+                        open.Stop();
+                        _mainViewModel.Tools.Filter.IsOpen = true;
+                        var grab = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+                        grab.Tick += (s2, a2) =>
+                        {
+                            grab.Stop();
+                            CaptureScreen(_mainWindow, targetPng);
+                            ExitApplication();
+                        };
+                        grab.Start();
+                    };
+                    open.Start();
+                });
+                return;
+            }
+
+            // --screenshot-whatsnew <out.png> [after]: the What's new window for this version, as it shows after an
+            // update ("after") or from About.
+            if ((e.Args[i].Equals("--screenshot-whatsnew", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-whatsnew", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                bool afterUpdate = e.Args.Any(a => a.Equals("after", StringComparison.OrdinalIgnoreCase));
+                _skipSettingsSaveOnExit = true;
+                var dialog = WhatsNewDialog.CreateForCapture(afterUpdate);
+                if (dialog == null)
+                {
+                    _logger("[screenshot-whatsnew] WhatsNew.md has no section for the running version.");
+                    ExitApplication();
+                    return;
+                }
+                dialog.WindowStartupLocation = WindowStartupLocation.Manual;
+                dialog.Left = 0;
+                dialog.Top = 0;
+                dialog.Show();
+                PumpDispatcher(TimeSpan.FromMilliseconds(800));
+                CaptureVisual(dialog, (int)Math.Max(dialog.ActualWidth, 400), (int)Math.Max(dialog.ActualHeight, 300), targetPng);
+                dialog.Close();
+                ExitApplication();
+                return;
+            }
+
+            // --test-leave-clears <out.txt>: types a filter or search on each page, leaves it by the sidebar's
+            // route (CurrentSection), and writes what each box holds afterwards.
+            if ((e.Args[i].Equals("--test-leave-clears", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-test-leave-clears", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                _skipSettingsSaveOnExit = true;
+                _mainWindow.Show();
+                PumpDispatcher(TimeSpan.FromSeconds(1));
+                var report = new System.Text.StringBuilder();
+                void Leave(NavSection page, Action type, Func<string> read)
+                {
+                    _mainViewModel.CurrentSection = page;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(200));
+                    type();
+                    string typed = read();
+                    _mainViewModel.CurrentSection = page == NavSection.About ? NavSection.Library : NavSection.About;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(200));
+                    report.AppendLine($"{page}: typed '{typed}', after leaving '{read()}'");
+                }
+                Leave(NavSection.Library, () => _mainViewModel.SearchText = "star", () => _mainViewModel.SearchText);
+                Leave(NavSection.Tools, () => _mainViewModel.Tools.SearchText = "epic", () => _mainViewModel.Tools.SearchText);
+                Leave(NavSection.Activity, () => _mainViewModel.ActivityVM.SearchText = "launch", () => _mainViewModel.ActivityVM.SearchText);
+                Leave(NavSection.Settings, () => _mainViewModel.SettingsVM.SettingsSearchText = "tray", () => _mainViewModel.SettingsVM.SettingsSearchText);
+                Leave(NavSection.System, () => _mainViewModel.SystemVM.SystemSearchText = "gpu", () => _mainViewModel.SystemVM.SystemSearchText);
+                Leave(NavSection.About, () => _mainViewModel.AboutSearchText = "hotkey", () => _mainViewModel.AboutSearchText);
+                File.WriteAllText(e.Args[i + 1], report.ToString());
+                ExitApplication();
+                return;
+            }
+
+            // --test-global-search-keys <out.txt> [Library|Tools|Settings|About|System|Activity]: presses Ctrl+K, Esc and
+            // Ctrl+K again as real key events on the page and writes whether the search was open after each.
+            if ((e.Args[i].Equals("--test-global-search-keys", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-test-global-search-keys", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetTxt = e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = i + 2 < e.Args.Length && Enum.TryParse<NavSection>(e.Args[i + 2], ignoreCase: true, out var keysPage)
+                    ? keysPage
+                    : NavSection.Library;
+                _mainWindow.Topmost = true;
+                _mainWindow.Show();
+                _mainWindow.Activate();
+                PumpDispatcher(TimeSpan.FromSeconds(2));
+                var report = new System.Text.StringBuilder();
+                string Focused() => System.Windows.Input.Keyboard.FocusedElement?.GetType().Name ?? "null";
+                void Tap(string label, params byte[] keys)
+                {
+                    foreach (byte key in keys) keybd_event(key, 0, 0, UIntPtr.Zero);
+                    foreach (byte key in keys.Reverse()) keybd_event(key, 0, 2, UIntPtr.Zero);
+                    PumpDispatcher(TimeSpan.FromMilliseconds(600));
+                    report.AppendLine($"{label}: open={_mainWindow.GlobalSearchIsOpen}, focus={Focused()}, active={_mainWindow.IsActive}");
+                }
+                report.AppendLine($"start: open={_mainWindow.GlobalSearchIsOpen}, focus={Focused()}, active={_mainWindow.IsActive}");
+                Tap("Ctrl+K", 0x11, 0x4B);
+                Tap("Esc", 0x1B);
+                Tap("Ctrl+K again", 0x11, 0x4B);
+                Tap("Esc", 0x1B);
+                Tap("Ctrl+K third", 0x11, 0x4B);
+                Tap("Ctrl+K while open", 0x11, 0x4B);
+                Tap("Esc", 0x1B);
+                // Choosing a result with Enter, then asking again from where it took us.
+                foreach (string query in new[] { "epic", "launch", "about" })
+                {
+                    Tap("Ctrl+K", 0x11, 0x4B);
+                    _mainWindow.SetGlobalSearchText(query);
+                    Tap($"Enter on '{query}'", 0x0D);
+                    report.AppendLine($"   section={_mainViewModel.CurrentSection}");
+                    Tap("Ctrl+K after choosing", 0x11, 0x4B);
+                    Tap("Esc", 0x1B);
+                    _mainViewModel.CurrentSection = NavSection.Library;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                }
+                // A game opens its Game Details (a dialog); closing it, the search must still answer.
+                _mainViewModel.CurrentSection = NavSection.Library;
+                Tap("Ctrl+K", 0x11, 0x4B);
+                _mainWindow.SetGlobalSearchText("star");
+                var closeDialog = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+                closeDialog.Tick += (_, _) =>
+                {
+                    closeDialog.Stop();
+                    var dialog = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w != _mainWindow && w.IsVisible);
+                    report.AppendLine($"   dialog={dialog?.GetType().Name ?? "none"}");
+                    dialog?.Close();
+                };
+                closeDialog.Start();
+                Tap("Enter on game 'star'", 0x0D);
+                PumpDispatcher(TimeSpan.FromSeconds(4));
+                report.AppendLine($"   after dialog: open={_mainWindow.GlobalSearchIsOpen}, focus={Focused()}, active={_mainWindow.IsActive}");
+                Tap("Ctrl+K after the dialog", 0x11, 0x4B);
+                File.WriteAllText(targetTxt, report.ToString());
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-global-search <out.png> <query> [Library|Tools|Settings|About|System|Activity]: the
+            // window's search (Ctrl+K) open over the given page with the query typed.
+            if ((e.Args[i].Equals("--screenshot-global-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-global-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                string query = e.Args[i + 2];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = i + 3 < e.Args.Length && Enum.TryParse<NavSection>(e.Args[i + 3], ignoreCase: true, out var searchPage)
+                    ? searchPage
+                    : NavSection.Library;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                _mainWindow.OpenGlobalSearch(query);
                 _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);
@@ -2072,7 +2334,11 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 string query = e.Args[i + 2];
-                CaptureSystemOnceSpecsLoad(targetPng, () => _mainViewModel.SystemVM.SystemSearchText = query);
+                CaptureSystemOnceSpecsLoad(targetPng, () =>
+                {
+                    _mainViewModel.SystemVM.SystemSearchText = query;
+                    _mainWindow.ChooseFirstSearchResult();
+                });
                 return;
             }
 
@@ -3052,8 +3318,8 @@ public partial class App
                             var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(_mainWindow, p => p.IsOpen);
                             if (popup?.Child == null) return (0, new List<string>(), (System.Windows.Controls.Primitives.ToggleButton?)null);
                             var found = FindVisualChildren<System.Windows.Controls.Primitives.ToggleButton>(popup.Child).ToList();
-                            var keys = found.Select(b => (b.DataContext as LibraryFilterOption)?.Key ?? "?").ToList();
-                            return (found.Count, keys, found.FirstOrDefault(b => (b.DataContext as LibraryFilterOption)?.Key == steamKey));
+                            var keys = found.Select(b => (b.DataContext as FilterOption)?.Key ?? "?").ToList();
+                            return (found.Count, keys, found.FirstOrDefault(b => (b.DataContext as FilterOption)?.Key == steamKey));
                         });
 
                         if (boxCount == 0) throw new Exception("The filter popup did not open, or opened and rendered no option rows - a template or converter failed to resolve.");

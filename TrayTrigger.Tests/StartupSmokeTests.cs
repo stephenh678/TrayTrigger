@@ -45,7 +45,7 @@ public class StartupSmokeTests
     /// Runs the body with the app's resources in place, and takes them out again after: other tests share this Application, and
     /// some of them rely on it having none. The body runs as one piece on the UI thread, so no other test sees them in between.
     /// </summary>
-    private static void WithAppResources(Action<ResourceDictionary> body) => WpfTestHost.Run(() =>
+    internal static void WithAppResources(Action<ResourceDictionary> body) => WpfTestHost.Run(() =>
     {
         var app = LoadAppResources();
         Application.Current.Resources.MergedDictionaries.Add(app);

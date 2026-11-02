@@ -66,4 +66,13 @@ public partial class WhatsNewDialog : Window
         dialog.ShowDialog();
         return true;
     }
+
+#if DEBUG
+    /// <summary>Dev captures: the dialog for the running version, not shown, so it can be drawn into a picture.</summary>
+    internal static WhatsNewDialog? CreateForCapture(bool afterUpdate)
+    {
+        string key = WhatsNewService.StableKey(UpdateService.CurrentSemVer);
+        return WhatsNewService.LoadSection(key) is { } notes ? new WhatsNewDialog(key, notes, afterUpdate) : null;
+    }
+#endif
 }

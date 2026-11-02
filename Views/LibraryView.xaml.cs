@@ -25,113 +25,23 @@ public partial class LibraryView : UserControl
     {
         InitializeComponent();
 
-        // Not settable from XAML - it's a delegate, not a value.
-        LibraryFilterPopup.CustomPopupPlacementCallback = PlaceLibraryFilterPopup;
-
         // Both card menus are shared resources; the card they were opened on is remembered in
         // OnCardContextMenuOpening and its highlight cleared here when the menu goes away.
         ((ContextMenu)FindResource("GameItemContextMenu")).Closed += OnCardContextMenuClosed;
         ((ContextMenu)FindResource("GameBatchContextMenu")).Closed += OnCardContextMenuClosed;
-
-        // The filter asks for a name and a yes through the view, so it stays free of dialogs. The data
-        // context arrives after construction, hence Loaded.
-        Loaded += (_, _) => WireFilterPrompts();
     }
-
-    private void WireFilterPrompts()
-    {
-        if (DataContext is not MainViewModel main) return;
-        var filter = main.Library.Filter;
-        filter.PromptForName = () =>
-        {
-            var dialog = new QuickInputDialog("Save Filter", "Save this filter",
-                "Name it. The ticked options are saved; the category tab and search text are not.", string.Empty);
-            return dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.ResultValue) ? dialog.ResultValue : null;
-        };
-        filter.ConfirmReplace = (name, saved, now) => ModernDialog.Confirm(
-            WindowHelper.ActiveOwner(), "Replace saved filter", $"Replace the saved filter \"{name}\"?",
-            $"Saved: {saved}.\nNow: {now}.", confirmText: "Replace", cancelText: "Cancel");
-        filter.ConfirmDelete = name => ModernDialog.ConfirmDelete(
-            WindowHelper.ActiveOwner(), "Delete saved filter", $"Delete the saved filter \"{name}\"?",
-            "Your games and your other filters are not affected.", confirmText: "Delete");
-    }
-
-    /// <summary>
-    /// Closes the flyout before the name box opens over it. Click runs ahead of the button's Command,
-    /// which is what asks for the name.
-    /// </summary>
-    private void LibraryFilterSave_Click(object sender, RoutedEventArgs e) =>
-        ViewModel.Library.Filter.IsOpen = false;
 
     private MainViewModel ViewModel => (MainViewModel)DataContext;
 
     /// <summary>True while the filter flyout is open, so the window can leave Escape to it.</summary>
-    public bool IsFilterFlyoutOpen => LibraryFilterPopup.IsOpen;
+    public bool IsFilterFlyoutOpen => FilterFlyoutControl.IsOpen;
+
+    /// <summary>The filter button and its count badge, for the dev diagnostics that drive them.</summary>
+    internal Button LibraryFilterButton => FilterFlyoutControl.Button;
+    internal Border LibraryFilterBadge => FilterFlyoutControl.Badge;
 
     /// <summary>Puts the caret in the library search box and selects what is there (Ctrl+F).</summary>
     public void FocusSearchBox() => LibrarySearchBox.FocusBox();
-
-    /// <summary>
-    /// Right-aligns the filter flyout under its button. The panel's width varies with its content
-    /// (MinWidth 270, MaxWidth 300, and the Launcher group's labels decide where in between it
-    /// lands), so a fixed HorizontalOffset can only ever be correct at one of those widths -
-    /// the previous -236 drifted visibly off the button as soon as a long launcher name widened
-    /// the panel. Measuring at placement time is correct at every width.
-    /// </summary>
-    private static CustomPopupPlacement[] PlaceLibraryFilterPopup(Size popupSize, Size targetSize, Point offset) =>
-    [
-        new CustomPopupPlacement(new Point(targetSize.Width - popupSize.Width, targetSize.Height + 4), PopupPrimaryAxis.Horizontal)
-    ];
-
-    /// <summary>
-    /// Puts focus on the flyout itself, so Escape works and Tab goes to its first control. A Popup does
-    /// not take focus on its own, which left the panel unusable without a mouse. Focus goes to the panel
-    /// and not to its first option: an option with focus draws a blue outline, which on opening read as
-    /// that option being picked.
-    /// </summary>
-    private void LibraryFilterPopup_Opened(object? sender, EventArgs e)
-    {
-        if (LibraryFilterPopup.Child is FrameworkElement child)
-        {
-            child.Focus();
-        }
-    }
-
-    /// <summary>
-    /// Escape closes the flyout and puts focus back on the button that opened it, per the ARIA
-    /// authoring practices - without the second half, focus is left orphaned on a panel that is
-    /// no longer on screen.
-    /// </summary>
-    private void LibraryFilterPopup_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Escape) return;
-        ViewModel.Library.Filter.IsOpen = false;
-        LibraryFilterButton.Focus();
-        e.Handled = true;
-    }
-
-    /// <summary>
-    /// Clear leaves the flyout open, but the button hides itself once nothing is ticked, and a
-    /// hidden button can't keep keyboard focus. Click runs ahead of the Command that clears, so
-    /// focus moves once that has happened: back onto the panel, as when it opened.
-    /// </summary>
-    private void LibraryFilterClear_Click(object sender, RoutedEventArgs e)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (LibraryFilterPopup.IsOpen && LibraryFilterPopup.Child is FrameworkElement child)
-            {
-                child.Focus();
-            }
-        }), System.Windows.Threading.DispatcherPriority.Input);
-    }
-
-    /// <summary>
-    /// Closes the flyout before the help window opens over it. Click runs ahead of the button's
-    /// Command, which is what actually shows the topic.
-    /// </summary>
-    private void LibraryFilterHelp_Click(object sender, RoutedEventArgs e) =>
-        ViewModel.Library.Filter.IsOpen = false;
 
     private void DropZone_DragOver(object sender, DragEventArgs e)
     {

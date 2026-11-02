@@ -241,10 +241,11 @@
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsGameProfilesTab}"/>
             </StackPanel>
         </Border>
-        <!-- Card search (Views/CardSearch, Views/SearchBox), as on Settings and About: it searches the
-             selected tab and the text stays as you switch tabs (SystemViewModel.SystemSearchText). -->
+        <!-- Card search (Views/CardSearch, Views/SearchBox), as on Settings and About: a dropdown of matching
+             cards from every tab, and the text stays as you switch tabs (SystemViewModel.SystemSearchText). -->
         <views:SearchBox x:Name="SystemSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
-                         Text="{Binding SystemSearchText}" Placeholder="Search system..."/>
+                         Text="{Binding SystemSearchText}" Placeholder="Search system..." ResultsHost="{Binding ElementName=SystemCardsPanel}"
+                         NoResultsHint="Search everything (Ctrl+K) looks in every page."/>
         </Grid>
 
         <!-- 3. CONTENT AREA -->
@@ -252,12 +253,14 @@
                       views:ScrollToTop.ResetOn="{Binding CurrentSubSection}">
             <StackPanel x:Name="SystemCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
                         views:CardSearch.Query="{Binding SystemSearchText}"
+                        views:CardSearch.GoTo="{Binding GoToSystemTabCommand}"
                         views:CardSearch.Scope="{Binding SearchScope}">
 
                 <!-- ========================================================== -->
                 <!-- CATEGORY 1: HARDWARE SPECS                                 -->
                 <!-- ========================================================== -->
-                <StackPanel Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SystemSubSection.HardwareSpecs}" views:CardSearch.TabLabel="Hardware Specs">
                     <!-- Section header, on every tab: the section's own Refresh lives at its right end. -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <DockPanel LastChildFill="True">
@@ -585,7 +588,8 @@
                 <!-- ========================================================== -->
                 <!-- CATEGORY 2: PERFORMANCE TWEAKS                             -->
                 <!-- ========================================================== -->
-                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SystemSubSection.PerformanceTweaks}" views:CardSearch.TabLabel="Performance Tweaks">
                     <!-- Section header, on every tab. Refresh here re-reads every tweak and re-runs Stutter Check. -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <DockPanel LastChildFill="True">
@@ -606,7 +610,8 @@
                 </StackPanel>
 
                 <!-- Stutter Check has its own tab, and still shows on All between the tweaks header and the preset. -->
-                <StackPanel Visibility="{Binding ShowStutterSection, Converter={StaticResource BoolToVis}}">
+                <StackPanel Visibility="{Binding ShowStutterSection, Converter={StaticResource BoolToVis}}"
+                            views:CardSearch.Tab="{x:Static vm:SystemSubSection.StutterCheck}" views:CardSearch.TabLabel="Stutter Check">
                     <!-- Stutter Check: the verdict. It only reports; Fix it applies a tweak from the Performance Tweaks tab. -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
@@ -690,7 +695,8 @@
 
                 </StackPanel>
 
-                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SystemSubSection.PerformanceTweaks}" views:CardSearch.TabLabel="Performance Tweaks">
                     <!-- Performance Preset: the recommended tweaks below, applied and undone together -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
@@ -798,7 +804,8 @@
                 <!-- ========================================================== -->
                 <!-- CATEGORY 3: PERFORMANCE PROFILES                          -->
                 <!-- ========================================================== -->
-                <StackPanel Visibility="{Binding ShowGameProfilesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowGameProfilesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SystemSubSection.GameProfiles}" views:CardSearch.TabLabel="Performance Profiles">
                     <!-- Section header, on every tab. -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <StackPanel Orientation="Horizontal">
@@ -869,9 +876,6 @@
 
             </StackPanel>
         </ScrollViewer>
-
-        <!-- Card search found nothing. -->
-        <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SystemCardsPanel}"/>
 
         <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Undo Preset runs) -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"

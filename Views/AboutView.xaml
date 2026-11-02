@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
              xmlns:views="clr-namespace:TrayTrigger.Views"
              xmlns:services="clr-namespace:TrayTrigger.Services"
              mc:Ignorable="d"
@@ -57,10 +58,11 @@
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAboutSupportTab}"/>
             </StackPanel>
         </Border>
-        <!-- Card search (Views/CardSearch, Views/SearchBox), as on Settings: it searches the
-             selected tab and the text stays as you switch tabs (MainViewModel.AboutSearchText). -->
+        <!-- Card search (Views/CardSearch, Views/SearchBox), as on Settings: a dropdown of matching cards
+             from every tab, and the text stays as you switch tabs (MainViewModel.AboutSearchText). -->
         <views:SearchBox x:Name="AboutSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
-                         Text="{Binding AboutSearchText}"/>
+                         Text="{Binding AboutSearchText}" Placeholder="Search about..." ResultsHost="{Binding ElementName=AboutCardsPanel}"
+                         NoResultsHint="Search everything (Ctrl+K) looks in every page."/>
         </Grid>
 
         <!-- 3. About Content ScrollViewer -->
@@ -68,12 +70,14 @@
                       views:ScrollToTop.ResetOn="{Binding CurrentAboutSection}">
             <StackPanel x:Name="AboutCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
                         views:CardSearch.Query="{Binding AboutSearchText}"
+                        views:CardSearch.GoTo="{Binding GoToAboutTabCommand}"
                         views:CardSearch.Scope="{Binding CurrentAboutSection}">
 
                 <!-- ============================================== -->
                 <!-- CATEGORY 1: APPLICATION OVERVIEW               -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowAboutOverviewSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowAboutOverviewSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:AboutSubSection.Overview}" views:CardSearch.TabLabel="Overview">
                     <!-- Section Header (shown in All view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -179,7 +183,8 @@
                 <!-- ============================================== -->
                 <!-- CATEGORY 2: KEY FEATURES                       -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowAboutFeaturesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowAboutFeaturesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:AboutSubSection.Features}" views:CardSearch.TabLabel="Key Features">
                     <!-- Section Header (shown in All view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -445,7 +450,8 @@
                 <!-- ============================================== -->
                 <!-- CATEGORY 3: SHORTCUTS                          -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowAboutShortcutsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowAboutShortcutsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:AboutSubSection.Shortcuts}" views:CardSearch.TabLabel="Shortcuts">
                     <!-- Section Header (shown in All view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -590,7 +596,18 @@
                                                 <TextBlock Text="Ctrl+F" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
                                         </StackPanel>
-                                        <TextBlock Text="Focus the search box on any page that has one"
+                                        <TextBlock Text="Focus the search or filter box of the page you are on"
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+
+                                    <!-- Row 6a: Search everything -->
+                                    <DockPanel Margin="0,0,0,9">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Ctrl+K" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Search everything: games, tools and settings, from any page"
                                                    Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"/>
                                     </DockPanel>
 
@@ -612,7 +629,7 @@
                                                 <TextBlock Text="Esc" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
                                         </StackPanel>
-                                        <TextBlock Text="Clear the search and show everything again"
+                                        <TextBlock Text="Clear the search or filter and show everything again"
                                                    Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"/>
                                     </DockPanel>
                                 </StackPanel>
@@ -624,7 +641,8 @@
                 <!-- ============================================== -->
                 <!-- CATEGORY 4: SUPPORT & LINKS                    -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowAboutSupportSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowAboutSupportSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:AboutSubSection.Support}" views:CardSearch.TabLabel="Support &amp; Links">
                     <!-- Section Header (shown in All view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -775,7 +793,5 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Card search found nothing. -->
-        <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=AboutCardsPanel}"/>
     </Grid>
 </UserControl>

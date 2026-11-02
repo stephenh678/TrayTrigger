@@ -119,6 +119,6 @@
     <Color x:Key="ColorMask">#FF000000</Color>
     <Color x:Key="ColorOverlayLine">#33FFFFFF</Color>
     <SolidColorBrush x:Key="BrushOverlayLine" Color="{StaticResource ColorOverlayLine}"/>
-    <Color x:Key="ColorHighlight">#66FFC400</Color>
+    <Color x:Key="ColorHighlight">#80FFC400</Color>
     <SolidColorBrush x:Key="BrushHighlight" Color="{StaticResource ColorHighlight}"/>
 </ResourceDictionary>

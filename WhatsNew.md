@@ -4,6 +4,13 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.7.7
+
+- **Search everything (Ctrl+K)** - The magnifier at the top of the left bar opens one search for games, tools and settings. Pick a result and TrayTrigger takes you there: a game opens its page, a setting is outlined on its tab.
+- **A filter button on Tools** - The same filter the Library has, with options that fit a tool: its kind, favorites, hotkeys, run as administrator, starts or closes with games, and a missing file. It works the same way, saved filters included.
+- **Search finds a setting on any tab** - Type in the search box on Settings, About or System and a list drops down with every matching setting from every tab, each with the tab it lives on and the line that matched. Pick one (or press Enter) and TrayTrigger takes you to it and outlines it. The page no longer shrinks while you type.
+- **Filters say "Filter"** - The boxes that narrow a list (Library, Tools, Activity) now say Filter, to read differently from the Search on Settings, About and System, and a filter clears when you leave the page. Ctrl+F now works on Activity too.
+
 ## 1.7.6
 
 - **Hero banners** - Click a game and its page opens on a big hero banner with the game's name, a Play button, and your playtime, last played and profile. Banners and fresh game info load in as you open each game, so the first visit may take a sec. Overview is the game; Settings is Edit Game right there in the same window. Save keeps you on the page, and Cancel puts everything back how it was.

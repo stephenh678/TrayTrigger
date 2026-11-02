@@ -960,6 +960,8 @@ public class SystemViewModel : ViewModelBase
     }
 
     // Commands
+    /// <summary>Search results take System to a card's tab (see Views/CardSearch); on All the card is already on screen.</summary>
+    public ICommand GoToSystemTabCommand { get; }
     public ICommand SelectAllTabCommand { get; }
     public ICommand SelectSpecsTabCommand { get; }
     public ICommand SelectTweaksTabCommand { get; }
@@ -1279,6 +1281,10 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(SearchScope));
             };
 
+        GoToSystemTabCommand = new RelayCommand(tab =>
+        {
+            if (tab is SystemSubSection target && CurrentSubSection != SystemSubSection.All) CurrentSubSection = target;
+        });
         SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
         SelectTweaksTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.PerformanceTweaks);

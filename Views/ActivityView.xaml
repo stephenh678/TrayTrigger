@@ -166,7 +166,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <views:SearchBox x:Name="ActivitySearchBox" Grid.Column="0" Width="Auto" Margin="0,0,10,0"
-                             Text="{Binding SearchText}" Placeholder="Search activity by game, tool, or what happened..."/>
+                             Text="{Binding SearchText}" Placeholder="Filter activity by game, tool, or what happened..." ClearText="Clear filter"/>
             <ComboBox AutomationProperties.Name="Keep history for" Grid.Column="1"
                       ItemsSource="{Binding RetentionOptions}" SelectedItem="{Binding RetentionOption, Mode=TwoWay}"
                       Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"

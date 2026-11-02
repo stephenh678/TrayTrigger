@@ -22,6 +22,31 @@ These three are under Settings > Launch & Performance > Launching Games.
 - **Keep game launchers minimized when launching a game** asks Steam, GOG Galaxy and Epic to start quietly, so only the game opens. See How a game is launched.
 - **Show a launch popup by the tray icon** shows a small popup by the clock when a game is started from the tray or a hotkey: what it is waiting for, and the reason if the launch fails. See How the tray menu works.
 
+## Search and filter
+
+Three ways to find something, named for what they do. A **filter** (Library, Tools and Activity) narrows the list you are looking at to what matches. A **page search** (Settings, About and System) finds a card on any tab of that page and takes you to it. **Search everything** looks in all of them at once. Ctrl+F puts the cursor in the filter or search box of the page you are on, Ctrl+K opens Search everything, and Esc clears or closes either.
+
+### Search everything
+
+The magnifier at the top of the left bar, or **Ctrl+K** from any page, opens a search box over the window that looks in every place at once. Results are grouped: Games, Tools, then the cards of Settings, System and About, and one line for Activity & History when its entries match.
+
+- Up and Down pick a result and Enter or a click opens it. A game opens its Game Details; a tool is selected on the Tools page; a setting, system or About card is shown on its page and tab, outlined, with your words marked; the Activity line opens Activity & History with the filter set.
+- Each group shows the best few, so a settings card never pushes a game out of sight. When a game search finds more than five, the last line, "Show all 8 games matching ...", opens the Library with that word in its filter box.
+- Every word you type must be in the game's or tool's name or category, or in the card. Hidden games and tools you have turned off are not listed.
+- Esc, a click outside the box, or Ctrl+K again closes it. Ctrl+K does nothing while a hotkey is being recorded.
+
+### Searching the pages
+
+Settings, About and System each have a search box beside their tabs. Type a word or two and a list drops down with every matching card from every tab, not only the one you are on. Each result shows the card's name, the tab it is on, and the line that matched.
+
+- Up and Down pick a result, and Enter or a click takes you to it: TrayTrigger switches to its tab, scrolls to the card (or to the row inside it, such as one tweak among several) and outlines it, with the words you typed marked in yellow.
+- The page itself does not change while you type, and the outline stays until you search for something else or clear the box.
+- Every word you type must appear in the card (its title, description, option names or tooltip) or in the tab's name. Whatever you have typed into a box, such as an API key, is never searched.
+- The list searches the page you are on. When it finds nothing it says so and points to Search everything (Ctrl+K), which looks in every page.
+- A setting your PC can't use (an NVIDIA option without an NVIDIA card, the monitor options with one monitor) is not listed.
+- Press Enter in the box again to bring the list back after choosing. Esc, or the x in the box, clears the search.
+- Leaving the page by the sidebar clears the search, puts the page back on its All tab and scrolls it to the top, so it opens fresh next time. The Library, Tools and Activity do the same for their filter box (the category tab, sort and view you chose stay).
+
 ## Window sizes
 
 Game Details (which holds Edit Game on its Settings tab), Edit Tool, Scan for Games, the folder import and Edit Theme open at the size you last left them. A window you never resized keeps its normal size, and a saved size that is too big for the screen is ignored.

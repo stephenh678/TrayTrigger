@@ -11,11 +11,11 @@ using System.Windows.Threading;
 namespace TrayTrigger.Views;
 
 /// <summary>
-/// Find-in-page highlighting for <see cref="CardSearch"/>: every visible TextBlock under the host
-/// (including the ones check boxes and buttons generate for their labels) gets an adorner that tints
-/// the words of the query, and the first match can be scrolled into view - inside a tall card it could
-/// otherwise be a screen further down. Adorners draw over the text, so no label, binding or inline
-/// is touched, and they live in the ScrollViewer's own adorner layer, so they scroll and clip with it.
+/// Find-in-page highlighting for <see cref="CardSearch"/>: every visible TextBlock under the card or
+/// row the reader chose (<see cref="CardSearch.HighlightRootProperty"/>), including the ones check boxes
+/// and buttons generate for their labels, gets an adorner that tints the words of the query. Adorners
+/// draw over the text, so no label, binding or inline is touched, and they live in the ScrollViewer's
+/// own adorner layer, so they scroll and clip with it.
 /// </summary>
 internal static class SearchHighlight
 {
@@ -29,29 +29,19 @@ internal static class SearchHighlight
     private static readonly DependencyProperty WaitingForVisibleProperty = DependencyProperty.RegisterAttached(
         "WaitingForVisible", typeof(bool), typeof(SearchHighlight), new PropertyMetadata(false));
 
-    // A pass that should park the first match hasn't run yet. A refresh that doesn't move (the page
-    // re-running the same search right after the query changed) supersedes that pass, so it inherits
-    // the move instead of cancelling it.
-    private static readonly DependencyProperty MovePendingProperty = DependencyProperty.RegisterAttached(
-        "MovePending", typeof(bool), typeof(SearchHighlight), new PropertyMetadata(false));
-
-    /// <param name="moveToFirstMatch">Park the first match in view - when the query changed, not when
-    /// the page changed under an existing search.</param>
-    internal static void Refresh(Panel host, string[] terms, bool moveToFirstMatch)
+    internal static void Refresh(Panel host, string[] terms)
     {
         Clear(host);
         int pass = (int)host.GetValue(PassProperty) + 1;
         host.SetValue(PassProperty, pass);
-        if (moveToFirstMatch) host.SetValue(MovePendingProperty, true);
 
-        // One-letter words would tint nearly every label on the page - the slowest pass there is, for
-        // no benefit. They still filter cards; they just aren't highlighted.
+        // Only the card or row the reader chose is marked; the rest of the page stays as it is.
+        if (CardSearch.GetHighlightRoot(host) is not { } root) return;
+
+        // One-letter words would tint nearly every label in the row - the slowest pass there is, for
+        // no benefit. They still find cards; they just aren't highlighted.
         string[] highlightTerms = terms.Where(term => term.Length >= 2).ToArray();
-        if (highlightTerms.Length == 0)
-        {
-            host.ClearValue(MovePendingProperty);
-            return;
-        }
+        if (highlightTerms.Length == 0) return;
 
         // A search typed before leaving the page is still there on the way back; highlight it then.
         if (!host.IsVisible)
@@ -73,9 +63,7 @@ internal static class SearchHighlight
             }
 
             var adorners = new List<HighlightAdorner>();
-            TextBlock? firstBlock = null;
-            Rect firstRect = Rect.Empty;
-            foreach (TextBlock block in VisibleTextBlocks(host))
+            foreach (TextBlock block in VisibleTextBlocks(root))
             {
                 // Plain string check first: asking a TextBlock for text positions switches it to its
                 // slower rich-text form for good, so only blocks that actually match pay for that.
@@ -87,32 +75,13 @@ internal static class SearchHighlight
                 var adorner = new HighlightAdorner(block, highlightTerms, rects);
                 layer.Add(adorner);
                 adorners.Add(adorner);
-                if (firstBlock == null)
-                {
-                    firstBlock = block;
-                    firstRect = rects[0];
-                }
             }
             host.SetValue(AdornersProperty, adorners);
-
-            // Park the first match about a third of the way down unless it's already in the upper part
-            // of the view: just scrolled into view, it sits on the bottom edge and still reads as
-            // "somewhere below".
-            bool move = (bool)host.GetValue(MovePendingProperty);
-            host.ClearValue(MovePendingProperty);
-            if (move && firstBlock != null && host.Parent is ScrollViewer viewer && viewer.ViewportHeight > 0)
-            {
-                double y = firstBlock.TranslatePoint(firstRect.TopLeft, viewer).Y;
-                if (y < 0 || y > viewer.ViewportHeight * 0.6)
-                    viewer.ScrollToVerticalOffset(viewer.VerticalOffset + y - viewer.ViewportHeight / 3);
-            }
         }, DispatcherPriority.Loaded);
     }
 
     private static void WaitForVisible(Panel host)
     {
-        // Coming back to the page highlights where the reader left off, so nothing is left to move.
-        host.ClearValue(MovePendingProperty);
         if ((bool)host.GetValue(WaitingForVisibleProperty)) return;
         host.SetValue(WaitingForVisibleProperty, true);
         host.IsVisibleChanged += OnHostBecameVisible;
@@ -123,8 +92,8 @@ internal static class SearchHighlight
         if (sender is not Panel host || !host.IsVisible) return;
         host.IsVisibleChanged -= OnHostBecameVisible;
         host.SetValue(WaitingForVisibleProperty, false);
-        // Back on the page: highlight where the reader left off rather than jumping to the first match.
-        Refresh(host, CardSearch.SplitTerms(CardSearch.GetQuery(host)), moveToFirstMatch: false);
+        // Back on the page: mark the chosen row again.
+        Refresh(host, CardSearch.SplitTerms(CardSearch.GetQuery(host)));
     }
 
     private static void Clear(Panel host)
@@ -140,7 +109,7 @@ internal static class SearchHighlight
 
     /// <summary>Visible TextBlocks in on-screen order, skipping anything collapsed and the insides of
     /// text boxes (their placeholder text isn't something the search found).</summary>
-    private static IEnumerable<TextBlock> VisibleTextBlocks(DependencyObject root)
+    internal static IEnumerable<TextBlock> VisibleTextBlocks(DependencyObject root)
     {
         int count = VisualTreeHelper.GetChildrenCount(root);
         for (int i = 0; i < count; i++)
@@ -287,8 +256,14 @@ internal static class SearchHighlight
         protected override void OnRender(DrawingContext drawingContext)
         {
             if (!_block.IsVisible) return;
+            // A firm fill and an underline: the fill is translucent (it sits over the text), and alone it
+            // is easy to miss on a dark theme.
+            var line = new Pen(AppPalette.Brush("BrushGold"), 2);
             foreach (Rect rect in _rects)
+            {
                 drawingContext.DrawRoundedRectangle(Fill, null, rect, 2, 2);
+                drawingContext.DrawLine(line, new Point(rect.Left, rect.Bottom - 1), new Point(rect.Right, rect.Bottom - 1));
+            }
         }
     }
 }

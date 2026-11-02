@@ -17,7 +17,7 @@ What's wrong right now, each with a button to fix it. It's shown only when there
 
 ## Recent
 
-Everything TrayTrigger noted in the last 90 days, newest first. Older entries go by themselves; the Keep dropdown beside the search box makes that 15 days, 30 days or a year instead, and the heading says which. Clear History, next to it, empties the list after a confirmation; Needs Attention stays, since those are live problems, not history. Each row has a badge saying what kind it is: **CRITICAL** in solid red (your PC was left changed), **PROBLEM** in amber (something didn't do what you asked), **CHANGE** in blue and **ACTIVITY** in grey.
+Everything TrayTrigger noted in the last 90 days, newest first. Older entries go by themselves; the Keep dropdown beside the filter box makes that 15 days, 30 days or a year instead, and the heading says which. Clear History, next to it, empties the list after a confirmation; Needs Attention stays, since those are live problems, not history. Each row has a badge saying what kind it is: **CRITICAL** in solid red (your PC was left changed), **PROBLEM** in amber (something didn't do what you asked), **CHANGE** in blue and **ACTIVITY** in grey.
 
 - **Critical**: a setting a Performance Profile couldn't put back after a game, when TrayTrigger closed, or after it closed unexpectedly; and a damaged record of what a profile changed, so TrayTrigger can't tell what to put back - the entry says what to check by hand.
 
@@ -35,13 +35,13 @@ Each game you play is one row, "Played Elden Ring · 2h 17m", and it moves to th
 - **Scripts**: the pre-launch and post-exit scripts that ran, or were skipped, and why, and what a script said it did ("closed OneDrive and Discord"): any line it prints starting with TT: lands here.
 - **Tools**: what the Tools page did, and didn't: "Discord closed, opened again after · MSI Afterburner already running, left as it was · OneDrive wasn't running, nothing to close". Until your last game has exited it reads "closes after your last game", and if a tool then wouldn't close or couldn't be opened again the line says so, beside the problem row for it. The tools themselves don't get rows; the history is the game.
 
-The same thing happening again is one row too: a problem shows how many times (7 TIMES), and a setting you switched back and forth shows how often it changed ("changed 3 times"), and clicking a row shows each time, what it means, **Show in log** for the technical detail, and **Copy details** for a bug report, the whole launch record included. The tabs narrow the list to Problems, Changes or Activity, and the search box finds a game, a tool or what happened.
+The same thing happening again is one row too: a problem shows how many times (7 TIMES), and a setting you switched back and forth shows how often it changed ("changed 3 times"), and clicking a row shows each time, what it means, **Show in log** for the technical detail, and **Copy details** for a bug report, the whole launch record included. The tabs narrow the list to Problems, Changes or Activity, and the filter box finds a game, a tool or what happened.
 
 Right-click a row for more:
 
 - **Copy details** and **Copy this line**: the whole entry for a bug report, or just its one-line title to paste into a chat.
-- **Show only this game**: puts the row's game or tool in the search box, so the list shows only that.
-- **Open this game**: opens the game's Game Details on its Settings tab, when it is still in your library. Game Details' Last session card shows the newest of a game's Played rows, and its See this game in Activity link comes back here with the game's name in the search box.
+- **Show only this game**: puts the row's game or tool in the filter box, so the list shows only that.
+- **Open this game**: opens the game's Game Details on its Settings tab, when it is still in your library. Game Details' Last session card shows the newest of a game's Played rows, and its See this game in Activity link comes back here with the game's name in the filter box.
 - **Open the log**: opens debug.log in your editor. It opens the file, not the place the entry is in; the log is cleared and rolls over, so an old entry may have no lines left, and some lines only appear with Verbose logging on.
 - **Remove this entry**: after a confirmation, removes the row and every time it happened (a row that says 7 TIMES removes all seven). It isn't offered for a Critical row while its setting is still under Needs attention, because that is a PC left changed; once the setting is back, the row can go, even if an older entry in it was never marked FIXED. Only the entries the row shows go: with a search or tab narrowing the list, the times it hides stay. Removing can't be undone.
 

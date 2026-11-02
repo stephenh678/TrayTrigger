@@ -123,6 +123,7 @@ public class HelpContentServiceTests
     [InlineData("library/launch")]
     [InlineData("tools/overview")]
     [InlineData("tools/start_with_games")]
+    [InlineData("tools/filtering")]
     [InlineData("troubleshooting/logs")]
     [InlineData("troubleshooting/backup")]
     [InlineData("library/suspend")]

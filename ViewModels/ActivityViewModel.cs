@@ -268,6 +268,14 @@ public sealed class ActivityViewModel : ViewModelBase
         Remove: RemoveRow,
         IsStillNeedingAttention: key => _service.States.Any(s => string.Equals(s.Key, key, StringComparison.Ordinal)));
 
+    /// <summary>How many entries the filter would show for this text, on any tab: what the window's search offers as "Activity".</summary>
+    public int CountMatches(string? text)
+    {
+        string query = text?.Trim() ?? string.Empty;
+        if (query.Length == 0) return 0;
+        return _service.Entries.Count(e => Matches(e.Text, query) || Matches(e.Subject, query) || Matches(e.Detail, query));
+    }
+
     private static bool Matches(string? text, string query) =>
         text != null && text.Contains(query, StringComparison.CurrentCultureIgnoreCase);
 

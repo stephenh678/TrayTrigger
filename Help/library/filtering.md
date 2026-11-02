@@ -1,11 +1,11 @@
 # Filtering the library
 
-The filter button sits beside the sort box in the library toolbar, under the standard filter icon. It narrows what the list shows without changing anything about your games.
+The filter button sits beside the sort box in the library toolbar, under the standard filter icon. It narrows what the list shows without changing anything about your games. The Tools page has the same flyout with the options that are true of a tool; see Filtering tools.
 
-## How it relates to the tabs and the search box
+## How it relates to the tabs and the filter box
 
 - The category tabs are your own labels for your games, and stay the primary cut. The filter works inside whichever tab is selected.
-- The search box is a text match on title, category, and path.
+- The filter box is a text match on title, category, and path.
 - All three apply together. On the RPG tab, with "steam" typed and the Steam filter on, you see RPG games from Steam whose title, category, or path contains "steam".
 
 ## What you can filter on
@@ -48,7 +48,7 @@ The other groups have no opposite. They are choices between values, so ticking t
 
 The Saved section at the top of the flyout keeps combinations you use again.
 
-- **Save current...** names the ticks on screen and saves them. Only the ticks are saved: the category tab and the search box are not, so a saved filter works on any tab. Saving under a name you already used asks first, showing what is saved and what you are about to save, and then replaces it.
+- **Save current...** names the ticks on screen and saves them. Only the ticks are saved: the category tab and the filter box are not, so a saved filter works on any tab. Saving under a name you already used asks first, showing what is saved and what you are about to save, and then replaces it.
 - Pressing a saved filter puts exactly its ticks, opposites included, on screen, replacing the ones there. It shows a check while the ticks on screen match it. Change a tick and it reads "edited"; **Save current...** under the same name saves the change.
 - The x beside a saved filter deletes it, after asking. Your games are not affected.
 - A saved launcher that has left your library is skipped when you apply the filter.

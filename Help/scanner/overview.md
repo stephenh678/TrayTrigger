@@ -36,7 +36,7 @@ A game you uninstall stays in your library, so its playtime, hotkey, scripts and
 - **NOT INSTALLED** - a launcher game (Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net) that its own launcher no longer has. Reinstall it there and the tag goes on the next scan.
 - **MISSING** - a game you added yourself, by drop or by folder scan, whose file isn't where TrayTrigger left it. It may only have moved, so right-click it and choose "Locate Executable..." to point it at the new place.
 
-The check runs at startup and on every scan. Play still works on a tagged game: for a Steam game it offers to open it in Steam, where you can reinstall it, and for the rest it says which launcher to reinstall from. To find them all at once, open the filter beside the search box and tick "Not installed" or "Executable missing" - from there you can select the ones you won't reinstall and remove them together.
+The check runs at startup and on every scan. Play still works on a tagged game: for a Steam game it offers to open it in Steam, where you can reinstall it, and for the rest it says which launcher to reinstall from. To find them all at once, open the filter beside the filter box and tick "Not installed" or "Executable missing" - from there you can select the ones you won't reinstall and remove them together.
 
 A game is only tagged when its launcher was read in full and doesn't list it. If a launcher isn't installed, or a game sits on a drive that isn't plugged in, nothing is tagged - an external drive that's asleep is not an uninstall.
 

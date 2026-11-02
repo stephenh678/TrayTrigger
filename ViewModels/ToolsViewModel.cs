@@ -49,11 +49,22 @@ public sealed class ToolsViewModel : ViewModelBase
         _settings = settings;
         _selectedCategory = string.IsNullOrWhiteSpace(settings.LastToolsCategoryTab) ? LibraryConstants.AllCategory : settings.LastToolsCategoryTab;
 
+        Filter = new ToolFilterViewModel(OnFilterChanged,
+            saved: settings.SavedToolFilters,
+            onSavedChanged: filters =>
+            {
+                _settings.SavedToolFilters = filters.ToList();
+                SaveSettings();
+            });
+        Filter.RestoreKeys(settings.ToolFilterKeys);
+        Filter.CountProvider = CountForFilterSummary;
+
         FilteredTools = new ListCollectionView(Tools)
         {
             Filter = item => item is ToolCardViewModel card
                 && ToolCatalog.IsInTab(card.Tool, SelectedCategory)
-                && ToolCatalog.MatchesSearch(card.Tool, SearchText),
+                && ToolCatalog.MatchesSearch(card.Tool, SearchText)
+                && Filter.Matches(card),
             CustomSort = new CardComparer(this)
         };
 
@@ -66,6 +77,41 @@ public sealed class ToolsViewModel : ViewModelBase
     // ------------------------------------------------------------------ collections & state
 
     public ObservableCollection<ToolCardViewModel> Tools { get; } = new();
+
+    /// <summary>The toolbar's filter flyout: kind and per-tool state. Runs on top of the category tabs and the filter box, never instead of them.</summary>
+    public ToolFilterViewModel Filter { get; }
+
+    private void OnFilterChanged()
+    {
+        RefreshView();
+        // A selection made under one filter must not be acted on invisibly under another.
+        SelectionClearRequested?.Invoke();
+        _settings.ToolFilterKeys = Filter.ActiveKeys();
+        SaveSettings();
+    }
+
+    /// <summary>"Showing 3 of 9": the tools the tab and the box would show, and how many of them the ticks keep.</summary>
+    private (int Shown, int InView) CountForFilterSummary()
+    {
+        int inView = 0, shown = 0;
+        foreach (var card in Tools)
+        {
+            if (!ToolCatalog.IsInTab(card.Tool, SelectedCategory) || !ToolCatalog.MatchesSearch(card.Tool, SearchText)) continue;
+            inView++;
+            if (Filter.Matches(card)) shown++;
+        }
+        return (shown, inView);
+    }
+
+    /// <summary>
+    /// True when the list is empty only because of the filter flyout: there are tools and the tab and box
+    /// would show some, but a tick box is hiding them. Drives the "Clear filters" button in the empty
+    /// state, so a filter kept from an earlier run can never read as tools that went missing.
+    /// </summary>
+    public bool IsEmptyBecauseOfFilters => HasAnyTools && Filter.HasActiveFilters && IsFilteredEmpty;
+
+    /// <summary>Clears every filter tick: the empty state's escape hatch and the flyout's button.</summary>
+    public void ClearFilters() => Filter.ClearAll();
     public ICollectionView FilteredTools { get; }
     public ObservableCollection<CategoryTabItem> CategoryTabs { get; } = new();
 
@@ -171,6 +217,7 @@ public sealed class ToolsViewModel : ViewModelBase
     public bool IsFilteredEmpty => FilteredTools.IsEmpty;
     public bool ShowEmptyLibrary => !HasAnyTools;
     public bool ShowFavoritesEmpty => HasAnyTools && IsFilteredEmpty && SearchText.Trim().Length == 0
+        && !Filter.HasActiveFilters
         && string.Equals(SelectedCategory, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
     public bool ShowNoMatches => HasAnyTools && IsFilteredEmpty && !ShowFavoritesEmpty;
     public bool ShowListHeader => IsListView && !IsFilteredEmpty;
@@ -206,6 +253,7 @@ public sealed class ToolsViewModel : ViewModelBase
         }
         TakeSnapshot();
         RebuildTabs();
+        Filter.RefreshAvailability(Tools);
         RefreshView();
         if (!string.IsNullOrWhiteSpace(_storage.ToolsLoadWarning))
         {
@@ -222,6 +270,7 @@ public sealed class ToolsViewModel : ViewModelBase
             Tools.Add(new ToolCardViewModel(tool, this));
         }
         RebuildTabs();
+        Filter.RefreshAvailability(Tools);
         RefreshView();
         OnPropertyChanged(string.Empty);
     }
@@ -235,6 +284,7 @@ public sealed class ToolsViewModel : ViewModelBase
     {
         TakeSnapshot();
         RebuildTabs();
+        Filter.RefreshAvailability(Tools);
         RefreshView();
         Save();
         if (status != null) StatusMessage = status;
@@ -277,6 +327,7 @@ public sealed class ToolsViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowEmptyLibrary));
         OnPropertyChanged(nameof(ShowFavoritesEmpty));
         OnPropertyChanged(nameof(ShowNoMatches));
+        OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
         OnPropertyChanged(nameof(ShowListHeader));
         OnPropertyChanged(nameof(ToolCountDisplay));
     }

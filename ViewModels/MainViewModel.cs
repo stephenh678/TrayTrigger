@@ -324,6 +324,10 @@ public class MainViewModel : ViewModelBase
         });
         SelectAboutCommand = new RelayCommand(() => CurrentSection = NavSection.About);
         SelectActivityCommand = new RelayCommand(() => CurrentSection = NavSection.Activity);
+        GoToAboutTabCommand = new RelayCommand(tab =>
+        {
+            if (tab is AboutSubSection target && CurrentAboutSection != AboutSubSection.All) CurrentAboutSection = target;
+        });
         SelectAboutAllTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.All);
         SelectAboutOverviewTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Overview);
         SelectAboutFeaturesTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Features);
@@ -502,8 +506,51 @@ public class MainViewModel : ViewModelBase
                 {
                     SettingsVM.ReconcileStartWithWindows();
                 }
+
+                ResetPageOnLeave(prev);
             }
         }
+    }
+
+    /// <summary>Raised after a searchable page has been left and reset, so the window can send it back to the top.</summary>
+    public event Action<NavSection>? PageLeft;
+
+    /// <summary>
+    /// A page with a search or filter is left as a clean one: no text in the box. Settings, About and System
+    /// (the pages with tabs) also go back on All and, the window's part, scroll to the top. A search or filter
+    /// is a quick lookup, so it doesn't wait for you; coming back by the sidebar opens the page afresh. A link
+    /// that sends you to a page sets its text after this, as it comes in. The category tab, sort and view
+    /// mode are settings you chose, not a lookup, and stay.
+    /// </summary>
+    private void ResetPageOnLeave(NavSection page)
+    {
+        switch (page)
+        {
+            case NavSection.Settings:
+                SettingsVM.SettingsSearchText = string.Empty;
+                SettingsVM.SelectedTab = SettingsCategoryTab.All;
+                break;
+            case NavSection.About:
+                AboutSearchText = string.Empty;
+                CurrentAboutSection = AboutSubSection.All;
+                break;
+            case NavSection.System:
+                SystemVM.SystemSearchText = string.Empty;
+                SystemVM.CurrentSubSection = SystemSubSection.All;
+                break;
+            case NavSection.Library:
+                if (SearchText.Length > 0) SearchText = string.Empty;
+                return;
+            case NavSection.Tools:
+                if (Tools.SearchText.Length > 0) Tools.SearchText = string.Empty;
+                return;
+            case NavSection.Activity:
+                if (ActivityVM.SearchText.Length > 0) ActivityVM.SearchText = string.Empty;
+                return;
+            default:
+                return;
+        }
+        PageLeft?.Invoke(page);
     }
 
     public bool IsLibraryView => CurrentSection == NavSection.Library;
@@ -590,6 +637,8 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Search results take About to a card's tab (see Views/CardSearch); on All the card is already on screen.</summary>
+    public ICommand GoToAboutTabCommand { get; }
     public ICommand SelectAboutAllTabCommand { get; }
     public ICommand SelectAboutOverviewTabCommand { get; }
     public ICommand SelectAboutFeaturesTabCommand { get; }

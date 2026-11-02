@@ -22,6 +22,12 @@ public partial class SettingsView : UserControl
     /// <summary>The page's card search box, for the window's Ctrl+F / Escape handling.</summary>
     public SearchBox PageSearchBox => SettingsSearchBox;
 
+    /// <summary>The panel of the page's sections, which the window's search reads (<see cref="CardSearch"/>).</summary>
+    internal System.Windows.Controls.Panel CardsPanel => SettingsCardsPanel;
+
+    /// <summary>Back to the top, for when the page has been left.</summary>
+    internal void ScrollToTop() => SettingsScroll.ScrollToTop();
+
     /// <summary>
     /// The undo toast is held while the pointer is over it or keyboard focus is inside it, and its
     /// 10-second window pauses. Also re-read when the toast shows or hides: a hidden toast can keep

@@ -4,6 +4,10 @@ Tools is an optional page for the programs you use alongside your games: DLSS Sw
 
 A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched, and none of the game features apply: no Performance Profile, no scripts, no playtime and no launcher detection.
 
+## Finding a tool
+
+The filter box above the list narrows it by name, category or path, the tabs split it by category, and the filter button beside Sort narrows it by what a tool is and what it does: a program, a script or a Store app, a favorite, a hotkey, run as administrator, starts or closes with games, a missing file. It works exactly as the Library's does, with saved filters and "opposite" ticks. See Filtering tools.
+
 ## Adding a tool
 
 - Drop a program (.exe), a script (.bat, .cmd, .ps1), a shortcut (.lnk), or an app dragged from Browse Apps anywhere on the Tools page, or use Add Tool. You can add several at once.

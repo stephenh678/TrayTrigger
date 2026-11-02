@@ -25,6 +25,25 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = _viewModel;
 
+        // A searchable page that has been left (and reset to its All tab) is sent back to the top.
+        _viewModel.PageLeft += page =>
+        {
+            switch (page)
+            {
+                case NavSection.Settings: SettingsPage.ScrollToTop(); break;
+                case NavSection.About: AboutPage.ScrollToTop(); break;
+                case NavSection.System: SystemPage.ScrollToTop(); break;
+            }
+        };
+
+        SearchOverlay.Search = RunGlobalSearch;
+        SearchOverlay.Chosen = ChooseGlobalHit;
+        // The pages the search reads are laid out once, when the window is idle after it first shows, so
+        // their list rows exist to be found from any page.
+        ContentRendered += (_, _) => Dispatcher.BeginInvoke(RealizeSearchPages, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        // A search left open when the window goes to the tray isn't there when it comes back.
+        IsVisibleChanged += (_, _) => { if (!IsVisible) SearchOverlay.Close(restoreFocus: false); };
+
         // The theme's picture is held only while the window is on screen: loaded when it first shows, let go when it hides to the tray.
         IsVisibleChanged += (_, _) => ThemeService.Instance.WindowShown = IsVisible;
 
@@ -353,8 +372,8 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Library shortcuts documented in the About page's Quick Reference: Ctrl+F jumps focus
-    /// to the search box, Escape clears an active search filter. Settings, About and System get the
-    /// same pair for their card search - Ctrl+F here, Escape in <see cref="Window_KeyDown"/>; everything
+    /// to the filter box, Escape clears an active filter. Activity gets the same pair, and Settings,
+    /// About and System get them for their card search - Ctrl+F here, Escape in <see cref="Window_KeyDown"/>; everything
     /// else is a no-op outside those sections so it doesn't steal keystrokes.
     ///
     /// <para>Tools gets the library's set, rule for rule, because a page of things you select and
@@ -366,6 +385,25 @@ public partial class MainWindow : Window
     /// </summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // Ctrl+K is the window's search, from any page (Ctrl+F stays each page's own box). Not while a hotkey
+        // is being recorded: that box is waiting to hear exactly this chord.
+        if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control && !FocusIsInHotkeyBox())
+        {
+            if (SearchOverlay.IsOpen) SearchOverlay.FocusBox();
+            else OpenGlobalSearch();
+            e.Handled = true;
+            return;
+        }
+        // With the search open the keys are its own; Escape closes it before a page spends it on a selection.
+        if (SearchOverlay.IsOpen)
+        {
+            if (e.Key == Key.Escape)
+            {
+                SearchOverlay.Close();
+                e.Handled = true;
+            }
+            return;
+        }
         if (CurrentPageSearchBox is { } pageSearch)
         {
             if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
@@ -379,6 +417,8 @@ public partial class MainWindow : Window
         {
             var tools = _viewModel.Tools;
             bool inTextBox = Keyboard.FocusedElement is System.Windows.Controls.TextBox;
+            // Escape inside the open filter flyout is the flyout's, as on the Library page.
+            if (e.Key == Key.Escape && ToolsPage.IsFilterFlyoutOpen) return;
             if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 ToolsPage.FocusSearchBox();
@@ -405,6 +445,20 @@ public partial class MainWindow : Window
             else if (e.Key == Key.Escape && !string.IsNullOrEmpty(tools.SearchText))
             {
                 tools.SearchText = string.Empty;
+                e.Handled = true;
+            }
+            return;
+        }
+        if (_viewModel.CurrentSection == NavSection.Activity)
+        {
+            if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                ActivityPage.FocusSearchBox();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && !string.IsNullOrEmpty(_viewModel.ActivityVM.SearchText))
+            {
+                _viewModel.ActivityVM.SearchText = string.Empty;
                 e.Handled = true;
             }
             return;
@@ -447,6 +501,139 @@ public partial class MainWindow : Window
         }
     }
 
+    private bool FocusIsInHotkeyBox()
+    {
+        for (DependencyObject? up = Keyboard.FocusedElement as DependencyObject; up != null; up = up is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(up) : LogicalTreeHelper.GetParent(up))
+        {
+            if (up is HotkeyRecorderBox) return true;
+        }
+        return false;
+    }
+
+#if DEBUG
+    internal bool GlobalSearchIsOpen => SearchOverlay.IsOpen;
+    internal void SetGlobalSearchText(string text) => SearchOverlay.SetQuery(text);
+#endif
+
+    private void OnSearchButtonClick(object sender, RoutedEventArgs e) => OpenGlobalSearch();
+
+    /// <summary>Opens the window's search over the page on screen.</summary>
+    internal void OpenGlobalSearch(string? query = null)
+    {
+        RealizeSearchPages();
+        SearchOverlay.Open();
+        if (query != null) SearchOverlay.SetQuery(query);
+    }
+
+    private bool _searchPagesRealized;
+    private long _searchPagesLayoutMs;
+
+    /// <summary>
+    /// Lays out Settings, System and About once so the rows their lists generate (a help topic, a tweak) exist
+    /// to be read, whichever page is on screen. Done in one go on the UI thread - shown for no frame - and
+    /// only the first time. A page the user is looking at is left alone.
+    /// </summary>
+    private void RealizeSearchPages()
+    {
+        if (_searchPagesRealized) return;
+        _searchPagesRealized = true;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var host in new[] { SettingsPageHost, AboutPageHost, SystemPageHost })
+        {
+            if (host.Visibility == Visibility.Visible) continue;
+            host.Visibility = Visibility.Visible;
+            host.Opacity = 0;
+            host.UpdateLayout();
+            host.ClearValue(UIElement.VisibilityProperty);
+            host.ClearValue(UIElement.OpacityProperty);
+        }
+        _searchPagesLayoutMs = timer.ElapsedMilliseconds;
+        LoggingService.Verbose("MainWindow", $"Search pages laid out in {_searchPagesLayoutMs} ms");
+    }
+
+    private IReadOnlyList<GlobalGroup> RunGlobalSearch(string query) => GlobalSearch.Find(
+        query,
+        games: _viewModel.Games.Where(c => !c.Game.IsHidden).Select(c => new NamedItem(c.Name, c.Category, c)),
+        tools: _viewModel.IsToolsEnabled ? _viewModel.Tools.Tools.Select(c => new NamedItem(c.Name, c.Category, c)) : [],
+        settings: SettingsPage.CardsPanel,
+        system: SystemPage.CardsPanel,
+        about: AboutPage.CardsPanel,
+        activityMatches: _viewModel.ActivityVM.CountMatches(query));
+
+#if DEBUG
+    /// <summary>For dev checks: what the search lists for a query, and where choosing the first line of each group lands.</summary>
+    internal List<string> DescribeGlobalSearch(string query)
+    {
+        var lines = new List<string>();
+        RealizeSearchPages();
+        lines.Add($"pages laid out in {_searchPagesLayoutMs} ms");
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var groups = RunGlobalSearch(query);
+        lines.Add($"search ran in {timer.ElapsedMilliseconds} ms");
+        foreach (var group in groups)
+        {
+            lines.Add($"[{group.Name}]");
+            foreach (var hit in group.Hits)
+                lines.Add($"  {hit.Kind}: {hit.Title} | {hit.Detail}" + (hit.Snippet.Length > 0 ? $" | {hit.Snippet}" : string.Empty));
+        }
+        foreach (var group in groups.Where(g => g.Hits[0].Kind != GlobalHitKind.Game))
+        {
+            _viewModel.CurrentSection = NavSection.Library;
+            ChooseGlobalHit(group.Hits[0], query);
+            Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+            lines.Add($"choose {group.Name}: section={_viewModel.CurrentSection}, settingsTab={_viewModel.SettingsVM.SelectedTab}, "
+                + $"settingsText='{_viewModel.SettingsVM.SettingsSearchText}', aboutTab={_viewModel.CurrentAboutSection}, systemTab={_viewModel.SystemVM.CurrentSubSection}, "
+                + $"toolsSelected={_viewModel.Tools.SelectedTools.Count}, librarySearch='{_viewModel.SearchText}', activitySearch='{_viewModel.ActivityVM.SearchText}'");
+        }
+        return lines;
+    }
+#endif
+
+    /// <summary>Goes where a result points: a game opens its Game Details, a tool is selected on Tools, a card is shown on its page, tab and row.</summary>
+    private void ChooseGlobalHit(GlobalHit hit, string query)
+    {
+        switch (hit.Kind)
+        {
+            case GlobalHitKind.Game when hit.Target is GameCardViewModel game:
+                _viewModel.OpenGameDetails(game);
+                break;
+            case GlobalHitKind.MoreGames:
+                // "Every game matching": the whole library, so the tab and the attribute filters are put aside.
+                _viewModel.CurrentSection = NavSection.Library;
+                _viewModel.Library.SelectCategoryTab(LibraryConstants.AllCategory);
+                _viewModel.Library.ClearFilters();
+                _viewModel.SearchText = query;
+                break;
+            case GlobalHitKind.Tool when hit.Target is ToolCardViewModel tool:
+                _viewModel.CurrentSection = NavSection.Tools;
+                _viewModel.Tools.SearchText = string.Empty;
+                _viewModel.Tools.ClearFilters();
+                _viewModel.Tools.SelectedCategory = LibraryConstants.AllCategory;
+                ToolsPage.ShowTool(tool);
+                break;
+            case GlobalHitKind.Activity:
+                _viewModel.ActivityVM.Tab = ActivityTab.All;
+                _viewModel.ActivityVM.SearchText = query;
+                _viewModel.CurrentSection = NavSection.Activity;
+                break;
+            case GlobalHitKind.Setting when hit.Target is CardHit card:
+                _viewModel.CurrentSection = NavSection.Settings;
+                _viewModel.SettingsVM.SettingsSearchText = query;
+                CardSearch.GoTo(card);
+                break;
+            case GlobalHitKind.System when hit.Target is CardHit card:
+                _viewModel.CurrentSection = NavSection.System;
+                _viewModel.SystemVM.SystemSearchText = query;
+                CardSearch.GoTo(card);
+                break;
+            case GlobalHitKind.About when hit.Target is CardHit card:
+                _viewModel.CurrentSection = NavSection.About;
+                _viewModel.AboutSearchText = query;
+                CardSearch.GoTo(card);
+                break;
+        }
+    }
+
     /// <summary>The search box of the page on screen, when that page has one.</summary>
     private SearchBox? CurrentPageSearchBox => _viewModel.CurrentSection switch
     {
@@ -455,6 +642,26 @@ public partial class MainWindow : Window
         NavSection.System => SystemPage.PageSearchBox,
         _ => null,
     };
+
+#if DEBUG
+    /// <summary>For dev captures: types into the current page's search box with the cursor in it, so its results list opens.</summary>
+    internal void TypeInPageSearch(string query)
+    {
+        if (CurrentPageSearchBox is not { } box) return;
+        Activate();
+        box.FocusBox();
+        box.Text = query;
+        box.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+    }
+
+    /// <summary>Dev captures: shows the page search's best match as picking it from the list would
+    /// (the list is a popup, which a capture of the window doesn't include).</summary>
+    internal void ChooseFirstSearchResult()
+    {
+        if (CurrentPageSearchBox is { ResultsHost: { } host } box && CardSearch.Find(host, box.Text).FirstOrDefault() is { } hit)
+            CardSearch.GoTo(hit);
+    }
+#endif
 
     /// <summary>
     /// Escape clears the page's search. Handled here, bubbling, rather than in Window_PreviewKeyDown, so

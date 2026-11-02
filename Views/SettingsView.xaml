@@ -127,13 +127,15 @@
              and the box sits beside it, exactly as before; only when the six tabs no longer fit
              (a 720px window) does the strip start scrolling behind its edge chevrons. -->
         <DockPanel Grid.Row="1" Margin="0,0,0,16" HorizontalAlignment="Left" KeyboardNavigation.TabNavigation="Local">
-        <!-- Card search (Views/CardSearch, Views/SearchBox), on every tab: it searches the selected
-             tab and the text stays as you switch tabs (SettingsViewModel.SettingsSearchText). -->
+        <!-- Card search (Views/CardSearch, Views/SearchBox), on every tab: a dropdown of matching cards
+             from every tab, and the text stays as you switch tabs (SettingsViewModel.SettingsSearchText). -->
         <!-- Docked first so it keeps its width, but still second in the tab order, as it
              reads on screen. -->
         <views:SearchBox x:Name="SettingsSearchBox" DockPanel.Dock="Right" HorizontalAlignment="Left" Margin="12,0,0,0"
+                         ResultsHost="{Binding ElementName=SettingsCardsPanel}"
                          KeyboardNavigation.TabIndex="1"
-                         Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
+                         Text="{Binding SettingsSearchText}" Placeholder="Search settings..."
+                         NoResultsHint="Search everything (Ctrl+K) looks in every page."/>
         <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                 BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" HorizontalAlignment="Left" VerticalAlignment="Center"
                 KeyboardNavigation.TabIndex="0" KeyboardNavigation.TabNavigation="Local"
@@ -162,12 +164,14 @@
                       views:ScrollToTop.ResetOn="{Binding SelectedTab}">
             <StackPanel x:Name="SettingsCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
                         views:CardSearch.Query="{Binding SettingsSearchText}"
+                        views:CardSearch.GoTo="{Binding GoToTabCommand}"
                         views:CardSearch.Scope="{Binding SelectedTab}">
 
                 <!-- ============================================== -->
                 <!-- CATEGORY 1: GENERAL                            -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowGeneralSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowGeneralSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SettingsCategoryTab.General}" views:CardSearch.TabLabel="General">
                     <!-- Section Header (shown in All Settings view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -512,7 +516,8 @@
                 <!-- ============================================== -->
                 <!-- CATEGORY 2: LIBRARY & ART                      -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowLibrarySection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowLibrarySection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SettingsCategoryTab.Library}" views:CardSearch.TabLabel="Library &amp; Art">
                     <!-- Section Header (shown in All Settings view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -958,7 +963,8 @@
                 <!-- ============================================== -->
                 <!-- CATEGORY 3: TRAY MENU                          -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowTrayMenuSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowTrayMenuSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SettingsCategoryTab.TrayMenu}" views:CardSearch.TabLabel="Tray Menu">
                     <!-- Section Header (shown in All Settings view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -1103,7 +1109,8 @@
                 <!-- ============================================== -->
                 <!-- CATEGORY 4: LAUNCH & PERFORMANCE               -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowPerformanceTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowPerformanceTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SettingsCategoryTab.PerformanceTweaks}" views:CardSearch.TabLabel="Launch &amp; Performance">
                     <!-- Section Header (shown in All Settings view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -1387,7 +1394,8 @@
                 <!-- ============================================== -->
                 <!-- CATEGORY 5: DIAGNOSTICS & STORAGE              -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowDiagnosticsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                <StackPanel Visibility="{Binding ShowDiagnosticsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SettingsCategoryTab.Diagnostics}" views:CardSearch.TabLabel="Diagnostics &amp; Storage">
                     <!-- Section Header (shown in All Settings view) -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
@@ -1586,9 +1594,6 @@
 
             </StackPanel>
         </ScrollViewer>
-
-        <!-- Card search found nothing. -->
-        <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SettingsCardsPanel}" Title="No settings match"/>
 
         <!-- Settings status line. SettingsViewModel.StatusMessage was previously bound
              nowhere (the Library status bar is collapsed while Settings is shown), so
