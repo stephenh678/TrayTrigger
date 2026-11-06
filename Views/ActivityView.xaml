@@ -202,7 +202,7 @@
                                                     <Border Style="{StaticResource CriticalTag}" Visibility="{Binding IsCritical, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xEA39;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextOnSolid}" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                                            <TextBlock Text="CRITICAL" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushTextOnSolid}" VerticalAlignment="Center"/>
+                                                            <TextBlock Style="{StaticResource BadgeText}" Text="CRITICAL" Foreground="{DynamicResource BrushTextOnSolid}" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Border>
                                                 </StackPanel>
@@ -264,7 +264,7 @@
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="{Binding LevelGlyph}" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}"
                                                                        Foreground="{Binding LevelForeground}" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                                            <TextBlock Text="{Binding LevelTag}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
+                                                            <TextBlock Style="{StaticResource BadgeText}" Text="{Binding LevelTag}"
                                                                        Foreground="{Binding LevelForeground}" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Border>
@@ -273,11 +273,11 @@
                                                             Visibility="{Binding IsFixed, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextOnSolid}" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                                            <TextBlock Text="FIXED" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushTextOnSolid}" VerticalAlignment="Center"/>
+                                                            <TextBlock Style="{StaticResource BadgeText}" Text="FIXED" Foreground="{DynamicResource BrushTextOnSolid}" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Border>
                                                     <Border Style="{StaticResource CountTag}" Visibility="{Binding ShowCountTag, Converter={StaticResource BoolToVis}}">
-                                                        <TextBlock Text="{Binding CountTag}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                        <TextBlock Style="{StaticResource BadgeText}" Text="{Binding CountTag}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                                     </Border>
                                                     <TextBlock Text="{Binding QuietCount}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0,0,0"
                                                                VerticalAlignment="Center" Visibility="{Binding ShowQuietCount, Converter={StaticResource BoolToVis}}"/>

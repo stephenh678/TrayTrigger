@@ -58,7 +58,7 @@ Both sources are searched by the game's name, and the result whose title is clos
 
 - The window title shows which Steam listing or RAWG entry the game matched. Point at "Change Match" to see the Steam App ID it used.
 - If it matched the wrong game, or nothing was found, click "Change Match", search by title, and pick the right entry. The pick is remembered for the game.
-- Changing the Steam match sets the game's Steam App ID, so its title details, genre and poster art follow the new listing. This is the same as Change Match... in Edit Game's Online match card. How the game launches does not change.
+- Changing the Steam match sets the game's Steam App ID, so its title details, genre and poster art follow the new listing. This is the same as Change Match... in Edit Game's Online Match card. How the game launches does not change.
 - Changing the RAWG match updates the RAWG text and, if the game is still Uncategorized, its category.
 
 ## How fresh the info is

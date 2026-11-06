@@ -1299,9 +1299,13 @@
         <!-- Tray Context Menu Section Header (Non-interactive) -->
         <!-- A non-interactive label inside a menu. Used for the tray menu's section headings and
              for the batch context menu's selection count. -->
-        <!-- Text roles, so a heading looks the same on every page (WordingGuardTests keeps them in use).
+        <!-- Text roles, so the same kind of text looks the same on every page (WordingGuardTests keeps them in use).
              SectionLabel: a page section's capitalised header, in the accent, with its icon (HARDWARE SPECS, GENERAL).
-             CardLabel: a capitalised heading inside a card or a dialog panel (ABOUT THE GAME, DETAILS). -->
+             CardLabel: a heading inside a card or a dialog panel (ABOUT THE GAME, DETAILS, User Data &amp; Settings).
+             CardTitle: a card's title (Appearance, Identity &amp; Library, Display &amp; Input), Title Case.
+             StrongText: body text that stands out - a value, a setting's name in a row, a count.
+             FieldLabel: a capitalised label over a value or a column (WINDOWS, DATA FOLDER, HOTKEY).
+             BadgeText: the words in a badge or a key cap (CRITICAL, MISSING, Ctrl+K); the badge sets the colour. -->
         <Style x:Key="SectionLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -1311,6 +1315,26 @@
             <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+        </Style>
+
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeSubhead}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        </Style>
+        <Style x:Key="StrongText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+        </Style>
+        <Style x:Key="BadgeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBadge}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
         <Style x:Key="MenuSectionHeaderStyle" TargetType="MenuItem">

@@ -82,8 +82,7 @@
                             </Button.Style>
                         </Button>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding ActiveFilterSummary}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}"/>
+                            <TextBlock Style="{StaticResource StrongText}" Text="{Binding ActiveFilterSummary}"/>
                             <TextBlock Text="{Binding ResultSummary}" FontSize="{DynamicResource FontSizeBody}"
                                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
                         </StackPanel>

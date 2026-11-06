@@ -60,7 +60,7 @@ public partial class GameEditViewModel
         var search = new SteamSearchService();
         var dialog = new Views.GameMatchPickerDialog(
             "Change Steam Match",
-            $"Pick the Steam store listing for “{Name}”. What is ticked under Online match is replaced with what it has.",
+            $"Pick the Steam store listing for “{Name}”. What is ticked under Online Match is replaced with what it has.",
             Name,
             HasMatch ? SteamAppId!.Trim() : null,
             async (query, ct) =>

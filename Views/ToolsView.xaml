@@ -158,7 +158,7 @@
                                    Foreground="{DynamicResource BrushTextPrimary}" TextAlignment="Center"
                                    TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Center" Margin="0,3,0,0">
-                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="MISSING" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
                         </Border>
                     </StackPanel>
                 </Grid>
@@ -187,7 +187,7 @@
                         <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontFamily="{DynamicResource AppFont}"
                                    Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Left" Margin="0,2,0,0">
-                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="MISSING" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
                         </Border>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -230,14 +230,13 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,6,0"
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
-                        <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" FontFamily="{DynamicResource AppFont}"
-                                   Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         <TextBlock Style="{StaticResource ToolGameGlyph}" Margin="8,0,0,0"/>
                         <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="8,0,0,0"
                                    Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                         <Border Style="{StaticResource ToolMissingBadge}" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="MISSING" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
                         </Border>
                     </StackPanel>
 
@@ -394,14 +393,10 @@
                         <ColumnDefinition Width="3*"/>
                         <ColumnDefinition Width="120"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="1" Text="TOOL" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="2" Text="CATEGORY" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="3" Text="PROGRAM" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="4" Text="HOTKEY" FontFamily="{DynamicResource AppFont}"/>
                 </Grid>
             </Border>
 

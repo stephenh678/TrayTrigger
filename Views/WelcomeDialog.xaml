@@ -53,8 +53,7 @@
                        RenderOptions.BitmapScalingMode="HighQuality"/>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="StepText" Text="GETTING STARTED · STEP 1 OF 2" FontSize="{DynamicResource FontSizeBody}" FontWeight="Bold"
-                               Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,3"/>
+                    <TextBlock Style="{StaticResource SectionLabel}" x:Name="StepText" Text="GETTING STARTED · STEP 1 OF 2" Margin="0,0,0,3"/>
                     <!-- The wordmark: "Trigger" in the logo's blue. Runs on one line, so no space creeps in. -->
                     <TextBlock FontSize="{DynamicResource FontSizeTitle}" FontWeight="SemiBold"
                                Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"><Run Text="Welcome to Tray"/><Run Text="Trigger" Foreground="{DynamicResource BrushBrand}"/></TextBlock>

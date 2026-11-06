@@ -1078,9 +1078,8 @@
                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                </Border>
 
-                                                               <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" 
-                                                                          Foreground="{DynamicResource BrushTextPrimary}" 
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"
+                                                               <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}" 
+                                                                          FontFamily="{DynamicResource AppFont}"
                                                                           TextAlignment="Center" TextTrimming="CharacterEllipsis" 
                                                                           MaxWidth="160" HorizontalAlignment="Center"/>
 
@@ -1098,7 +1097,7 @@
                                                                            </Style.Triggers>
                                                                        </Style>
                                                                    </Border.Style>
-                                                                   <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="{Binding PlayingTagText}" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
                                                                </Border>
                                                            </StackPanel>
 
@@ -1345,7 +1344,7 @@
                                                                                </Style.Triggers>
                                                                            </Style>
                                                                        </Border.Style>
-                                                                       <TextBlock Text="HIDDEN" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
+                                                                       <TextBlock Style="{StaticResource BadgeText}" Text="HIDDEN"
                                                                                   Foreground="{DynamicResource BrushTextSoft}"
                                                                                   FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
                                                                    </Border>
@@ -1382,7 +1381,7 @@
                                                                    </Style.Triggers>
                                                                </Style>
                                                            </Border.Style>
-                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
+                                                           <TextBlock Style="{StaticResource BadgeText}" Text="{Binding PlayingTagText}" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
                                                        </Border>
 
                                                        <!-- 4. Hover Play Button Overlay. Not focusable: it shows only while the
@@ -1631,7 +1630,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="STEAM" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="STEAM" Foreground="{DynamicResource BrushAccentText}"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1648,7 +1647,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="GOG" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="GOG" Foreground="{DynamicResource BrushBadgePurple}"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1665,7 +1664,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="EA" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="EA" Foreground="{DynamicResource BrushSuccessText}"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1682,7 +1681,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="EPIC" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="EPIC" Foreground="{DynamicResource BrushTextPrimary}"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1699,7 +1698,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="UBI" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="UBI" Foreground="{DynamicResource BrushGold}"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1716,7 +1715,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="XBOX" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="XBOX" Foreground="{DynamicResource BrushSuccessText}"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1733,7 +1732,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="B.NET" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="B.NET" Foreground="{DynamicResource BrushInfoText}"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1749,7 +1748,7 @@
                                                                        </Style.Triggers>
                                                                    </Style>
                                                                </Border.Style>
-                                                               <TextBlock Text="LOCAL" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="LOCAL" Foreground="{DynamicResource BrushTextSoft}" VerticalAlignment="Center"/>
                                                            </Border>
 
                                                        </DockPanel>
@@ -1769,7 +1768,7 @@
                                                        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-3">
                                                            <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
                                                                <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="{Binding PlayingTagText}" Foreground="{DynamicResource BrushSuccessText}"/>
                                                            </Border>
                                                            <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                    CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
@@ -1778,9 +1777,8 @@
                                                        </StackPanel>
 
                                                        <!-- Title -->
-                                                       <TextBlock Grid.Row="2" Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" 
-                                                                  Foreground="{DynamicResource BrushTextPrimary}" 
-                                                                  FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"
+                                                       <TextBlock Style="{StaticResource StrongText}" Grid.Row="2" Text="{Binding Name}" 
+                                                                  FontFamily="{DynamicResource AppFont}"
                                                                   TextAlignment="Center" TextTrimming="CharacterEllipsis" 
                                                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
 
@@ -1888,16 +1886,11 @@
                                            <ColumnDefinition Width="125"/> <!-- Last Played -->
                                            <ColumnDefinition Width="90"/>  <!-- Actions -->
                                        </Grid.ColumnDefinitions>
-                                       <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                                       <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                                       <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                                       <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                                       <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}" 
+                                       <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="1" Text="GAME TITLE" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="2" Text="CATEGORY" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="3" Text="PLAYTIME" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="4" Text="LAST PLAYED" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="5" Text="ACTIONS" FontFamily="{DynamicResource AppFont}" 
                                                   HorizontalAlignment="Right" Margin="0,0,6,0"/>
                                    </Grid>
                                </Border>
@@ -1986,7 +1979,7 @@
                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                                        <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
+                                                           <TextBlock Style="{StaticResource BadgeText}" Text="{Binding PlayingTagText}" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
                                                        </Border>
                                                        <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2006,8 +1999,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="STEAM" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}"
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="STEAM" Foreground="{DynamicResource BrushAccentText}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2023,8 +2016,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="GOG" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}"
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="GOG" Foreground="{DynamicResource BrushBadgePurple}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2040,8 +2033,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="EA" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="EA" Foreground="{DynamicResource BrushSuccessText}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2057,8 +2050,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="EPIC" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}"
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="EPIC" Foreground="{DynamicResource BrushTextPrimary}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2074,8 +2067,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="UBI" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}"
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="UBI" Foreground="{DynamicResource BrushGold}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2091,8 +2084,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="XBOX" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="XBOX" Foreground="{DynamicResource BrushSuccessText}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>
 
@@ -2109,8 +2102,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="B.NET" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}"
-                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="B.NET" Foreground="{DynamicResource BrushInfoText}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2124,8 +2117,8 @@
                                                                    </Style.Triggers>
                                                                </Style>
                                                            </Border.Style>
-                                                           <TextBlock Text="LOCAL" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}"
-                                                                      FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
+                                                           <TextBlock Style="{StaticResource BadgeText}" Text="LOCAL" Foreground="{DynamicResource BrushTextSoft}"
+                                                                      FontFamily="{DynamicResource AppFont}"/>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
@@ -2138,12 +2131,11 @@
                                                                    </Style.Triggers>
                                                                </Style>
                                                            </Border.Style>
-                                                           <TextBlock Text="HIDDEN" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
+                                                           <TextBlock Style="{StaticResource BadgeText}" Text="HIDDEN"
                                                                       Foreground="{DynamicResource BrushTextSoft}" FontFamily="{DynamicResource AppFont}"/>
                                                        </Border>
                                                        </StackPanel>
-                                                       <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                                                  Foreground="{DynamicResource BrushTextPrimary}"
+                                                       <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}"
                                                                   FontFamily="{DynamicResource AppFont}"
                                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"
                                                                   VerticalAlignment="Center"/>

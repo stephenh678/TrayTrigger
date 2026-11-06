@@ -93,28 +93,57 @@ public class WordingGuardTests
     }
 
     [Fact]
-    public void CapitalisedHeadings_UseTheSharedTextStyles()
+    public void Text_UsesTheSharedTextRoles()
     {
-        // A capitalised heading in body size and SemiBold, written out in place instead of using SectionLabel or
-        // CardLabel (App.xaml): the drift that left one Game Details heading blue and the rest grey.
+        // Text written out in place with the size, weight and colour of a role in App.xaml: the drift that left one
+        // Game Details heading blue and the rest grey, and System's card titles larger than Settings'.
+        var roles = new (string Size, string Weight, string Brush, string Style)[]
+        {
+            ("FontSizeSubhead", "SemiBold", "BrushTextPrimary", "CardTitle"),
+            ("FontSizeBody", "SemiBold", "BrushTextPrimary", "StrongText"),
+            ("FontSizeBody", "SemiBold", "BrushTextMuted", "FieldLabel"),
+            ("FontSizeBody", "SemiBold", "BrushTextSecondary", "CardLabel"),
+            ("FontSizeBody", "SemiBold", "BrushAccentText", "SectionLabel"),
+        };
         var tag = new Regex(@"<TextBlock\b([^>]*)>", RegexOptions.Singleline);
         var offenders = new List<string>();
-        foreach (var file in Sources("*.xaml"))
+        foreach (var file in Sources("*.xaml").Where(f => f != "App.xaml"))
         {
             string text = Read(file);
             foreach (Match m in tag.Matches(text))
             {
                 string a = m.Groups[1].Value;
-                var label = Regex.Match(a, @"\bText=""([A-Z](?:[A-Z0-9 '/-]|&amp;){3,})""");
-                if (!label.Success) continue;
-                if (a.Contains("FontSizeBody") && a.Contains("FontWeight=\"SemiBold\"")
-                    && (a.Contains("BrushAccentText") || a.Contains("BrushTextSecondary")))
-                    offenders.Add($"{file}:{LineOf(text, m.Index)}  {label.Groups[1].Value}");
+                if (a.Contains("Style=")) continue;
+                string at = $"{file}:{LineOf(text, m.Index)}";
+                // A badge's words: BadgeText sets their size and weight, the badge its colour.
+                if (a.Contains("{DynamicResource FontSizeBadge}") && Regex.IsMatch(a, @"\bFontWeight=""(SemiBold|Bold)"""))
+                    offenders.Add($"{at}  BadgeText");
+                // SectionLabel is for a literal capitalised header; a bound value in the accent is something else.
+                bool literalCaps = Regex.IsMatch(a, @"\bText=""[A-Z](?:[A-Z0-9 '/-]|&amp;){3,}""");
+                foreach (var r in roles)
+                {
+                    if (r.Style == "SectionLabel" && !literalCaps) continue;
+                    if (a.Contains($"{{DynamicResource {r.Size}}}") && a.Contains($"FontWeight=\"{r.Weight}\"") && a.Contains($"{{DynamicResource {r.Brush}}}"))
+                        offenders.Add($"{at}  {r.Style}");
+                }
             }
         }
 
         Assert.True(offenders.Count == 0,
-            "Use Style=\"{StaticResource SectionLabel}\" (a page section) or CardLabel (inside a card). Found:\n" + string.Join('\n', offenders));
+            "Use the text role from App.xaml (Style=\"{StaticResource ...}\") instead of writing it out. Found:\n" + string.Join('\n', offenders));
+    }
+
+    [Fact]
+    public void CardTitles_AreTitleCase()
+    {
+        var title = new Regex(@"<TextBlock\b[^>]*Style=""\{StaticResource CardTitle\}""[^>]*\bText=""([^""{]+)""", RegexOptions.Singleline);
+        var offenders = Sources("*.xaml")
+            .SelectMany(f => { string t = Read(f); return title.Matches(t).Select(m => (f, t, m)); })
+            .Where(x => !IsTitleCase(x.m.Groups[1].Value))
+            .Select(x => $"{x.f}:{LineOf(x.t, x.m.Index)}  {x.m.Groups[1].Value}")
+            .ToList();
+
+        Assert.True(offenders.Count == 0, "A card title is Title Case. Found:\n" + string.Join('\n', offenders));
     }
 
     [Theory]

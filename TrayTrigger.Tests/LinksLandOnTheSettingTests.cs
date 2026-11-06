@@ -20,7 +20,7 @@ public class LinksLandOnTheSettingTests
     public void ASettingsCardAJumpLooksFor_IsHeadedWithThatTitle(string title)
     {
         string heading = title.Replace("&", "&amp;");
-        Assert.Contains($"<TextBlock Text=\"{heading}\" FontSize=\"{{DynamicResource FontSizeSubhead}}\"", Read("Views/SettingsView.xaml"));
+        Assert.Contains($"<TextBlock Style=\"{{StaticResource CardTitle}}\" Text=\"{heading}\"", Read("Views/SettingsView.xaml"));
     }
 
     [Fact]

@@ -38,8 +38,7 @@
                 <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                         BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="Tool" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                        <TextBlock Style="{StaticResource StrongText}" Text="Tool" Margin="0,0,0,10"/>
 
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -98,8 +97,7 @@
                 <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                         BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="Launch" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                        <TextBlock Style="{StaticResource StrongText}" Text="Launch" Margin="0,0,0,2"/>
                         <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" Margin="0,0,0,10"
                                 Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/overview"/>
 

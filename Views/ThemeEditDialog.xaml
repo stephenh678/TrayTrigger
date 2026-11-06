@@ -12,13 +12,6 @@
         FontFamily="{DynamicResource AppFont}">
 
     <Window.Resources>
-        <!-- The small heading at the top of each card. -->
-        <Style x:Key="CardLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
         <Style x:Key="DialogCardBorder" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource BrushDialogCard}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
@@ -275,7 +268,7 @@
                     <StackPanel Grid.Column="0">
                         <Border Style="{StaticResource DialogCardBorder}">
                             <StackPanel>
-                                <TextBlock Text="NAME" Style="{StaticResource CardLabel}"/>
+                                <TextBlock Text="NAME" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
                                 <TextBox AutomationProperties.Name="Theme name" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" MaxLength="60"/>
                                 <TextBlock Text="Starts from" Margin="0,12,0,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                 <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
@@ -292,7 +285,7 @@
 
                         <Border Style="{StaticResource DialogCardBorder}">
                             <StackPanel>
-                                <TextBlock Text="BACKGROUND PICTURE" Style="{StaticResource CardLabel}"/>
+                                <TextBlock Text="BACKGROUND PICTURE" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
                                 <Border Height="110" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushBackground}"
                                         BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" ClipToBounds="True">
                                     <Grid>
@@ -355,7 +348,7 @@
                         <Border Style="{StaticResource DialogCardBorder}" Margin="0">
                             <StackPanel>
                                 <Grid>
-                                    <TextBlock Text="FONT AND TEXT SIZE" Style="{StaticResource CardLabel}"/>
+                                    <TextBlock Text="FONT AND TEXT SIZE" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
                                     <Button Content="Reset" Command="{Binding ResetTypeCommand}" Style="{StaticResource HelpLinkButton}"
                                             HorizontalAlignment="Right" VerticalAlignment="Top"
                                             ToolTip="Both follow the font and the size from Settings again"
@@ -420,7 +413,7 @@
                         <Border Style="{StaticResource DialogCardBorder}">
                             <StackPanel>
                                 <Grid>
-                                    <TextBlock Text="MAIN COLORS" Style="{StaticResource CardLabel}"/>
+                                    <TextBlock Text="MAIN COLORS" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
                                         <Button Content="Randomize" Command="{Binding RandomizeColorsCommand}" Style="{StaticResource HelpLinkButton}"
                                                 ToolTip="Try a random set of main colors. The text stays easy to read." AutomationProperties.Name="Randomize the colors"/>
@@ -473,7 +466,7 @@
                         <Border Style="{StaticResource DialogCardBorder}" Margin="0">
                             <StackPanel DataContext="{Binding Corners}">
                                 <Grid>
-                                    <TextBlock Text="CORNERS" Style="{StaticResource CardLabel}"/>
+                                    <TextBlock Text="CORNERS" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
                                         <Button Content="Randomize" Command="{Binding DataContext.RandomizeCornersCommand, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource HelpLinkButton}"
                                                 ToolTip="Try a random shape and size for the corners" AutomationProperties.Name="Randomize the corners"/>
@@ -601,20 +594,20 @@
                                     </Style>
                                 </Border.Style>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Samples[0].Name, FallbackValue='Cyberpunk 2077'}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="{Binding Samples[0].Name, FallbackValue='Cyberpunk 2077'}"/>
                                     <TextBlock Text="Second-level text, like a description" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0"/>
                                     <TextBlock Text="Quiet text, like a hint or a caption" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                         <TextBlock Text="A link" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                                         <!-- The library's own badges: Playing, and the two readings of "isn't there" (Missing, Not installed). -->
                                         <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" Margin="14,0,0,0">
-                                            <TextBlock Text="▶ PLAYING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
+                                            <TextBlock Style="{StaticResource BadgeText}" Text="▶ PLAYING" Foreground="{DynamicResource BrushSuccessText}"/>
                                         </Border>
                                         <Border Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="8,0,0,0">
-                                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}"/>
+                                            <TextBlock Style="{StaticResource BadgeText}" Text="MISSING" Foreground="{DynamicResource BrushWarning}"/>
                                         </Border>
                                         <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="8,0,0,0">
-                                            <TextBlock Text="NOT INSTALLED" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushInfoText}"/>
+                                            <TextBlock Style="{StaticResource BadgeText}" Text="NOT INSTALLED" Foreground="{DynamicResource BrushInfoText}"/>
                                         </Border>
                                     </StackPanel>
                                 </StackPanel>

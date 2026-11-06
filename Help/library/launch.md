@@ -1,6 +1,6 @@
 # How a game is launched
 
-Edit Game's Launch tab has two cards: **How it starts** (which client, if any, starts the game, and the file to run) and **Run options** (from where, with what, and as whom: the working folder, arguments, administrator and the hotkey). This is what each field does and, just as important, when it is ignored.
+Edit Game's Launch tab has two cards: **How It Starts** (which client, if any, starts the game, and the file to run) and **Run Options** (from where, with what, and as whom: the working folder, arguments, administrator and the hotkey). This is what each field does and, just as important, when it is ignored.
 
 Edit Game is the Settings tab of a game's Game Details window. It opens on its own All tab, with every card in one scrolling column. The Launch tab shows these cards on their own; Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and nothing you type is lost when you switch.
 

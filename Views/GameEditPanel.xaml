@@ -106,8 +106,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowIdentityCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Identity &amp; Library" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Identity &amp; Library" Margin="0,0,0,10"/>
 
                             <!-- Game Title -->
                             <DockPanel Margin="0,0,0,4">
@@ -156,8 +155,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowIdentityCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Online match" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Online Match" Margin="0,0,0,2"/>
                             <TextBlock Text="{Binding MatchSummary}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <TextBlock Text="A match gives this game Steam's title, genre, poster, reviews, specs and news. It doesn't change how the game launches, and Steam doesn't need to be running."
@@ -207,8 +205,7 @@
                             <DockPanel Margin="0,0,0,10">
                                 <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="How artwork is found" VerticalAlignment="Center"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/artwork"/>
-                                <TextBlock Text="Artwork" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource BrushTextPrimary}"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Artwork" VerticalAlignment="Center"/>
                             </DockPanel>
                             <TextBlock Text="Drop a picture on a preview to use it." Style="{StaticResource ArtUse}" Margin="0,0,0,10"/>
 
@@ -225,7 +222,7 @@
                                     <DockPanel>
                                       <StackPanel DockPanel.Dock="Top">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="Hero banner" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                            <TextBlock Style="{StaticResource CardTitle}" Text="Hero Banner"/>
                                             <TextBlock Text="Game Details" Style="{StaticResource ArtUse}" Margin="8,0,0,0" VerticalAlignment="Bottom"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding HeroChip}" TextTrimming="CharacterEllipsis" ToolTip="{Binding HeroChip}">
@@ -299,7 +296,7 @@
                                             </Border>
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="Poster" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                    <TextBlock Style="{StaticResource CardTitle}" Text="Poster"/>
                                                     <TextBlock Text="Library cards" Style="{StaticResource ArtUse}" Margin="8,0,0,0" VerticalAlignment="Bottom"/>
                                                 </StackPanel>
                                                 <TextBlock Text="{Binding PosterChip}" TextTrimming="CharacterEllipsis" ToolTip="{Binding PosterChip}">
@@ -336,7 +333,7 @@
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="Icon" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                    <TextBlock Style="{StaticResource CardTitle}" Text="Icon"/>
                                                     <TextBlock Text="Tray and list" Style="{StaticResource ArtUse}" Margin="8,0,0,0" VerticalAlignment="Bottom"/>
                                                 </StackPanel>
                                                 <TextBlock Text="{Binding IconChip}" TextTrimming="CharacterEllipsis" ToolTip="{Binding IconChip}">
@@ -369,8 +366,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowLaunchCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="How it starts" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="How It Starts" Margin="0,0,0,2"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How launching works" Margin="0,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/launch"/>
 
@@ -383,8 +379,7 @@
                                     Visibility="{Binding HasPlatform, Converter={StaticResource BoolToVis}}">
                                 <StackPanel>
                                     <DockPanel LastChildFill="False" Margin="0,0,0,6">
-                                        <TextBlock Text="{Binding PlatformDescription}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                        <TextBlock Style="{StaticResource StrongText}" Text="{Binding PlatformDescription}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                         <Button Content="Convert to Local Game" Command="{Binding ConvertToLocalCommand}"
                                                 Visibility="{Binding CanConvertToLocal, Converter={StaticResource BoolToVis}}"
                                                 Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
@@ -415,8 +410,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding ConvertedNotice}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0"/>
+                                    <TextBlock Style="{StaticResource StrongText}" Grid.Column="0" Text="{Binding ConvertedNotice}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0"/>
                                     <Button Grid.Column="1" Content="Undo" Command="{Binding UndoConvertToLocalCommand}"
                                             AutomationProperties.Name="Undo Convert to Local Game"
                                             Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
@@ -458,8 +452,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowLaunchCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Run options" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Run Options" Margin="0,0,0,10"/>
 
                             <!-- Working folder and arguments are rarely needed, so they sit in an expander
                                  that starts open whenever either one has a value (UX-14g). -->
@@ -522,8 +515,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowPerformanceCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Profile" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Profile" Margin="0,0,0,10"/>
 
                             <TextBlock Text="Performance Profile" FontSize="{DynamicResource FontSizeBody}"
                                        Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
@@ -560,8 +552,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowCoresAndHdrCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Cores and HDR" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Cores and HDR" Margin="0,0,0,10"/>
 
                             <!-- CPU Cores - independent of the profile tier. Its options are worked out
                                  from this PC's CPU (hybrid Intel, Ryzen X3D, multi-CCD Ryzen); on a CPU
@@ -630,8 +621,7 @@
                             Visibility="{Binding Dlss.IsVisible, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
-                                <TextBlock Text="NVIDIA DLSS Override" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="NVIDIA DLSS Override" VerticalAlignment="Center"/>
                             </Grid>
 
                             <!-- The other state, and the only other one: a game that ships no DLSS.
@@ -662,10 +652,8 @@
                                               IsChecked="{Binding Dlss.OverrideEnabled}"
                                               IsEnabled="{Binding Dlss.CanToggleOverride}"
                                               Style="{StaticResource ModernCheckBox}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"
-                                               FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Margin="12,0,0,0"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Style="{StaticResource StrongText}" Grid.Column="1" Text="{Binding Dlss.VersionLine}" Margin="12,0,0,0"
+                                               VerticalAlignment="Center"/>
                                 </Grid>
                                 <TextBlock Text="Applies to game-supported DLSS features: Super Resolution, Ray Reconstruction, and Frame Generation."
                                            FontSize="{DynamicResource FontSizeBody}" Margin="24,2,0,0" TextWrapping="Wrap"
@@ -675,8 +663,7 @@
                                      nothing so the game picks its own. The same two names DLSS Swapper uses. -->
                                 <StackPanel Margin="24,10,0,0"
                                             Visibility="{Binding Dlss.CanEnable, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="Preset" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Margin="0,0,0,4"
-                                               Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Style="{StaticResource StrongText}" Text="Preset" Margin="0,0,0,4"/>
                                     <ComboBox AutomationProperties.Name="DLSS preset" ItemsSource="{Binding Dlss.PresetOptions}"
                                               SelectedValue="{Binding Dlss.SelectedPreset}" SelectedValuePath="Value" DisplayMemberPath="Label"
                                               IsEnabled="{Binding Dlss.IsNotBusy}"
@@ -715,8 +702,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowDisplayCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Display" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Display" Margin="0,0,0,10"/>
 
                             <StackPanel>
                                 <TextBlock Text="Monitor" FontSize="{DynamicResource FontSizeBody}"
@@ -771,8 +757,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowScreensCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Screens" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Screens" Margin="0,0,0,6"/>
 
                             <StackPanel Visibility="{Binding ShowMouseLock, Converter={StaticResource BoolToVis}}">
                                 <CheckBox Content="Keep the mouse on the game's screen" IsChecked="{Binding KeepMouseOnGameScreen}"
@@ -800,8 +785,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowDisplayCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Sound" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Sound" Margin="0,0,0,2"/>
 
                             <StackPanel>
                                 <TextBlock Text="Sound output" FontSize="{DynamicResource FontSizeBody}"
@@ -844,8 +828,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Scripts" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Scripts" Margin="0,0,0,4"/>
                             <TextBlock Text="Run your own PowerShell script before this game starts and after it exits."
                                        FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
@@ -932,8 +915,7 @@
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Script options" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Script Options" Margin="0,0,0,4"/>
                             <!-- The options below belong to this game's own scripts, so say why they are off while it has none. -->
                             <TextBlock Text="These apply to this game's own scripts, so they are off until you set one above."
                                        FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10">
@@ -987,8 +969,7 @@
                                     CornerRadius="{DynamicResource RadiusControl}" Padding="10,8" Margin="0,0,0,10"
                                     Visibility="{Binding HasDefaultScripts, Converter={StaticResource BoolToVis}}">
                                 <StackPanel>
-                                    <TextBlock Text="Default Scripts from Settings" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <TextBlock Style="{StaticResource CardLabel}" Text="Default Scripts from Settings" Margin="0,0,0,4"/>
                                     <TextBlock Text="{Binding DefaultScriptsSummary}" FontSize="{DynamicResource FontSizeBody}"
                                                Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                                     <CheckBox Content="Don't run the default scripts for this game"

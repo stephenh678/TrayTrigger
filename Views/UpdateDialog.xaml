@@ -41,8 +41,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">
                         <!-- Current Version Badge -->
                         <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
-                            <TextBlock x:Name="CurrentVersionText" Text="v1.0.0" FontSize="{DynamicResource FontSizeBody}" 
-                                       Foreground="{DynamicResource BrushTextMuted}" FontWeight="SemiBold"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" x:Name="CurrentVersionText" Text="v1.0.0"/>
                         </Border>
 
                         <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
@@ -55,16 +54,15 @@
                         </Border>
 
                         <Border x:Name="LatestBadge" Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="LATEST" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="LATEST" Foreground="{DynamicResource BrushAccentText}"/>
                         </Border>
                         <Border x:Name="PrereleaseBadge" Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                            <TextBlock Text="PRE-RELEASE" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="PRE-RELEASE" Foreground="{DynamicResource BrushWarning}"/>
                         </Border>
                     </StackPanel>
 
                     <!-- Release Name -->
-                    <TextBlock x:Name="ReleaseTitleText" Text="TrayTrigger Release" FontSize="{DynamicResource FontSizeBody}" 
-                               FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" 
+                    <TextBlock Style="{StaticResource CardLabel}" x:Name="ReleaseTitleText" Text="TrayTrigger Release" 
                                Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </Grid>
@@ -73,8 +71,7 @@
             <Border Grid.Row="1" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="RELEASE NOTES" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                               Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="RELEASE NOTES" Margin="0,0,0,6"/>
                     <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <TextBlock x:Name="ReleaseNotesText" 
                                    Text="No release notes provided." 

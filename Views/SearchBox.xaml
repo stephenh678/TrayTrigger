@@ -76,8 +76,7 @@
                                             <DockPanel LastChildFill="True">
                                                 <TextBlock DockPanel.Dock="Right" Text="{Binding Hit.TabLabel}" Margin="12,0,0,0"
                                                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
-                                                <TextBlock Text="{Binding Hit.Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                <TextBlock Style="{StaticResource StrongText}" Text="{Binding Hit.Title}" TextTrimming="CharacterEllipsis"/>
                                             </DockPanel>
                                             <TextBlock Text="{Binding Hit.Snippet}" TextWrapping="Wrap" MaxHeight="48" Margin="0,2,0,0"
                                                        TextTrimming="CharacterEllipsis"
