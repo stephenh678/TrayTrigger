@@ -286,11 +286,11 @@
                         <TextBlock Text="Add Tool" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}"
+                <Button AutomationProperties.Name="Browse Start Menu" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}"
                         ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
+                        <TextBlock Text="Browse Start Menu" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -496,7 +496,7 @@
                                Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" Margin="0,0,0,14"/>
                     <TextBlock Text="No tools yet" FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Drop a program (.exe), a script (.bat, .cmd, .ps1) or a shortcut anywhere on this page, or use Add Tool. For a Microsoft Store app, use Browse Apps and drag the app here. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
+                    <TextBlock Text="Drop a program (.exe), a script (.bat, .cmd, .ps1) or a shortcut anywhere on this page, or use Add Tool. For a Microsoft Store app, use Browse Start Menu and drag the app here. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -506,11 +506,11 @@
                                 <TextBlock Text="Add Tool" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}"
+                        <Button AutomationProperties.Name="Browse Start Menu" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}"
                                 ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
+                                <TextBlock Text="Browse Start Menu" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

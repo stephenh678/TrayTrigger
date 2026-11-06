@@ -6,11 +6,11 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 1.7.7
 
-- **Search everything (Ctrl+K)** - The magnifier at the top of the left bar opens one search for games, tools and settings. Pick a result and TrayTrigger takes you there: a game opens its page, a setting is outlined on its tab.
-- **A filter button on Tools** - The same filter the Library has, with options that fit a tool: its kind, favorites, hotkeys, run as administrator, starts or closes with games, and a missing file. It works the same way, saved filters included.
-- **Search finds a setting on any tab** - Type in the search box on Settings, About or System and a list drops down with every matching setting from every tab, each with the tab it lives on and the line that matched. Pick one (or press Enter) and TrayTrigger takes you to it and outlines it. The page no longer shrinks while you type.
-- **Filters say "Filter"** - The boxes that narrow a list (Library, Tools, Activity) now say Filter, to read differently from the Search on Settings, About and System, and a filter clears when you leave the page. Ctrl+F now works on Activity too.
-- **"Put Back" everywhere** - Undoing what TrayTrigger changed now has one name on every page: Put Back, Put Back Preset and Put Back Settings Now. Restore is only for backups.
+- **Search everything (Ctrl+K)** - One search for games, tools and settings from any page; pick a result and TrayTrigger takes you there.
+- **Find any setting** - The search on Settings, About and System lists matches from every tab and outlines the one you pick.
+- **A filter button on Tools** - The same filter as the Library, with saved filters, now on Tools too.
+- **Every hotkey in one place** - About > Shortcuts lists each game's and tool's hotkey and opens it to change.
+- **Polished all over** - Buttons and menus use the same words everywhere (Put Back for anything TrayTrigger changed), Edit Game only offers Discard Changes when there's something to discard, and pages are tidier and line up the same way.
 
 ## 1.7.6
 

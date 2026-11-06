@@ -419,7 +419,7 @@ public partial class SettingsViewModel
         try
         {
             _storageService.EnsureDirectories();
-            Process.Start(SystemExecutables.Explorer, _storageService.BaseDirectory);
+            ShellOpen.OpenFolder(_storageService.BaseDirectory, "Storage", "the data folder");
         }
         catch (Exception ex)
         {
@@ -432,7 +432,7 @@ public partial class SettingsViewModel
         try
         {
             _storageService.EnsureDirectories();
-            Process.Start(SystemExecutables.Explorer, _storageService.LocalCacheDirectory);
+            ShellOpen.OpenFolder(_storageService.LocalCacheDirectory, "Storage", "the cache folder");
         }
         catch (Exception ex)
         {
@@ -457,7 +457,7 @@ public partial class SettingsViewModel
         try
         {
             string dir = Path.GetDirectoryName(LoggingService.LogFilePath) ?? _storageService.BaseDirectory;
-            Process.Start(SystemExecutables.Explorer, dir);
+            ShellOpen.OpenFolder(dir, "App", "the log folder");
         }
         catch (Exception ex)
         {

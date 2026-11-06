@@ -71,7 +71,7 @@ public class StartupSmokeTests
     public void TheAppsResources_LoadWithTheirStylesAndConverters() => WithAppResources(app =>
     {
         Assert.True(app.Count > 30, $"App.xaml loaded only {app.Count} resources.");
-        Assert.Equal(3, app.MergedDictionaries.Count);
+        Assert.Equal(4, app.MergedDictionaries.Count); // Colors, Typography, Shapes, Spacing
         foreach (string key in new[] { "AppFont", "IconFont", "MonoFont", "ModernComboBox", "BoolToVis" })
             Assert.True(app.Contains(key), $"App.xaml has no resource named {key}.");
     });

@@ -282,14 +282,7 @@ public class GameCardViewModel : ViewModelBase
     public bool IsContextMenuOpen
     {
         get => _isContextMenuOpen;
-        set
-        {
-            if (_isContextMenuOpen != value)
-            {
-                _isContextMenuOpen = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _isContextMenuOpen, value);
     }
     private bool _isContextMenuOpen;
 
@@ -298,14 +291,7 @@ public class GameCardViewModel : ViewModelBase
     public bool IsSelected
     {
         get => _isSelected;
-        set
-        {
-            if (_isSelected != value)
-            {
-                _isSelected = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _isSelected, value);
     }
 
     public ICommand PrimaryClickCommand { get; }
@@ -674,7 +660,7 @@ public class GameCardViewModel : ViewModelBase
             string? targetPath = Game.ExecutablePath;
             if (File.Exists(targetPath))
             {
-                using var proc = Process.Start(SystemExecutables.Explorer, $"/select,\"{targetPath}\"");
+                ShellOpen.Reveal(targetPath, "GameCard", $"the folder for '{Game.Name}'");
             }
             else if (Directory.Exists(Game.WorkingDirectory))
             {
@@ -690,7 +676,7 @@ public class GameCardViewModel : ViewModelBase
                 }
                 else
                 {
-                    using var proc = Process.Start(SystemExecutables.Explorer, $"\"{folder}\"");
+                    ShellOpen.OpenFolder(folder, "GameCard", $"the folder for '{Game.Name}'");
                 }
             }
         }

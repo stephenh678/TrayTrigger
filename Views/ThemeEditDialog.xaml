@@ -17,8 +17,8 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}"/>
-            <Setter Property="Padding" Value="14"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Padding" Value="{StaticResource DialogCardPadding}"/>
+            <Setter Property="Margin" Value="{StaticResource DialogCardGap}"/>
         </Style>
         <!-- The States strip in the preview: the shape of a small button, a row, and the caption under each. The colors are set where they are used. -->
         <Style x:Key="StateChip" TargetType="Border">

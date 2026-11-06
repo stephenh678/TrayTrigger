@@ -476,7 +476,7 @@ public partial class App
 
             // Navigation & exit items. A tray-first launcher should reach its two most common
             // non-launch tasks from the tray too, not only after opening the window.
-            menu.Items.Add(CreateNavMenuItem("Games Library", "\uE7FC", () => OpenSection(NavSection.Library), (Brush)FindResource("BrushAccentText")));
+            menu.Items.Add(CreateNavMenuItem("Library", "\uE7FC", () => OpenSection(NavSection.Library), (Brush)FindResource("BrushAccentText")));
             menu.Items.Add(CreateNavMenuItem("Scan for Games", "\uE721", () =>
             {
                 OpenSection(NavSection.Library);

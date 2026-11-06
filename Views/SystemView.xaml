@@ -17,8 +17,8 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="{StaticResource CardPadding}"/>
+            <Setter Property="Margin" Value="{StaticResource CardGap}"/>
         </Style>
 
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>

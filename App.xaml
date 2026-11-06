@@ -11,6 +11,7 @@
             <ResourceDictionary Source="Resources/Colors.xaml"/>
             <ResourceDictionary Source="Resources/Typography.xaml"/>
             <ResourceDictionary Source="Resources/Shapes.xaml"/>
+            <ResourceDictionary Source="Resources/Spacing.xaml"/>
         </ResourceDictionary.MergedDictionaries>
 
         <!-- The height of the segmented tab strip at the top of every page (About, Settings, System, Activity, Tools, Library), so the

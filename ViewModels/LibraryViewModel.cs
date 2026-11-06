@@ -22,33 +22,22 @@ public class CategoryTabItem : ViewModelBase
     public string DisplayName { get; }
     public bool IsFavoritesTab { get; }
     public bool IsHiddenTab { get; }
-    /// <summary>An icon before the name: the Tools page's Start with Games and Close with Games tabs. Blank on the Library's own tabs.</summary>
-    public string Glyph { get; }
-    public bool HasGlyph => Glyph.Length > 0;
 
     private bool _isSelected;
     public bool IsSelected
     {
         get => _isSelected;
-        set
-        {
-            if (_isSelected != value)
-            {
-                _isSelected = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _isSelected, value);
     }
 
     public ICommand SelectCommand { get; }
 
-    public CategoryTabItem(string name, string displayName, bool isSelected, Action<string> onSelect, string glyph = "")
+    public CategoryTabItem(string name, string displayName, bool isSelected, Action<string> onSelect)
     {
         Name = name;
         DisplayName = displayName;
         IsFavoritesTab = string.Equals(name, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
         IsHiddenTab = string.Equals(name, LibraryConstants.HiddenCategory, StringComparison.OrdinalIgnoreCase);
-        Glyph = glyph ?? string.Empty;
         _isSelected = isSelected;
         SelectCommand = new RelayCommand(() => onSelect(Name));
     }

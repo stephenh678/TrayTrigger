@@ -10,7 +10,7 @@ The filter box above the list narrows it by name, category or path, the tabs spl
 
 ## Adding a tool
 
-- Drop a program (.exe), a script (.bat, .cmd, .ps1), a shortcut (.lnk), or an app dragged from Browse Apps anywhere on the Tools page, or use Add Tool. You can add several at once.
+- Drop a program (.exe), a script (.bat, .cmd, .ps1), a shortcut (.lnk), or an app dragged from Browse Start Menu anywhere on the Tools page, or use Add Tool. You can add several at once.
 - Only programs, scripts and Store apps are accepted. Web links and shortcuts that point at anything else are refused, and so are files on a network drive.
 - The name comes from the file name, without " - Shortcut". Rename it from its right-click menu or Edit Tool.
 - A shortcut brings its arguments, working folder and its "Run as administrator" setting with it.
@@ -19,7 +19,7 @@ The filter box above the list narrows it by name, category or path, the tabs spl
 
 ## Store apps
 
-- Apps from the Microsoft Store, like Xbox or Windows Terminal, can be tools too. Click Browse Apps next to Add Tool (it opens Windows' list of every app in the Start menu, shell:AppsFolder), then drag the app onto the Tools page. A desktop shortcut made by dragging an app out of that folder works too.
+- Apps from the Microsoft Store, like Xbox or Windows Terminal, can be tools too. Click Browse Start Menu next to Add Tool (it opens Windows' list of every app in the Start menu, shell:AppsFolder), then drag the app onto the Tools page. A desktop shortcut made by dragging an app out of that folder works too.
 - A Store app is started the way its Start menu entry starts it. If it's already open, most apps come to the front; apps that allow several windows, like Windows Terminal, open another one.
 - Edit Tool shows the app's ID instead of a program path. Store apps have no working folder or file location and can't run as administrator, so those options aren't shown for them, and a batch Run as Administrator leaves them out.
 - If the app is uninstalled, the tool shows MISSING. Install it again from the Microsoft Store, or remove the tool.
@@ -39,7 +39,7 @@ The filter box above the list narrows it by name, category or path, the tabs spl
 ## Categories, favorites and sorting
 
 - Tools have their own categories, separate from game categories. Set one with Change Category... or in Edit Tool; the picker suggests the categories your tools already use.
-- The tabs are All Tools, Favorites, then each category A to Z. A category tab disappears when its last tool leaves it. To see the tools that start with games or close for them, tick Starts with games or Closes for games in the filter button. "Start with Games" and "Close with Games" can't be category names, so a tool given one goes to Uncategorized.
+- The tabs are All Tools, Favorites, then each category A to Z. A category tab disappears when its last tool leaves it. To see the tools that start with games or close for them, tick Starts with games or Closes for games in the filter button.
 - Click the star on a tool to make it a favorite.
 - Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category, program path or Store app ID.
 - Three views: Large Icons, Small Icons and List. The page remembers the view, sort and tab you last used.

@@ -113,8 +113,8 @@
                             </DockPanel>
                         </Button>
 
-                        <!-- 1. Games Library -->
-                        <Button Command="{Binding SelectLibraryCommand}" AutomationProperties.Name="Games Library" Margin="0,0,0,6">
+                        <!-- 1. Library -->
+                        <Button Command="{Binding SelectLibraryCommand}" AutomationProperties.Name="Library" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>
@@ -205,7 +205,7 @@
                         </Button>
 
                         <!-- 3. Settings -->
-                        <Button Command="{Binding SelectSettingsCommand}" AutomationProperties.Name="Application Settings" Margin="0,0,0,6">
+                        <Button Command="{Binding SelectSettingsCommand}" AutomationProperties.Name="Settings" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>

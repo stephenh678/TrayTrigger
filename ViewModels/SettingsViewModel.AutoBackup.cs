@@ -98,7 +98,7 @@ public partial class SettingsViewModel
         {
             string folder = new AutoBackupService(_storageService).BackupFolder;
             Directory.CreateDirectory(folder);
-            Process.Start(SystemExecutables.Explorer, folder);
+            ShellOpen.OpenFolder(folder, "Backup", "the automatic backups folder");
         }
         catch (Exception ex)
         {

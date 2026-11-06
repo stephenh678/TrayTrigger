@@ -243,9 +243,7 @@ public partial class GameEditViewModel
         get => _useSameScriptForBoth;
         set
         {
-            if (_useSameScriptForBoth == value) return;
-            _useSameScriptForBoth = value;
-            OnPropertyChanged();
+            if (!SetProperty(ref _useSameScriptForBoth, value)) return;
             OnPropertyChanged(nameof(CanEditPostExitScript));
             if (value) PostExitScriptPath = PreLaunchScriptPath;
         }

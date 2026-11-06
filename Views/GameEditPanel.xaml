@@ -103,7 +103,7 @@
 
                     <!-- CARD 1: IDENTITY & LIBRARY (title, category, hidden, store link) -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowIdentityCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Identity &amp; Library" Margin="0,0,0,10"/>
@@ -152,7 +152,7 @@
 
                     <!-- ONLINE MATCH: which Steam listing this game is, and what a new match may replace. -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowIdentityCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Online Match" Margin="0,0,0,2"/>
@@ -199,7 +199,7 @@
                     <!-- ARTWORK: the Banner on the left, the Poster and the Icon as compact rows on the right. Each is Automatic (found for the game) or
                          Custom (a file you chose, or dropped on it). The Banner keeps its shape as the window grows, so a wide window gets a bigger picture rather than empty cards. -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowArtworkCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel Margin="0,0,0,10">
@@ -363,7 +363,7 @@
 
                     <!-- CARD 2: LAUNCH (route first, then target, advanced options, admin, hotkey) -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowLaunchCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="How It Starts" Margin="0,0,0,2"/>
@@ -449,7 +449,7 @@
 
                     <!-- RUN OPTIONS: what is passed to the exe and how it is run - the working folder, arguments, administrator and the hotkey -->
                     <Border x:Name="RunOptionsCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowLaunchCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Run Options" Margin="0,0,0,10"/>
@@ -512,7 +512,7 @@
                     <!-- CARD 3: PERFORMANCE (session-scoped tweaks) - its own card so the profile
                          is explained where it is chosen instead of only on the System page. -->
                     <Border x:Name="ProfileCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowPerformanceCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Profile" Margin="0,0,0,10"/>
@@ -549,7 +549,7 @@
 
                     <!-- CORES AND HDR: per game, and independent of the profile tier -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowCoresAndHdrCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Cores and HDR" Margin="0,0,0,10"/>
@@ -617,7 +617,7 @@
                          covers all three features in one write, so a table of them was mechanism
                          on display. -->
                     <Border x:Name="DlssCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding Dlss.IsVisible, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
@@ -699,7 +699,7 @@
                          dimming the others, the sound output and the microphone. The lists are always there and disabled, with a note
                          saying why, when there is nothing to choose between; the options that need two monitors show only with two. -->
                     <Border x:Name="DisplayCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowDisplayCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Display" Margin="0,0,0,10"/>
@@ -754,7 +754,7 @@
 
                     <!-- SCREENS: what happens to the other monitors while the game runs; only with more than one -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowScreensCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Screens" Margin="0,0,0,6"/>
@@ -782,7 +782,7 @@
 
                     <!-- SOUND: where the game's sound and the microphone go while it runs -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowDisplayCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Sound" Margin="0,0,0,2"/>
@@ -825,7 +825,7 @@
                     <!-- CARD 4: PRE-LAUNCH / POST-EXIT SCRIPTS (opt-in via Settings > Launch &
                          Performance, or always shown for a game that already has a script) -->
                     <Border x:Name="ScriptsCard" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Scripts" Margin="0,0,0,4"/>
@@ -912,7 +912,7 @@
 
                     <!-- SCRIPT OPTIONS: arguments and how the scripts run. A card like the others, not a disclosure. -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Script Options" Margin="0,0,0,4"/>
@@ -999,7 +999,7 @@
                     <!-- Scripts stub: when the scripts feature is off, say so instead of silently
                          omitting the card, so the feature is discoverable from here. -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,10" Margin="0,0,0,12"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                             Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True">

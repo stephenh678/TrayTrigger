@@ -451,9 +451,7 @@ public partial class SettingsViewModel : ViewModelBase
         get => _trayPromotionStatus;
         set
         {
-            if (_trayPromotionStatus == value) return;
-            _trayPromotionStatus = value;
-            OnPropertyChanged();
+            if (!SetProperty(ref _trayPromotionStatus, value)) return;
             OnPropertyChanged(nameof(HasTrayPromotionStatus));
         }
     }

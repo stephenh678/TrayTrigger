@@ -42,6 +42,22 @@ public class ToolFilterTests : IDisposable
     private static string[] Shown(ToolsViewModel vm) => vm.FilteredTools.Cast<ToolCardViewModel>().Select(c => c.Name).OrderBy(n => n).ToArray();
 
     [Fact]
+    public void ASavedGameTab_FromBeforeTheyBecameFilters_OpensOnAllTools()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // 1.7.7-beta.1 had Start with Games and Close with Games tabs, so one may still be the saved tab.
+            var settings = new AppSettings { LastToolsCategoryTab = "Start with Games" };
+            var vm = NewTools(settings, Program("Afterburner", t => t.StartWithGames = true), Program("Vortex"));
+
+            Assert.Equal(LibraryConstants.AllCategory, vm.SelectedCategory);
+            Assert.Equal(LibraryConstants.AllCategory, settings.LastToolsCategoryTab);
+            Assert.Equal(["Afterburner", "Vortex"], Shown(vm));
+            Assert.DoesNotContain(vm.CategoryTabs, t => t.Name == "Start with Games");
+        });
+    }
+
+    [Fact]
     public void NothingTicked_ShowsEveryTool_AndTheButtonSaysNoFilters()
     {
         WpfTestHost.Run(() =>

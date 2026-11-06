@@ -51,7 +51,7 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 
 ## Shortcuts at the bottom
 
-Games Library opens the window on the library, Scan for Games runs a scan straight away, Settings opens the window on Settings, and Exit TrayTrigger quits the app immediately (unlike the window's Exit button, which asks first).
+Library opens the window on the library, Scan for Games runs a scan straight away, Settings opens the window on Settings, and Exit TrayTrigger quits the app immediately (unlike the window's Exit button, which asks first).
 
 ## What never shows
 

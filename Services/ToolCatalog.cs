@@ -125,25 +125,10 @@ public static class ToolCatalog
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>
-    /// Former Tools tabs (to 1.7.7) for the tools that start with games and close for them; the filter flyout
-    /// has both now. Still reserved, so a category never takes the name, and a saved tab still reads.
+    /// A tool's category, by the Library's rules (<see cref="LibraryConstants.NormalizeCategory"/>). The Start with
+    /// Games and Close with Games tabs are gone (the filter flyout has both), so those names are ordinary categories now.
     /// </summary>
-    public const string StartWithGamesTab = "Start with Games";
-    public const string CloseWithGamesTab = "Close with Games";
-
-    /// <summary>
-    /// A tool's category: <see cref="LibraryConstants.NormalizeCategory"/>, with the two game tabs' names
-    /// reserved as well, so no category can be taken for a tab. Game categories may still use them.
-    /// </summary>
-    public static string NormalizeCategory(string? category)
-    {
-        string normalized = LibraryConstants.NormalizeCategory(category);
-        return IsGameTab(normalized) ? LibraryConstants.Uncategorized : normalized;
-    }
-
-    private static bool IsGameTab(string? name) =>
-        string.Equals(name, StartWithGamesTab, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(name, CloseWithGamesTab, StringComparison.OrdinalIgnoreCase);
+    public static string NormalizeCategory(string? category) => LibraryConstants.NormalizeCategory(category);
 
     /// <summary>"Wait before starting the game": the seconds it starts at, and the range Edit Tool accepts.</summary>
     public const int DefaultWaitSeconds = 5;
@@ -249,8 +234,6 @@ public static class ToolCatalog
     {
         if (string.IsNullOrWhiteSpace(tab) || string.Equals(tab, LibraryConstants.AllCategory, StringComparison.OrdinalIgnoreCase)) return true;
         if (string.Equals(tab, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase)) return tool.IsFavorite;
-        if (string.Equals(tab, StartWithGamesTab, StringComparison.OrdinalIgnoreCase)) return StartsWithGames(tool);
-        if (string.Equals(tab, CloseWithGamesTab, StringComparison.OrdinalIgnoreCase)) return ClosesForGames(tool);
         return string.Equals(NormalizeCategory(tool.Category), tab, StringComparison.OrdinalIgnoreCase);
     }
 

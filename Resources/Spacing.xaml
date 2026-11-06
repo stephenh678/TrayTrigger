@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Spacing by name, so the same kind of card has the same room on every page. Views reference these
+         names (SpacingGuardTests keeps them in use). Started with cards; other spacing joins as it is tidied.
+         Spacing is not part of a theme: a text size change makes text larger, not the gaps around it. -->
+
+    <!-- A card on a page (Settings, System, About): room inside it, and the gap below it to the next card. -->
+    <Thickness x:Key="CardPadding">14,12</Thickness>
+    <Thickness x:Key="CardGap">0,0,0,10</Thickness>
+
+    <!-- A card inside a dialog (Edit Game, Edit Tool, Game Details, Edit Theme), a little further apart. -->
+    <Thickness x:Key="DialogCardPadding">14,12</Thickness>
+    <Thickness x:Key="DialogCardGap">0,0,0,12</Thickness>
+</ResourceDictionary>

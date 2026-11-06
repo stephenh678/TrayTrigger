@@ -65,9 +65,7 @@ public sealed class ThemeColorRow : ViewModelBase
         get => _hex;
         set
         {
-            if (_hex == value) return;
-            _hex = value;
-            OnPropertyChanged();
+            if (!SetProperty(ref _hex, value)) return;
             if (ThemeColor.TryParseTyped(value, out var typed))
             {
                 Error = null;

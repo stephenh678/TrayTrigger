@@ -107,14 +107,7 @@ public class SystemTweakViewModel : ViewModelBase
     public string StatusText
     {
         get => _statusText;
-        set
-        {
-            if (_statusText != value)
-            {
-                _statusText = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _statusText, value);
     }
 
     protected override void OnThemeChanged()
@@ -245,7 +238,7 @@ public class SystemTweakViewModel : ViewModelBase
     {
         if (Id == "core_isolation")
         {
-            if (!ShellOpen.Open("windowsdefender://coreisolation", "System", "Core Isolation in Windows Security"))
+            if (!ShellOpen.Open("windowsdefender://coreisolation", "System", "Core Isolation in Windows Security", quiet: true))
                 ShellOpen.Open("ms-settings:privacy", "System", "Windows Settings");
         }
         else if (Id == "hags")
@@ -899,14 +892,7 @@ public class SystemViewModel : ViewModelBase
     public string BusyToastMessage
     {
         get => _busyToastMessage;
-        set
-        {
-            if (_busyToastMessage != value)
-            {
-                _busyToastMessage = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _busyToastMessage, value);
     }
 
     // UI State
@@ -1377,8 +1363,9 @@ public class SystemViewModel : ViewModelBase
         // cards yet. A re-detect keeps the cards up and swaps the values in when it finishes, so
         // nothing below them moves.
         IsLoadingSpecs = !HasSpecs;
-        // The first detect says so in the placeholder card itself; the status line would only repeat it.
-        if (HasSpecs) StatusMessage = "Refreshing hardware specs...";
+        // A first detect says so in the placeholder card itself, so the status line stays idle: it would only repeat
+        // it, and a failure left from an earlier try would contradict the card.
+        StatusMessage = HasSpecs ? "Refreshing hardware specs..." : "Ready";
         try
         {
             var report = await _infoService.GetFullHardwareReportAsync();

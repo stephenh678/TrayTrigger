@@ -374,49 +374,17 @@ public class ScriptLibraryService
             return;
         }
 
-        try
-        {
-            Process.Start(new ProcessStartInfo(p) { Verb = "edit", UseShellExecute = true });
-            return;
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Verbose("Scripts", $"'edit' verb unavailable for {p} ({ex.Message}); using Notepad.");
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo(SystemExecutables.Notepad, $"\"{p}\"") { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("Scripts", $"Could not open {p} in an editor: {ex.Message}");
-        }
+        // The file type's own editor, else Notepad.
+        if (ShellOpen.Open(p, "Scripts", $"{p} with its editor", verb: "edit", quiet: true)) return;
+        ShellOpen.Open(SystemExecutables.Notepad, "Scripts", $"{p} in Notepad", arguments: $"\"{p}\"");
     }
 
     /// <summary>Opens the scripts folder in Explorer, creating and populating it first if needed.</summary>
     public void OpenFolder()
     {
         EnsureInstalled();
-        try
-        {
-            Process.Start(SystemExecutables.Explorer, ScriptsDirectory);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("Scripts", $"Could not open the scripts folder: {ex.Message}");
-        }
+        ShellOpen.OpenFolder(ScriptsDirectory, "Scripts", "the scripts folder");
     }
 
-    private static void RevealInExplorer(string path)
-    {
-        try
-        {
-            Process.Start(SystemExecutables.Explorer, $"/select,\"{path}\"");
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("Scripts", $"Could not reveal {path}: {ex.Message}");
-        }
-    }
+    private static void RevealInExplorer(string path) => ShellOpen.Reveal(path, "Scripts", $"{path} in Explorer");
 }

@@ -136,7 +136,7 @@
                          needs), replacing the old marketing labels. -->
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                            Padding="14,12" Margin="0,0,0,10">
+                            Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -221,7 +221,7 @@
 
                         <!-- 1: Performance Profiles -->
                         <Border Grid.Row="0" Grid.Column="0" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -237,7 +237,7 @@
 
                         <!-- 2: Library -->
                         <Border Grid.Row="0" Grid.Column="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE753;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -253,7 +253,7 @@
 
                         <!-- 3: Tray launcher & hotkeys -->
                         <Border Grid.Row="1" Grid.Column="0" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE765;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -269,7 +269,7 @@
 
                         <!-- 4: Launcher Control -->
                         <Border Grid.Row="1" Grid.Column="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -285,7 +285,7 @@
 
                         <!-- 5: Windows tweaks -->
                         <Border Grid.Row="2" Grid.Column="0" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -301,7 +301,7 @@
 
                         <!-- 6: Stutter Check -->
                         <Border Grid.Row="2" Grid.Column="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -317,7 +317,7 @@
 
                         <!-- 7: Scripts -->
                         <Border Grid.Row="3" Grid.Column="0" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE756;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -333,7 +333,7 @@
 
                         <!-- 8: DLSS Override -->
                         <Border Grid.Row="3" Grid.Column="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE950;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -349,7 +349,7 @@
 
                         <!-- 9: Activity & History -->
                         <Border Grid.Row="4" Grid.Column="0" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -365,7 +365,7 @@
 
                         <!-- 10: Tools -->
                         <Border Grid.Row="4" Grid.Column="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -381,7 +381,7 @@
 
                         <!-- 11: Backup and restore -->
                         <Border Grid.Row="5" Grid.Column="0" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE777;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -397,7 +397,7 @@
 
                         <!-- 12: Hardware monitoring -->
                         <Border Grid.Row="5" Grid.Column="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -413,7 +413,7 @@
 
                         <!-- 13: Themes -->
                         <Border Grid.Row="6" Grid.Column="0" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE790;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -429,7 +429,7 @@
 
                         <!-- 14: Game Details, which also keeps the grid at an even fourteen tiles -->
                         <Border Grid.Row="6" Grid.Column="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
-                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="{StaticResource CardPadding}" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
@@ -471,7 +471,7 @@
 
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
-                            Padding="14,12" Margin="0,0,0,10">
+                            Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,12">
                                 <Button DockPanel.Dock="Right" Content="App Hotkeys..."
@@ -702,7 +702,7 @@
                     <!-- Card 0: Help Topics index (every embedded Help/**.md, grouped by section) -->
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                            Padding="14,12" Margin="0,0,0,10">
+                            Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Help Topics"/>
                             <TextBlock Text="The explanations behind every Learn more link."
@@ -738,7 +738,7 @@
                     <!-- Card 1: Copy System Info for Bug Reports - what a stuck reader does next, before opening the log -->
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
-                            Padding="14,12" Margin="0,0,0,10">
+                            Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <DockPanel LastChildFill="True">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Button Content="Copy Diagnostic Info" Command="{Binding CopySystemInfoCommand}"
@@ -758,7 +758,7 @@
                     <!-- Card 2: Centralized Diagnostics Link -->
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                            Padding="14,12" Margin="0,0,0,10">
+                            Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <DockPanel LastChildFill="True">
                             <Button AutomationProperties.Name="Open Diagnostics &amp; Storage" DockPanel.Dock="Right"
                                     Command="{Binding OpenDiagnosticsSettingsCommand}"
@@ -781,7 +781,7 @@
                     <!-- Card 3: Community & Issues -->
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
-                            Padding="14,12" Margin="0,0,0,10">
+                            Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <DockPanel LastChildFill="True">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Button Content="Report an Issue" Command="{Binding OpenGitHubIssuesCommand}" 
@@ -800,7 +800,7 @@
                     <!-- Card 4: the project's own pages, whatever the update repository is set to. -->
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                            Padding="14,12" Margin="0,0,0,10">
+                            Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Online"/>
                             <TextBlock Text="Website, online help, questions and what&apos;s new."

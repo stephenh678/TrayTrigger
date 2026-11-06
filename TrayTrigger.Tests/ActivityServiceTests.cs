@@ -424,6 +424,28 @@ public class ActivityServiceTests : IDisposable
         Assert.StartsWith(expectedStart, ActivityViewModel.FormatWhen(then, nowLocal));
     }
 
+    [Theory]
+    [InlineData(0, true)]   // under Today
+    [InlineData(1, true)]   // under Yesterday
+    [InlineData(10, false)] // an older heading names no day, so the row keeps its date
+    public void RowWhen_DropsTheDay_OnlyWhereTheHeadingSaysIt(int daysLater, bool timeOnly)
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Activity, "Played Hades");
+
+        var row = new ActivityGroupViewModel(ActivityService.Group(service.Entries)[0], _now.ToLocalTime().AddDays(daysLater));
+
+        if (timeOnly)
+        {
+            Assert.StartsWith(row.Section + " ", row.When);
+            Assert.Equal(row.When[(row.Section.Length + 1)..], row.RowWhen);
+        }
+        else
+        {
+            Assert.Equal(row.When, row.RowWhen);
+        }
+    }
+
     /// <summary>
     /// The date headers, with "now" a Thursday evening (2026-10-08) and weeks starting on Sunday,
     /// so the week began on the 4th and last week ran from Sep 27 to Oct 3.

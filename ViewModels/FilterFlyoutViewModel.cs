@@ -312,9 +312,7 @@ public abstract class FilterFlyoutViewModel : ViewModelBase
         get => _isOpen;
         set
         {
-            if (_isOpen == value) return;
-            _isOpen = value;
-            OnPropertyChanged();
+            if (!SetProperty(ref _isOpen, value)) return;
             // Opened after a tab or search change: the total is worked out now, not when the ticks last moved.
             if (value) OnPropertyChanged(nameof(ResultSummary));
         }

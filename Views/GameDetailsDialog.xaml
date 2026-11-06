@@ -364,7 +364,7 @@
 
 
                 <!-- A. About / Synopsis Card -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}">
                     <StackPanel>
                         <!-- The words below come from Steam, or from RAWG when a key is set: where they came from, how fresh they are and how to
                              change that are said here, in the card they are about, and not in a row of their own. -->
@@ -419,7 +419,7 @@
                 </Border>
 
                 <!-- C. Latest Patch Notes & News Card -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -495,7 +495,7 @@
                 </Border>
 
                 <!-- B. PC System Requirements Card: always shown, in the app's own font like the rest of the page. -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -526,7 +526,7 @@
                     <StackPanel Grid.Column="1">
                         <!-- Details: who made it, when, where it lives and how big it is, how it was received, and where to read more -->
                         <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                                CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}">
                             <StackPanel>
                                 <TextBlock Text="DETAILS" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
                                 <DockPanel Margin="0,0,0,4" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
@@ -629,7 +629,7 @@
                         <!-- Your setup: one card, a row for each area TrayTrigger changes for this game, each with a way to the settings that do it.
                              An area left at its default has no row. -->
                         <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14"
+                                CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                                 Visibility="{Binding HasSetupCards, Converter={StaticResource BoolToVis}}">
                             <StackPanel>
                                 <TextBlock Text="YOUR SETUP" Style="{StaticResource CardLabel}" Margin="0,0,0,2"/>
@@ -681,7 +681,7 @@
 
                         <!-- Last session: what Activity & History has for the game's latest session, kept short. Only when it has one. -->
                         <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14"
+                                CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource DialogCardPadding}" Margin="{StaticResource DialogCardGap}"
                                 Visibility="{Binding HasLastSession, Converter={StaticResource BoolToVis}}">
                             <StackPanel>
                                 <TextBlock Text="LAST SESSION" Style="{StaticResource CardLabel}" Margin="0,0,0,6"/>
