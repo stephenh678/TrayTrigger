@@ -360,7 +360,7 @@ public sealed class ActivityService
         return Group(problems)
             .Select(g => $"{g.Latest.TimeUtc.ToLocalTime():yyyy-MM-dd HH:mm}  {g.Latest.Level}: {g.Latest.Text}"
                          + (g.Count > 1 ? $" ({g.Count} times)" : string.Empty)
-                         + (g.Fixed ? " - fixed with Restore Previous" : string.Empty))
+                         + (g.Fixed ? " - fixed with Put Back" : string.Empty))
             .ToList();
     }
 

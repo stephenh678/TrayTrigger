@@ -162,7 +162,7 @@ public partial class GameEditViewModel
         }
     }
 
-    /// <summary>The SteamGridDB-by-name look for a poster, for a game with no App ID (Find again, Use automatic). Applies a poster only when the matched
+    /// <summary>The SteamGridDB-by-name look for a poster, for a game with no App ID (Find again, Use Automatic). Applies a poster only when the matched
     /// community title resembles what was searched, so a stray autocomplete hit isn't pinned.</summary>
     private async Task LookUpGridArtByNameAsync(string term)
     {
@@ -193,7 +193,7 @@ public partial class GameEditViewModel
         }
     }
 
-    /// <summary>Applies a full Steam details fetch to the edit fields - shared by Change match and
+    /// <summary>Applies a full Steam details fetch to the edit fields - shared by Change Match and
     /// "Fetch by ID" so both routes to an App ID populate title, poster and genre identically.</summary>
     private void ApplySteamDetails(SteamAppDetails details, string appId)
     {

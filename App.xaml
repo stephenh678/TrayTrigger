@@ -1299,6 +1299,20 @@
         <!-- Tray Context Menu Section Header (Non-interactive) -->
         <!-- A non-interactive label inside a menu. Used for the tray menu's section headings and
              for the batch context menu's selection count. -->
+        <!-- Text roles, so a heading looks the same on every page (WordingGuardTests keeps them in use).
+             SectionLabel: a page section's capitalised header, in the accent, with its icon (HARDWARE SPECS, GENERAL).
+             CardLabel: a capitalised heading inside a card or a dialog panel (ABOUT THE GAME, DETAILS). -->
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+        </Style>
+        <Style x:Key="CardLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+        </Style>
+
         <Style x:Key="MenuSectionHeaderStyle" TargetType="MenuItem">
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="IsHitTestVisible" Value="False"/>

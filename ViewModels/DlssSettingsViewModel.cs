@@ -110,10 +110,10 @@ public sealed class DlssSettingsViewModel : ViewModelBase
 
     private void RestoreAll()
     {
-        if (!ModernDialog.Confirm(null, "Restore All DLSS Overrides",
+        if (!ModernDialog.Confirm(null, "Put Back All DLSS Settings",
                 "This turns the DLSS Override off for every game and puts NVIDIA's settings back the way they were.",
                 "Games will run on their own DLSS files again. You can switch it back on per game in Edit Game.",
-                confirmText: "Restore All", cancelText: "Cancel"))
+                confirmText: "Put Back All", cancelText: "Cancel"))
         {
             return;
         }

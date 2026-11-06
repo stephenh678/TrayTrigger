@@ -680,7 +680,7 @@ public partial class SystemTweaksService
             bool ok = ApplyHklmEntries(entries);
             LoggingService.Info("SystemTweaks", $"Reset: {entries.Count} HKLM change(s) {(ok ? "applied" : "failed - UAC cancelled or reg import error")}.");
             // The records of what was there go only once it's back: a cancelled administrator
-            // prompt changed nothing, and the next Restore Previous still needs them.
+            // prompt changed nothing, and the next Put Back still needs them.
             if (ok)
             {
                 if (ids.Contains("dx_shader_cache")) TakePrior("dx_shader_cache");

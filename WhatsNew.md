@@ -10,6 +10,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 - **A filter button on Tools** - The same filter the Library has, with options that fit a tool: its kind, favorites, hotkeys, run as administrator, starts or closes with games, and a missing file. It works the same way, saved filters included.
 - **Search finds a setting on any tab** - Type in the search box on Settings, About or System and a list drops down with every matching setting from every tab, each with the tab it lives on and the line that matched. Pick one (or press Enter) and TrayTrigger takes you to it and outlines it. The page no longer shrinks while you type.
 - **Filters say "Filter"** - The boxes that narrow a list (Library, Tools, Activity) now say Filter, to read differently from the Search on Settings, About and System, and a filter clears when you leave the page. Ctrl+F now works on Activity too.
+- **"Put Back" everywhere** - Undoing what TrayTrigger changed now has one name on every page: Put Back, Put Back Preset and Put Back Settings Now. Restore is only for backups.
 
 ## 1.7.6
 

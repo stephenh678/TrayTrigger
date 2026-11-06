@@ -18,7 +18,7 @@ It has its own **Stutter Check** tab on the System page, and the All tab still s
 - **Shader cache** - the NVIDIA driver's cache capped, or Windows cleanups set to delete the DirectX shader cache. A game recompiling shaders as you play is the most-cited cause of stutter in the fix threads. Fix it applies the tweak.
 - **PCIe lanes** - a graphics card on fewer lanes than it supports.
 - **Resizable BAR** - off on a card that can use it.
-- **Hardware-Accelerated GPU Scheduling, Game Bar recording, Game Mode** - the System tweaks that matter for stutter. Fix it applies the tweak, which Restore Previous can undo. Game Mode is the contested one: Microsoft recommends it on, and some threads blame it for hitching in particular games, so try it the other way for a game that still stutters. On a dual-CCD Ryzen X3D, though, leaving it off can cost a game its place on the V-Cache cores.
+- **Hardware-Accelerated GPU Scheduling, Game Bar recording, Game Mode** - the System tweaks that matter for stutter. Fix it applies the tweak, which Put Back can undo. Game Mode is the contested one: Microsoft recommends it on, and some threads blame it for hitching in particular games, so try it the other way for a game that still stutters. On a dual-CCD Ryzen X3D, though, leaving it off can cost a game its place on the V-Cache cores.
 - **Power plan** - whether the Ultimate plan is on, or switched to while a game runs.
 - **Core Isolation** - reported, never changed: it is a security boundary.
 - **Windows Search** - whether the indexer is busy right now.

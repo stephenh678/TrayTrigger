@@ -99,8 +99,7 @@
                                     <Button DockPanel.Dock="Right" Content="Save current..." Style="{StaticResource HelpLinkButton}"
                                             Command="{Binding SaveCurrentCommand}" Click="FilterSave_Click"
                                             AutomationProperties.Name="Save the ticked filters under a name"/>
-                                    <TextBlock Text="SAVED" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="SAVED" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <TextBlock Text="Tick some options, then save them here." Margin="22,0,8,0" TextWrapping="Wrap"
                                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">

@@ -33,7 +33,7 @@ public partial class PerformanceProfileService
     private static string DefenderWhat(PerGameProfileSnapshot perGame) => $"the Defender exclusion for {Path.GetFileName(perGame.DefenderExclusionPath!)}";
 
     /// <summary>
-    /// Notes what is on record and needs administrator rights, without asking for it: Restore Previous, or "Put back now" in
+    /// Notes what is on record and needs administrator rights, without asking for it: Put Back, or "Put Back Now" in
     /// the prompt at start and exit, does that. Returns what it noted.
     /// </summary>
     private List<string> NoteAdminLeftovers(PerformanceProfileSessionSnapshot snapshot)
@@ -57,7 +57,7 @@ public partial class PerformanceProfileService
         return names;
     }
 
-    /// <summary>The entry that offers Restore Previous for an NVIDIA setting that needs administrator rights.</summary>
+    /// <summary>The entry that offers Put Back for an NVIDIA setting that needs administrator rights.</summary>
     private void NoteAdminRecord(PerformanceProfileSessionSnapshot snapshot, NvidiaSettingSnapshot record, bool tried) =>
         NoteUnrestored(NvidiaSessionSettings[record.SettingId].What, () => RetryAdmin(snapshot, () => !snapshot.NvidiaSettings.Contains(record)), key: record, tried: tried);
 
@@ -68,7 +68,7 @@ public partial class PerformanceProfileService
     private static readonly object SchedulerEntryKey = new();
 
     /// <summary>
-    /// Restore Previous for what needs administrator rights. The registry values and Resizable BAR go back in one step, so
+    /// Put Back for what needs administrator rights. The registry values and Resizable BAR go back in one step, so
     /// one prompt however many of them are noted: the first to be retried in a pass does it, and the rest only look.
     /// </summary>
     private bool RetryAdmin(PerformanceProfileSessionSnapshot snapshot, Func<bool> isBack)

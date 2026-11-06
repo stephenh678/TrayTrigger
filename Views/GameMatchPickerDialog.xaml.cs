@@ -34,7 +34,7 @@ public sealed class MatchPickerItem
 }
 
 /// <summary>
-/// "Change match" - a live title search the user drives by hand when the automatic name match
+/// "Change Match" - a live title search the user drives by hand when the automatic name match
 /// picked the wrong game or found nothing. Source-agnostic: the caller supplies the search
 /// delegate (Steam store search or RAWG), the current id to flag, and an optional attribution
 /// link (RAWG's terms require one). Pre-fills and runs the game's name; the pick is returned in
@@ -110,7 +110,7 @@ public partial class GameMatchPickerDialog : Window
         SearchButton.IsEnabled = false;
         UseButton.IsEnabled = false;
         ResultsListBox.ItemsSource = null;
-        ShowEmpty("Searching…");
+        ShowEmpty("Searching...");
 
         try
         {

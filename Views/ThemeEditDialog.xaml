@@ -548,7 +548,7 @@
                     <Button Content="_Save Changes" Command="{Binding SaveCommand}" IsDefault="True" Click="SaveButton_Click"
                             Style="{StaticResource ModernAccentButton}" MinWidth="120"/>
                 </StackPanel>
-                <Button DockPanel.Dock="Left" Content="Open file" Command="{Binding OpenFileCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,14,0"
+                <Button DockPanel.Dock="Left" Content="Open File" Command="{Binding OpenFileCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,14,0"
                         Visibility="{Binding CanOpenFile, Converter={StaticResource BoolToVis}}"
                         ToolTip="Show the theme file in Explorer, to change the colors this window does not cover"/>
                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">

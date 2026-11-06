@@ -575,7 +575,7 @@ public class GameDetailsHeroTests : IDisposable
         Assert.True(vm.HasHeroImage);
         var first = vm.HeroImage;
 
-        // The page's own Change match gives the game another listing: the old one's banner must not stay behind the name.
+        // The page's own Change Match gives the game another listing: the old one's banner must not stay behind the name.
         game.SteamAppId = "222";
         await vm.LoadHeroAsync(replace: true);
         Assert.NotSame(first, vm.HeroImage);

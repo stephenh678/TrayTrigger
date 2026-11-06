@@ -58,21 +58,13 @@ public class ToolStartWithGamesSettingsTests : IDisposable
         Assert.Equal(expected, ToolCatalog.CanStartWithGames(new ToolEntry { TargetPath = target, AppId = appId }));
 
     [Fact]
-    public void Tabs_GameTabsOnlyWhileAToolUsesThem_AfterFavorites_StartBeforeClose()
+    public void Tabs_AreAllFavoritesAndCategories_TheGameSetsAreFilters()
     {
-        var afterburner = new ToolEntry { Name = "MSI Afterburner", TargetPath = @"C:\Tools\MSIAfterburner.exe", Category = "Graphics" };
-        var discord = new ToolEntry { Name = "Discord", TargetPath = @"C:\Tools\Discord.exe", Category = "Chat" };
+        var afterburner = new ToolEntry { Name = "MSI Afterburner", TargetPath = @"C:\Tools\MSIAfterburner.exe", Category = "Graphics", StartWithGames = true };
+        var discord = new ToolEntry { Name = "Discord", TargetPath = @"C:\Tools\Discord.exe", Category = "Chat", CloseForGames = true };
         var vortex = new ToolEntry { Name = "Vortex", TargetPath = @"C:\Tools\Vortex.exe", Category = "Mods" };
+
         Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
-
-        afterburner.StartWithGames = true;
-        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, ToolCatalog.StartWithGamesTab, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
-
-        discord.CloseForGames = true;
-        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, ToolCatalog.StartWithGamesTab, ToolCatalog.CloseWithGamesTab, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
-
-        afterburner.StartWithGames = false;
-        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, ToolCatalog.CloseWithGamesTab, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
     }
 
     [Fact]

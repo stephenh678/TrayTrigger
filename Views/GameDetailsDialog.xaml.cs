@@ -124,7 +124,7 @@ public partial class GameDetailsDialog : Window
     /// <summary>
     /// Drop straight into the match picker once the dialog's first load settles. Used by the
     /// library card's "Change Match..." item, which opens this dialog only to reach the picker -
-    /// having to click Change match again on arrival would defeat the point.
+    /// having to click Change Match again on arrival would defeat the point.
     ///
     /// It has to wait: ChangeMatchCommand is gated on CanChangeMatch, which is false while the
     /// details are still on their way in, so firing it at Loaded would silently do nothing.

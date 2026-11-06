@@ -39,7 +39,7 @@ The Saved section at the top of the flyout keeps combinations you use again, exa
 
 - **Clear**, at the top, resets every group. **clear** beside a group's heading resets just that group.
 - Under the count at the top, the flyout says what the ticks did: "Showing 3 of 9" is 3 tools out of the 9 the current tab and filter box would show.
-- The ticks are kept between sessions, so a filter you set stays on until you clear it. The button shows how many are on, and a list the filter has emptied says so and offers **Clear filters**.
+- The ticks are kept between sessions, so a filter you set stays on until you clear it. The button shows how many are on, and a list the filter has emptied says so and offers **Clear Filters**.
 - Leaving the Tools page clears the filter box, but not the ticks.
 
 The Library's filter is the same flyout; see Filtering the library.

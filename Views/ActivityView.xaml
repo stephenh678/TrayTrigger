@@ -16,15 +16,15 @@
              the row it was opened on. Items that don't apply to the row are hidden, not greyed out. -->
         <ContextMenu x:Key="ActivityRowContextMenu"
                      DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-            <MenuItem Header="Copy details" Command="{Binding CopyCommand}"/>
-            <MenuItem Header="Copy this line" Command="{Binding CopyLineCommand}"/>
-            <MenuItem Header="Show only this game" Command="{Binding ShowOnlyThisCommand}"
+            <MenuItem Header="Copy Details" Command="{Binding CopyCommand}"/>
+            <MenuItem Header="Copy This Line" Command="{Binding CopyLineCommand}"/>
+            <MenuItem Header="Show Only This Game" Command="{Binding ShowOnlyThisCommand}"
                       Visibility="{Binding HasSubject, Converter={StaticResource BoolToVis}}"/>
-            <MenuItem Header="Open this game" Command="{Binding OpenGameCommand}"
+            <MenuItem Header="Open This Game" Command="{Binding OpenGameCommand}"
                       Visibility="{Binding CanOpenGame, Converter={StaticResource BoolToVis}}"/>
-            <MenuItem Header="Open the log" Command="{Binding ShowLogCommand}"/>
+            <MenuItem Header="Open the Log" Command="{Binding ShowLogCommand}"/>
             <Separator Visibility="{Binding CanRemove, Converter={StaticResource BoolToVis}}"/>
-            <MenuItem Header="Remove this entry" Command="{Binding RemoveCommand}" Foreground="{DynamicResource BrushDanger}"
+            <MenuItem Header="Remove This Entry" Command="{Binding RemoveCommand}" Foreground="{DynamicResource BrushDanger}"
                       Visibility="{Binding CanRemove, Converter={StaticResource BoolToVis}}"/>
         </ContextMenu>
 
@@ -35,13 +35,6 @@
             <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}"/>
             <Setter Property="Padding" Value="12,4"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-
-        <Style x:Key="SectionLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="CriticalTag" TargetType="Border">
@@ -191,7 +184,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
                         <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                    Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="NEEDS ATTENTION" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Text="NEEDS ATTENTION" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Border Style="{StaticResource ActivityCard}">
                         <ItemsControl ItemsSource="{Binding NeedsAttention}">
@@ -230,7 +223,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
                         <TextBlock Text="&#xE81C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                    Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="RECENT" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Text="RECENT" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding RecentWindowLabel}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
@@ -261,7 +254,7 @@
                                         </Border.InputBindings>
                                         <StackPanel>
                                             <DockPanel LastChildFill="True">
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding When}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding RowWhen}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                                            FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                                 <WrapPanel VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Text}" FontSize="{DynamicResource FontSizeBody}" FontFamily="{DynamicResource AppFont}"

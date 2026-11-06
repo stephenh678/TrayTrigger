@@ -278,14 +278,14 @@
                                     <TextBlock Text="&#xE712;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"/>
                                     <Button.ContextMenu>
                                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                            <MenuItem Header="Open the Steam store page" Command="{Binding OpenStorePageCommand}"
+                                            <MenuItem Header="Open the Steam Store Page" Command="{Binding OpenStorePageCommand}"
                                                       Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"/>
-                                            <MenuItem Header="Open this game on RAWG" Command="{Binding OpenRawgPageCommand}"
+                                            <MenuItem Header="Open This Game on RAWG" Command="{Binding OpenRawgPageCommand}"
                                                       Visibility="{Binding HasRawgPage, Converter={StaticResource BoolToVis}}"/>
-                                            <MenuItem Header="Open the PCGamingWiki page" Command="{Binding OpenPcGamingWikiCommand}"
+                                            <MenuItem Header="Open the PCGamingWiki Page" Command="{Binding OpenPcGamingWikiCommand}"
                                                       Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"/>
                                             <Separator/>
-                                            <MenuItem Header="Remove from library" Command="{Binding DeleteGameCommand}" Foreground="{DynamicResource BrushDanger}"/>
+                                            <MenuItem Header="Remove from Library" Command="{Binding DeleteGameCommand}" Foreground="{DynamicResource BrushDanger}"/>
                                         </ContextMenu>
                                     </Button.ContextMenu>
                                 </Button>
@@ -398,15 +398,15 @@
                                                 </MenuItem.Style>
                                             </MenuItem>
                                             <Separator/>
-                                            <MenuItem Header="Refresh now" Command="{Binding RefreshNowCommand}" ToolTip="{Binding RefreshNowToolTip}"
+                                            <MenuItem Header="Refresh Now" Command="{Binding RefreshNowCommand}" ToolTip="{Binding RefreshNowToolTip}"
                                                       Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}"/>
-                                            <MenuItem Header="Change match..." Command="{Binding ChangeMatchCommand}" ToolTip="{Binding ChangeMatchToolTip}"/>
+                                            <MenuItem Header="Change Match..." Command="{Binding ChangeMatchCommand}" ToolTip="{Binding ChangeMatchToolTip}"/>
                                             <MenuItem Header="Where this info comes from" Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
                                         </ContextMenu>
                                     </Button.ContextMenu>
                                 </Button>
                             </StackPanel>
-                            <TextBlock Text="ABOUT THE GAME" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <TextBlock Text="ABOUT THE GAME" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/>
                         </DockPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                                    TextWrapping="Wrap" LineHeight="20"/>
@@ -443,8 +443,7 @@
                                     <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                 </StackPanel>
                             </Button>
-                            <TextBlock Text="LATEST DEVELOPER NEWS &amp; PATCH NOTES" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="LATEST DEVELOPER NEWS &amp; PATCH NOTES" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/>
                         </DockPanel>
 
                         <ItemsControl ItemsSource="{Binding VisibleNews}">
@@ -517,8 +516,7 @@
                                 <Button Content="Recommended" Command="{Binding ShowRecReqsCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
                             </StackPanel>
-                            <TextBlock Text="PC SYSTEM REQUIREMENTS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <TextBlock Text="PC SYSTEM REQUIREMENTS" Style="{StaticResource CardLabel}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                         </DockPanel>
                         <TextBlock Text="{Binding CurrentRequirementsText}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                    FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" LineHeight="19"/>
@@ -531,7 +529,7 @@
                         <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                 CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                             <StackPanel>
-                                <TextBlock Text="DETAILS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,8"/>
+                                <TextBlock Text="DETAILS" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
                                 <DockPanel Margin="0,0,0,4" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="{Binding DeveloperLabel}" Style="{StaticResource DetailLabel}"/>
                                     <TextBlock Text="{Binding Developers}" Style="{StaticResource DetailValue}" ToolTip="{Binding Developers}"/>
@@ -617,7 +615,7 @@
 
                                 <!-- Where to read more: only the links that exist for this game -->
                                 <WrapPanel Margin="0,8,0,0" Visibility="{Binding ShowLinks, Converter={StaticResource BoolToVis}}">
-                                    <Button Content="Store page" Command="{Binding OpenStorePageCommand}" Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"
+                                    <Button Content="Store Page" Command="{Binding OpenStorePageCommand}" Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"
                                             Style="{StaticResource ModernGhostButton}" Padding="0" Margin="0,0,14,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
                                     <Button Content="PCGamingWiki" Command="{Binding OpenPcGamingWikiCommand}" Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"
                                             Style="{StaticResource ModernGhostButton}" Padding="0" Margin="0,0,14,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
@@ -635,7 +633,7 @@
                                 CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14"
                                 Visibility="{Binding HasSetupCards, Converter={StaticResource BoolToVis}}">
                             <StackPanel>
-                                <TextBlock Text="YOUR SETUP" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                                <TextBlock Text="YOUR SETUP" Style="{StaticResource CardLabel}" Margin="0,0,0,2"/>
                                 <ItemsControl ItemsSource="{Binding SetupCards}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -688,7 +686,7 @@
                                 CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14"
                                 Visibility="{Binding HasLastSession, Converter={StaticResource BoolToVis}}">
                             <StackPanel>
-                                <TextBlock Text="LAST SESSION" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                                <TextBlock Text="LAST SESSION" Style="{StaticResource CardLabel}" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding LastSession.Title}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                 <ItemsControl ItemsSource="{Binding LastSession.Lines}" Margin="0,4,0,6">
                                     <ItemsControl.ItemTemplate>
@@ -698,7 +696,7 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <Button Content="See this game in Activity" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0"
+                                <Button Content="See This Game in Activity" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0"
                                         FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
                                         Command="{Binding OpenActivityCommand}"/>
                             </StackPanel>
@@ -721,7 +719,9 @@
             <Button Content="_Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}"
                     Padding="18,6" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="12,0,0,0"/>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsSettingsTab, Converter={StaticResource BoolToVis}}">
-                <Button Content="Cancel" Command="{Binding EditViewModel.CancelCommand}"
+                <!-- Only while there is something to throw away, so it never reads as a second Close. -->
+                <Button Content="_Discard Changes" Command="{Binding EditViewModel.CancelCommand}"
+                        Visibility="{Binding IsEnabled, RelativeSource={RelativeSource Self}, Converter={StaticResource BoolToVis}}"
                         ToolTip="Throw away the changes and start again from the saved settings"
                         Style="{StaticResource ModernGhostButton}" MinWidth="85" Margin="0,0,8,0"/>
                 <!-- The default button only while the Settings tab is on show, so Enter on the Overview never saves. -->

@@ -655,7 +655,7 @@ public partial class LibraryViewModel : ViewModelBase
         });
     }
 
-    /// <summary>"Restore Settings Now": puts Windows back as it was and stops tracking, but leaves the
+    /// <summary>"Put Back Settings Now": puts Windows back as it was and stops tracking, but leaves the
     /// game running. Off the UI thread, as above.</summary>
     private void RestoreSettingsNow(GameCardViewModel card)
     {

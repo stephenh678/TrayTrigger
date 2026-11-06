@@ -105,7 +105,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
     /// <summary>
     /// True when the list is empty only because of the filter flyout: there are tools and the tab and box
-    /// would show some, but a tick box is hiding them. Drives the "Clear filters" button in the empty
+    /// would show some, but a tick box is hiding them. Drives the "Clear Filters" button in the empty
     /// state, so a filter kept from an earlier run can never read as tools that went missing.
     /// </summary>
     public bool IsEmptyBecauseOfFilters => HasAnyTools && Filter.HasActiveFilters && IsFilteredEmpty;
@@ -311,10 +311,7 @@ public sealed class ToolsViewModel : ViewModelBase
         {
             string display = tab == LibraryConstants.AllCategory ? "All Tools" : tab;
             bool isSelected = string.Equals(tab, _selectedCategory, StringComparison.OrdinalIgnoreCase);
-            CategoryTabs.Add(new CategoryTabItem(tab, display, isSelected, name => SelectedCategory = name,
-                glyph: tab == ToolCatalog.StartWithGamesTab ? ToolCardViewModel.StartsWithGamesGlyph
-                     : tab == ToolCatalog.CloseWithGamesTab ? ToolCardViewModel.ClosesForGamesGlyph
-                     : string.Empty));
+            CategoryTabs.Add(new CategoryTabItem(tab, display, isSelected, name => SelectedCategory = name));
         }
         OnPropertyChanged(nameof(SelectedCategory));
     }
@@ -355,15 +352,8 @@ public sealed class ToolsViewModel : ViewModelBase
     /// </summary>
     private void OpenAppsFolder()
     {
-        try
-        {
-            using var _ = Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, "shell:AppsFolder") { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("Tools", $"Could not open the Applications folder: {ex.Message}");
+        if (!ShellOpen.OpenFolder("shell:AppsFolder", "Tools", "the Applications folder"))
             StatusMessage = "Couldn't open the Applications folder.";
-        }
     }
 
     /// <summary>Files dropped on the Tools page (or anywhere on the window while it is showing).</summary>
@@ -814,25 +804,18 @@ public sealed class ToolsViewModel : ViewModelBase
     public void OpenFolder(ToolCardViewModel card)
     {
         if (card.IsStoreApp) return;
-        try
+        if (File.Exists(card.TargetPath))
         {
-            if (File.Exists(card.TargetPath))
-            {
-                Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"/select,\"{card.TargetPath}\"") { UseShellExecute = true });
-                return;
-            }
-            string? folder = Path.GetDirectoryName(card.TargetPath);
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
-            {
-                Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"\"{folder}\"") { UseShellExecute = true });
-                return;
-            }
-            StatusMessage = $"The folder for \"{card.Name}\" no longer exists.";
+            ShellOpen.Reveal(card.TargetPath, "Tools", $"the folder for '{card.Name}'");
+            return;
         }
-        catch (Exception ex)
+        string? folder = Path.GetDirectoryName(card.TargetPath);
+        if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
         {
-            LoggingService.Warn("Tools", $"Could not open the folder for '{card.Name}': {ex.Message}");
+            ShellOpen.OpenFolder(folder, "Tools", $"the folder for '{card.Name}'");
+            return;
         }
+        StatusMessage = $"The folder for \"{card.Name}\" no longer exists.";
     }
 
     public void Remove(ToolCardViewModel card)

@@ -6,9 +6,9 @@ A game has three pictures, and each has its own card on Edit Game's **Artwork** 
 - **Poster**: the vertical picture on library cards. Tall, 2 by 3.
 - **Icon**: the small square one in the tray menu and the list view.
 
-Each card says whether the picture is **Automatic** (found for the game) or **Custom** (a file you chose). **Choose image...** makes it Custom; so does dropping a picture file on the card. **Use automatic** puts the automatic one back, and **Find again** (Automatic pictures only) looks for it again. The Hero banner card marks the part Game Details crops. The icon can also be an exe, which gives its icon.
+Each card says whether the picture is **Automatic** (found for the game) or **Custom** (a file you chose). **Choose Image...** makes it Custom; so does dropping a picture file on the card. **Use Automatic** puts the automatic one back, and **Find again** (Automatic pictures only) looks for it again. The Hero banner card marks the part Game Details crops. The icon can also be an exe, which gives its icon.
 
-A poster or icon you chose yourself before 1.7.6 shows as Automatic, because nothing marked it as yours then. It stays as it is until you press **Use automatic** or **Find again**, or run Refresh All Game Posters, which replace it with the automatic picture. Choose the picture again and it is marked Custom from then on.
+A poster or icon you chose yourself before 1.7.6 shows as Automatic, because nothing marked it as yours then. It stays as it is until you press **Use Automatic** or **Find again**, or run Refresh All Game Posters, which replace it with the automatic picture. Choose the picture again and it is marked Custom from then on.
 
 ## Hero banners
 
@@ -25,7 +25,7 @@ The hero banner is Steam's own wide hero banner for the game's App ID, from the 
 
 - Games added by the Steam scanner are linked automatically.
 - For everything else, TrayTrigger searches the Steam store by name when the game is added, if online title search is on.
-- To fix a wrong match, open the game's details and use the Steam menu on the About card > Change match..., or open Edit Game > Identity & Library > Online match and click Change match... to search the Steam store and pick the right listing. Or click **Enter an App ID**, type the one from the store page URL, and click Fetch by ID. Tick what a new match may replace (Title, Genre, Poster) before you pick it; Undo puts back what it changed until you save.
+- To fix a wrong match, open the game's details and use the Steam menu on the About card > Change Match..., or open Edit Game > Identity & Library > Online match and click Change Match... to search the Steam store and pick the right listing. Or click **Enter an App ID**, type the one from the store page URL, and click Fetch by ID. Tick what a new match may replace (Title, Genre, Poster) before you pick it; Undo puts back what it changed until you save.
 
 ## Show details on hover
 

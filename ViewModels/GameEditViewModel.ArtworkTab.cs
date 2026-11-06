@@ -20,8 +20,8 @@ public enum ArtSlot
 
 /// <summary>
 /// Edit Game > Artwork: the Banner (behind the name on Game Details), the Poster (library cards) and the Icon (tray and
-/// list). Each is Automatic, found for the game, or Custom, a file the player chose; Choose image... makes it Custom and
-/// Use automatic puts the automatic one back.
+/// list). Each is Automatic, found for the game, or Custom, a file the player chose; Choose Image... makes it Custom and
+/// Use Automatic puts the automatic one back.
 /// </summary>
 public partial class GameEditViewModel
 {
@@ -38,7 +38,7 @@ public partial class GameEditViewModel
     private bool _iconCustom;
     private bool _heroCustom;
 
-    /// <summary>The banner file picked this session; "" once Use automatic was pressed; null while nothing was changed.</summary>
+    /// <summary>The banner file picked this session; "" once Use Automatic was pressed; null while nothing was changed.</summary>
     private string? _customHeroSource;
     private BitmapImage? _heroPreview;
 
@@ -206,7 +206,7 @@ public partial class GameEditViewModel
     // --- Choosing or dropping a file ---
 
     /// <summary>
-    /// Makes a picture the player's own: what Choose image... and a dropped file both do. Returns why the file
+    /// Makes a picture the player's own: what Choose Image... and a dropped file both do. Returns why the file
     /// was refused, which is also shown in the status line, or null once it is in use.
     /// </summary>
     public string? TryUseImage(ArtSlot slot, string path)

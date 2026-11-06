@@ -161,7 +161,7 @@ public static class StutterCheckService
         Tweak(inputs, items, "dx_shader_cache", "Windows keeps the DirectX shader cache", "Windows cleanups delete the DirectX shader cache",
             "Storage Sense and Disk Cleanup can wipe every game's compiled shaders, and the next launch compiles them again mid-game. Fix it applies the Keep the DirectX Shader Cache tweak below.");
         Tweak(inputs, items, "hags", "Hardware-Accelerated GPU Scheduling is on", "Hardware-Accelerated GPU Scheduling is off",
-            "Lets the GPU manage its own command queue, which steadies frame pacing on CPU-limited PCs and is needed for DLSS Frame Generation. Fix it applies the HAGS tweak below; it asks for administrator permission and needs a restart, and Restore Previous puts it back.");
+            "Lets the GPU manage its own command queue, which steadies frame pacing on CPU-limited PCs and is needed for DLSS Frame Generation. Fix it applies the HAGS tweak below; it asks for administrator permission and needs a restart, and Put Back puts it back.");
         Tweak(inputs, items, "game_dvr", "Game Bar background recording is off", "Game Bar is recording in the background",
             "\"Record what happened\" keeps the GPU encoder busy and writes to your SSD the whole time you play. Fix it applies the Game Bar Captures tweak below.");
         Tweak(inputs, items, "game_mode", "Windows Game Mode is on", "Windows Game Mode is off",

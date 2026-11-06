@@ -216,7 +216,7 @@ public partial class GameEditViewModel : ViewModelBase
         FetchBySteamIdCommand = new RelayCommand(FetchBySteamId, () => !IsRefreshingMetadata);
         RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
         SaveCommand = new RelayCommand(Save);
-        CancelCommand = new RelayCommand(Cancel);
+        CancelCommand = new RelayCommand(Cancel, () => HasUnsavedChanges);
         SelectSectionCommand = new RelayCommand(p =>
         {
             if (p is GameEditSection section) SelectedSection = section;

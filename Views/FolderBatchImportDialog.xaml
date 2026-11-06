@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
         mc:Ignorable="d"
         Title="Add Games from Folder"
-        Height="560" Width="680"
+        Height="560" Width="680" MinHeight="420" MinWidth="560"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Background="{DynamicResource BrushSurface}"

@@ -29,14 +29,7 @@ public static class HelpCommands
     {
         if (p is string url && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Warn("Help", $"Could not open {url}: {ex.Message}");
-            }
+            ShellOpen.Open(url, "Help", url);
         }
     });
 }

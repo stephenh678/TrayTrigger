@@ -55,10 +55,10 @@ public partial class FilterFlyout : UserControl
             return dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.ResultValue) ? dialog.ResultValue : null;
         };
         filter.ConfirmReplace = (name, saved, now) => ModernDialog.Confirm(
-            WindowHelper.ActiveOwner(), "Replace saved filter", $"Replace the saved filter \"{name}\"?",
+            WindowHelper.ActiveOwner(), "Replace Saved Filter", $"Replace the saved filter \"{name}\"?",
             $"Saved: {saved}.\nNow: {now}.", confirmText: "Replace", cancelText: "Cancel");
         filter.ConfirmDelete = name => ModernDialog.ConfirmDelete(
-            WindowHelper.ActiveOwner(), "Delete saved filter", $"Delete the saved filter \"{name}\"?",
+            WindowHelper.ActiveOwner(), "Delete Saved Filter", $"Delete the saved filter \"{name}\"?",
             $"Your {things} and your other filters are not affected.", confirmText: "Delete");
     }
 

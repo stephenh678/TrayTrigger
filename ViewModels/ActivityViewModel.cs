@@ -420,6 +420,9 @@ public sealed class ActivityGroupViewModel : ViewModelBase
         return lines;
     }
     public string When { get; }
+
+    /// <summary>When, as the row shows it: under the Today and Yesterday headings only the time, since the heading already says the day.</summary>
+    public string RowWhen => Section is "Today" or "Yesterday" ? When[(When.IndexOf(' ') + 1)..] : When;
     /// <summary>The date header this row sits under; see <see cref="ActivityViewModel.SectionFor"/>.</summary>
     public string Section { get; }
     public IReadOnlyList<string> Times { get; }
@@ -472,9 +475,9 @@ public sealed class ActivityGroupViewModel : ViewModelBase
 
     /// <summary>Every Critical entry in the row put right since: a green FIXED badge, as OPTIMAL is green.</summary>
     public bool IsFixed => Group.Fixed;
-    /// <summary>When, for the expanded row: "Put back Today 1:20 PM, with Restore Previous."</summary>
+    /// <summary>When, for the expanded row: "Put back Today 1:20 PM, with the Put Back button."</summary>
     public string FixedLabel => IsFixed && Group.Latest.FixedUtc is { } t
-        ? $"Put back {ActivityViewModel.FormatWhen(t, DateTime.Now)}, with Restore Previous."
+        ? $"Put back {ActivityViewModel.FormatWhen(t, DateTime.Now)}, with the Put Back button."
         : string.Empty;
 
     /// <summary>"7 TIMES" on a repeated problem, the way MISSING flags a card; blank otherwise.</summary>
@@ -517,7 +520,7 @@ public sealed class ActivityGroupViewModel : ViewModelBase
         sb.Append("  ").Append(Group.Latest.Level).Append(": ").AppendLine(Text);
         if (HasDetail) sb.AppendLine(Detail);
         if (IsFixed && Group.Latest.FixedUtc is { } fixedAt)
-            sb.AppendLine("Fixed " + fixedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + ", with Restore Previous.");
+            sb.AppendLine("Fixed " + fixedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + ", with the Put Back button.");
         if (Count > 1) sb.AppendLine($"{Count} times: " + string.Join(", ", Group.TimesUtc.Select(t => t.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))));
         sb.Append("TrayTrigger ").Append(UpdateService.CurrentVersionDisplay);
         return sb.ToString();

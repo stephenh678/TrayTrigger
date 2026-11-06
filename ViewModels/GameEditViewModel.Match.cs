@@ -54,7 +54,7 @@ public partial class GameEditViewModel
     public ICommand RemoveMatchCommand => _removeMatch ??= new RelayCommand(RemoveMatch, () => HasMatch);
     private ICommand? _changeMatch, _enterAppId, _removeMatch;
 
-    /// <summary>The same picker Game Details' Change match opens, pre-filled with this game's title.</summary>
+    /// <summary>The same picker Game Details' Change Match opens, pre-filled with this game's title.</summary>
     private async Task ChangeMatchAsync()
     {
         var search = new SteamSearchService();

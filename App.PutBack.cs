@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using TrayTrigger.Services;
@@ -46,18 +46,18 @@ public partial class App
         if (check.GameRunning)
         {
             // Closing puts the game's changes back, and the ones that need permission ask for it: say so first.
-            return ModernDialog.Confirm(owner, "A game is still running",
+            return ModernDialog.Confirm(owner, "A Game Is Still Running",
                 $"Closing TrayTrigger puts back the changes it made for the game: {list}.",
                 "Windows will ask for your permission to do that. Stay open to keep playing.",
-                confirmText: "Close and put back", cancelText: "Stay open");
+                confirmText: "Close and Put Back", cancelText: "Stay Open");
         }
 
         // Three ways out, with Esc and the title-bar close on the one that changes nothing: staying open.
-        // Enter is on "Put back now", the choice that leaves nothing behind.
-        var choice = ModernDialog.PromptChoice(owner, "Some settings are still changed",
+        // Enter is on "Put Back Now", the choice that leaves nothing behind.
+        var choice = ModernDialog.PromptChoice(owner, "Some Settings Are Still Changed",
             $"Your last game's changes weren't all put back: {list}. Put them back before closing?",
             "Windows may ask for your permission. If you close anyway, TrayTrigger offers again the next time it starts, and Activity & History keeps a reminder.",
-            primaryText: "Close anyway", secondaryText: "Put back now", cancelText: "Stay open",
+            primaryText: "Close Anyway", secondaryText: "Put Back Now", cancelText: "Stay Open",
             iconType: Views.DialogIconType.Warning);
         if (choice == Views.DialogResultOption.Secondary) _performanceProfileService!.RetryUnrestored();
         return choice != Views.DialogResultOption.Cancel;
@@ -70,7 +70,7 @@ public partial class App
         _putBackPromptPending = true;
         if (windowWillShow) return;
         // Clicking it opens Activity & History, which shows the reminder, and the prompt with the window.
-        ShowTrayNotification("Settings from your last game are still changed",
+        ShowTrayNotification("Settings from Your Last Game Are Still Changed",
             "Click to put them back.", opensActivity: true);
     }
 
@@ -90,18 +90,29 @@ public partial class App
         if (service == null || check == null || check.GameRunning || check.Items.Count == 0) return;
 
         var owner = _mainWindow is { IsVisible: true } ? _mainWindow : null;
-        bool putBack = ModernDialog.Confirm(owner, "Settings from your last game are still changed",
+        bool putBack = ModernDialog.Confirm(owner, "Settings from Your Last Game Are Still Changed",
             $"TrayTrigger couldn't put these back last time: {PerformanceProfileService.JoinList(check.Items)}. Put them back now?",
-            "Windows may ask for your permission. If you'd rather not now, Activity & History keeps a reminder with Restore Previous, and TrayTrigger asks again the next time it starts.",
-            confirmText: "Put back now", cancelText: "Not now");
+            "Windows may ask for your permission. If you'd rather not now, Activity & History keeps a reminder with Put Back, and TrayTrigger asks again the next time it starts.",
+            confirmText: "Put Back Now", cancelText: "Not Now");
         if (!putBack) return;
 
-        bool allBack = await Task.Run(service.RetryUnrestored);
+        bool allBack;
+        try
+        {
+            allBack = await Task.Run(service.RetryUnrestored);
+        }
+        catch (Exception ex)
+        {
+            // async void: an exception here would reach the app-wide handler at startup. What is still
+            // changed stays on record, so the warning below and Activity & History still offer Put Back.
+            LoggingService.Error("App", "Putting back at start failed", ex);
+            allBack = false;
+        }
         if (!allBack)
         {
-            ModernDialog.ShowWarning(owner, "Not everything was put back",
+            ModernDialog.ShowWarning(owner, "Not Everything Was Put Back",
                 $"Still changed: {PerformanceProfileService.JoinList(service.CheckPutBacks().Items)}.",
-                "Restore Previous in Activity & History tries again.");
+                "Put Back in Activity & History tries again.");
         }
     }
 }

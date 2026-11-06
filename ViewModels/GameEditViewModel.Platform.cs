@@ -34,7 +34,7 @@ public partial class GameEditViewModel
     /// to Local in this edit session) - shows the platform card.</summary>
     public bool HasPlatform => (_hasPlatform || _isSteamGame) && !_convertToLocal;
 
-    /// <summary>Convert to Local game is offered unless the result couldn't run: a Game Pass (GDK) exe needs its package.</summary>
+    /// <summary>Convert to Local Game is offered unless the result couldn't run: a Game Pass (GDK) exe needs its package.</summary>
     public bool CanConvertToLocal => !SourceGame.IsXboxGame;
 
     /// <summary>Convert to Local was clicked and not yet saved or undone: shows the note with Undo in the platform card's place.</summary>

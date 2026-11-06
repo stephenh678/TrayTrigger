@@ -12,7 +12,7 @@ TrayTrigger changes things for your games and puts them back afterwards: a Perfo
 
 What's wrong right now, each with a button to fix it. It's shown only when there's something there, and each item goes by itself once it's fixed, so there's nothing to dismiss.
 
-- **A setting a Performance Profile couldn't put back**, such as the power plan or Windows' multimedia scheduler settings. Marked CRITICAL, because your PC was left changed. **Restore Previous** tries again; it may ask for administrator permission. Once everything is back, the item goes and the entry in Recent gets a green **FIXED** badge beside CRITICAL, with when it was put back.
+- **A setting a Performance Profile couldn't put back**, such as the power plan or Windows' multimedia scheduler settings. Marked CRITICAL, because your PC was left changed. **Put Back** tries again; it may ask for administrator permission. Once everything is back, the item goes and the entry in Recent gets a green **FIXED** badge beside CRITICAL, with when it was put back.
 - **A newer NVIDIA driver**, once you've pressed Check for Newer Driver on the System page and it found one. **Get Driver** opens NVIDIA's page; the NVIDIA app can install it too. The item stays until that driver or a newer one is installed, which TrayTrigger notices the next time it reads your hardware (at the next start, or on Refresh under Hardware Specs).
 
 ## Recent
@@ -35,15 +35,15 @@ Each game you play is one row, "Played Elden Ring · 2h 17m", and it moves to th
 - **Scripts**: the pre-launch and post-exit scripts that ran, or were skipped, and why, and what a script said it did ("closed OneDrive and Discord"): any line it prints starting with TT: lands here.
 - **Tools**: what the Tools page did, and didn't: "Discord closed, opened again after · MSI Afterburner already running, left as it was · OneDrive wasn't running, nothing to close". Until your last game has exited it reads "closes after your last game", and if a tool then wouldn't close or couldn't be opened again the line says so, beside the problem row for it. The tools themselves don't get rows; the history is the game.
 
-The same thing happening again is one row too: a problem shows how many times (7 TIMES), and a setting you switched back and forth shows how often it changed ("changed 3 times"), and clicking a row shows each time, what it means, **Show in log** for the technical detail, and **Copy details** for a bug report, the whole launch record included. The tabs narrow the list to Problems, Changes or Activity, and the filter box finds a game, a tool or what happened.
+The same thing happening again is one row too: a problem shows how many times (7 TIMES), and a setting you switched back and forth shows how often it changed ("changed 3 times"), and clicking a row shows each time, what it means, **Show in log** for the technical detail, and **Copy Details** for a bug report, the whole launch record included. The tabs narrow the list to Problems, Changes or Activity, and the filter box finds a game, a tool or what happened.
 
 Right-click a row for more:
 
-- **Copy details** and **Copy this line**: the whole entry for a bug report, or just its one-line title to paste into a chat.
-- **Show only this game**: puts the row's game or tool in the filter box, so the list shows only that.
+- **Copy Details** and **Copy This Line**: the whole entry for a bug report, or just its one-line title to paste into a chat.
+- **Show Only This Game**: puts the row's game or tool in the filter box, so the list shows only that.
 - **Open this game**: opens the game's Game Details on its Settings tab, when it is still in your library. Game Details' Last session card shows the newest of a game's Played rows, and its See this game in Activity link comes back here with the game's name in the filter box.
 - **Open the log**: opens debug.log in your editor. It opens the file, not the place the entry is in; the log is cleared and rolls over, so an old entry may have no lines left, and some lines only appear with Verbose logging on.
-- **Remove this entry**: after a confirmation, removes the row and every time it happened (a row that says 7 TIMES removes all seven). It isn't offered for a Critical row while its setting is still under Needs attention, because that is a PC left changed; once the setting is back, the row can go, even if an older entry in it was never marked FIXED. Only the entries the row shows go: with a search or tab narrowing the list, the times it hides stay. Removing can't be undone.
+- **Remove This Entry**: after a confirmation, removes the row and every time it happened (a row that says 7 TIMES removes all seven). It isn't offered for a Critical row while its setting is still under Needs attention, because that is a PC left changed; once the setting is back, the row can go, even if an older entry in it was never marked FIXED. Only the entries the row shows go: with a search or tab narrowing the list, the times it hides stay. Removing can't be undone.
 
 Games you add and changes to performance settings - Performance Profiles, CPU Cores, DLSS Override and System tweaks - are listed, quietly - no notification and no dot - because they decide what TrayTrigger changes on your PC. Other settings you change aren't listed: you're already looking at the result.
 

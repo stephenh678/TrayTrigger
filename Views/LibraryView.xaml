@@ -124,7 +124,7 @@
                           ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
                     <MenuItem.Icon><TextBlock Text="&#xE7E8;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Restore Settings Now" Command="{Binding RestoreSettingsCommand}"
+                <MenuItem Header="Put Back Settings Now" Command="{Binding RestoreSettingsCommand}"
                           ToolTip="Leaves the game running and puts Windows back the way it was: the Performance Profile is restored, the post-exit script runs and tools set to close after the game close. The game is no longer tracked, so its playtime stops counting.">
                     <MenuItem.Icon><TextBlock Text="&#xE72C;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
                 </MenuItem>
@@ -135,7 +135,7 @@
             </MenuItem>
             <MenuItem Header="{Binding FavoriteMenuLabel}" Command="{Binding ToggleFavoriteCommand}"/>
             <MenuItem Header="{Binding HideMenuLabel}" Command="{Binding ToggleHiddenCommand}"/>
-            <MenuItem Header="Open Containing Folder" Command="{Binding OpenFolderCommand}"/>
+            <MenuItem Header="Open File Location" Command="{Binding OpenFolderCommand}"/>
 
             <!-- Broken Game Relocate Option -->
             <MenuItem Header="Locate Executable..." Command="{Binding RelocateCommand}">
@@ -499,7 +499,7 @@
 
                            <!-- Left: Title & Subtitle matching Settings & System -->
                            <StackPanel VerticalAlignment="Center">
-                               <TextBlock Text="Games Library" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
+                               <TextBlock Text="Library" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                                           FontFamily="{DynamicResource AppFont}" FontWeight="Normal"/>
                                <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, and local folders"
                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
@@ -575,6 +575,7 @@
                                <ColumnDefinition Width="190"/>
                                <ColumnDefinition Width="Auto"/>
                                <ColumnDefinition Width="Auto"/>
+                               <ColumnDefinition Width="Auto"/>
                            </Grid.ColumnDefinitions>
 
                            <!-- The same search box as Settings, About and System, with its clear x;
@@ -593,61 +594,64 @@
                            <views:FilterFlyout x:Name="FilterFlyoutControl" Grid.Column="2" Margin="0,0,10,0"
                                                DataContext="{Binding Library.Filter}" HelpTopic="library/filtering"/>
 
-                           <!-- View Mode Switcher (Grid, Icons, List) -->
-                           <Border Grid.Column="3" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                           <!-- Details on hover: a toggle of its own, beside the view buttons -->
+                           <Border Grid.Column="3" Margin="0,0,10,0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
-                               <StackPanel Orientation="Horizontal">
-                                   <!-- Not one of the views: it changes how both poster views draw their cards,
-                                        so it sits first, divided off from the four views it doesn't replace.
-                                        Disabled (not hidden) in the other two, so the views don't shift along
-                                        the bar as you switch between them. The glyph is Hide (an eye struck
-                                        through): lit, it means the details are hidden until you point at a card. -->
-                                   <Button Command="{Binding SettingsVM.TogglePosterDetailsOnHoverCommand}"
-                                           Width="32" Height="30" Padding="0" Cursor="Hand"
-                                           IsEnabled="{Binding SettingsVM.IsPosterView}"
-                                           ToolTipService.ShowOnDisabled="True"
+                               <!-- Not one of the views: it changes how both poster views draw their cards, so it is its own
+                                    control beside the views rather than one of them. Disabled (not hidden) in the other two,
+                                    so nothing shifts as you switch views. The glyph is Hide (an eye struck through): lit, it
+                                    means the details are hidden until you point at a card. -->
+                               <Button Command="{Binding SettingsVM.TogglePosterDetailsOnHoverCommand}"
+                                       Width="32" Height="30" Padding="0" Cursor="Hand"
+                                       IsEnabled="{Binding SettingsVM.IsPosterView}"
+                                       ToolTipService.ShowOnDisabled="True"
         AutomationProperties.Name="{Binding SettingsVM.PosterDetailsOnHoverAccessibleName}">
-                                       <Button.Style>
-                                           <Style TargetType="Button" BasedOn="{StaticResource SegmentedTabButton}">
-                                               <Setter Property="ToolTip" Value="Show details on hover: posters show only their art until you point at one"/>
+                                   <Button.Style>
+                                       <Style TargetType="Button" BasedOn="{StaticResource SegmentedTabButton}">
+                                           <Setter Property="ToolTip" Value="Show details on hover: posters show only their art until you point at one"/>
+                                           <Style.Triggers>
+                                               <Trigger Property="IsEnabled" Value="False">
+                                                   <Setter Property="Opacity" Value="0.35"/>
+                                                   <Setter Property="ToolTip" Value="Show details on hover: for the two poster views"/>
+                                               </Trigger>
+                                           </Style.Triggers>
+                                       </Style>
+                                   </Button.Style>
+                                   <!-- On is an outline and an accent glyph, not the filled blue of the view buttons
+                                        beside it: filled, it read as a second view being selected. -->
+                                   <Border Width="26" Height="24" CornerRadius="{DynamicResource RadiusSmall}" BorderThickness="1">
+                                       <Border.Style>
+                                           <Style TargetType="Border">
+                                               <Setter Property="BorderBrush" Value="Transparent"/>
                                                <Style.Triggers>
-                                                   <Trigger Property="IsEnabled" Value="False">
-                                                       <Setter Property="Opacity" Value="0.35"/>
-                                                       <Setter Property="ToolTip" Value="Show details on hover: for the two poster views"/>
-                                                   </Trigger>
+                                                   <DataTrigger Binding="{Binding SettingsVM.PosterDetailsOnHover}" Value="True">
+                                                       <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                                       <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+                                                   </DataTrigger>
                                                </Style.Triggers>
                                            </Style>
-                                       </Button.Style>
-                                       <!-- On is an outline and an accent glyph, not the filled blue of the view buttons
-                                            beside it: filled, it read as a second view being selected. -->
-                                       <Border Width="26" Height="24" CornerRadius="{DynamicResource RadiusSmall}" BorderThickness="1">
-                                           <Border.Style>
-                                               <Style TargetType="Border">
-                                                   <Setter Property="BorderBrush" Value="Transparent"/>
+                                       </Border.Style>
+                                       <TextBlock Text="&#xED1A;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center">
+                                           <TextBlock.Style>
+                                               <Style TargetType="TextBlock">
+                                                   <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                                                    <Style.Triggers>
                                                        <DataTrigger Binding="{Binding SettingsVM.PosterDetailsOnHover}" Value="True">
-                                                           <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
-                                                           <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+                                                           <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
                                                        </DataTrigger>
                                                    </Style.Triggers>
                                                </Style>
-                                           </Border.Style>
-                                           <TextBlock Text="&#xED1A;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
-                                                      HorizontalAlignment="Center" VerticalAlignment="Center">
-                                               <TextBlock.Style>
-                                                   <Style TargetType="TextBlock">
-                                                       <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-                                                       <Style.Triggers>
-                                                           <DataTrigger Binding="{Binding SettingsVM.PosterDetailsOnHover}" Value="True">
-                                                               <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
-                                                           </DataTrigger>
-                                                       </Style.Triggers>
-                                                   </Style>
-                                               </TextBlock.Style>
-                                           </TextBlock>
-                                       </Border>
-                                   </Button>
-                                   <Border Width="1" Margin="4,5" Background="{DynamicResource BrushBorder}"/>
+                                           </TextBlock.Style>
+                                       </TextBlock>
+                                   </Border>
+                               </Button>
+                           </Border>
+
+                           <!-- View Mode Switcher (Grid, Icons, List) -->
+                           <Border Grid.Column="4" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
+                               <StackPanel Orientation="Horizontal">
 
                                    <!-- Every button is icon-only, so each carries a tooltip and an automation
                                         name. Extra Large uses a "large tiles" glyph (E8A9) - the old E71D
@@ -833,7 +837,7 @@
                                    <TextBlock Text="Your library has games, but none of them match the filters you have set. Filters stay put between sessions - the filter button shows how many are on."
                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                               FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,16"/>
-                                   <Button Content="Clear filters" Command="{Binding Library.Filter.ClearCommand}"
+                                   <Button Content="Clear Filters" Command="{Binding Library.Filter.ClearCommand}"
                                            Style="{StaticResource ModernAccentButton}" HorizontalAlignment="Center"/>
                                </StackPanel>
                                </Grid>

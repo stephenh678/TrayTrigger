@@ -19,6 +19,13 @@ stable version they lead to.
 - **Links land on the setting** - a link that points at a setting now takes you to it: the "Edit performance", "Edit scripts" and similar links in Game Details' Your setup scroll to and outline the card they edit, and the keys reminder's Open Settings lands on Art & Info Sources, as the About links do.
 - **Script options is a card, not a fold-away** - in Edit Game, the arguments and run options under Scripts (formerly "How the scripts run") are always shown, like the other cards. A game with no script of its own says why they are greyed out.
 - **Restore opens in your automatic backups** - Restore... now starts in the Backups folder, where the automatic backups are saved, instead of Documents.
+- **"Put Back" everywhere** - putting back what TrayTrigger changed has one name now. Restore Previous on a tweak or in Activity & History is **Put Back**, Undo Preset is **Put Back Preset**, the running game's Restore Settings Now is **Put Back Settings Now**, and DLSS' Restore All is **Put Back All**. Restore is only for backups, and Settings' button is **Reset to Defaults**, the same as its confirmation.
+- **Buttons and menus read the same way** - every button, menu item and dialog title is Title Case (Copy Details, Change Match..., Clear Filters), while links stay in sentence case. The same command has the same name on every page: Open File Location on both Library and Tools, and Scan for Games in the tray, as on the Library.
+- **Edit Game's buttons are clearer** - the Settings tab's Cancel is now **Discard Changes** and only shows while you have edits to throw away, so it no longer looks like a second Close.
+- **Stutter Check has its own heading** - on System > All it sits under a STUTTER CHECK heading between Hardware Specs and Performance Tweaks, matching its tab, instead of under Performance Tweaks. The status line no longer repeats "Analyzing system hardware..." while the Hardware Specs card already says so.
+- **Tools tabs are categories only** - the Start with Games and Close with Games tabs are gone; tick Starts with games or Closes for games in the filter button instead. A tool that closes for games shows its power symbol in grey, not the red of Exit.
+- **Tidier toolbars** - the Library's show-details-on-hover eye is a button of its own beside the view buttons rather than one of them, Add Tool comes first on Tools as Add Game does on the Library, and the Library and Settings pages are titled as the left bar names them.
+- **Activity shows the time once** - rows under the Today and Yesterday headings show only the time, since the heading already says the day.
 
 ## 1.7.6
 

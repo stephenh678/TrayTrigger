@@ -24,7 +24,7 @@ public enum RawgLookupStatus
     Failed
 }
 
-/// <summary>One row of a RAWG search, for the "Change match" picker.</summary>
+/// <summary>One row of a RAWG search, for the "Change Match" picker.</summary>
 public sealed record RawgSearchHit(int Id, string Name, string Year, string Platforms)
 {
     public string Subtitle => string.IsNullOrEmpty(Year)
@@ -232,7 +232,7 @@ public class RawgService
     }
 
     /// <summary>
-    /// Raw search results for the "Change match" picker: no similarity guard, RAWG's own
+    /// Raw search results for the "Change Match" picker: no similarity guard, RAWG's own
     /// ranking, up to 20 hits. Returns an empty list on failure or a bad key (the picker shows a
     /// status line either way).
     /// </summary>

@@ -154,7 +154,7 @@ public partial class GameDetailsViewModel
             if (path == _heroPath && stamp == _heroStamp && (path != null || _heroImage == null)) return;
             if (path == null)
             {
-                // The banner was taken away (Use automatic found none): back to the blurred poster.
+                // The banner was taken away (Use Automatic found none): back to the blurred poster.
                 _heroPath = null;
                 _heroStamp = default;
                 _heroImage = null;

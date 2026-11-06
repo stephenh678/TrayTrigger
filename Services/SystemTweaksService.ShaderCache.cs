@@ -71,7 +71,7 @@ public partial class SystemTweaksService
         {
             bool applied = NvShaderCache.Apply(out string? prior, out string? error);
             // Recorded whenever the driver saved the write, even if the check afterwards failed: the
-            // size may be Unlimited now, and Restore Previous needs to know what it was.
+            // size may be Unlimited now, and Put Back needs to know what it was.
             if (prior != null) CapturePrior("nv_shader_cache", prior);
             if (!applied) LoggingService.Warn("SystemTweaks", $"Setting the NVIDIA shader cache to Unlimited failed: {error}");
             return applied;

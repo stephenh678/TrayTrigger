@@ -61,9 +61,9 @@ The Saved section at the top of the flyout keeps combinations you use again.
 
 ## The count badge
 
-Filters stay set between sessions, the same as the category tab and the sort order. Unlike those two, the filter is invisible once the flyout closes, so the button carries a badge showing how many filters are on. It disappears when none are. If a filter hides everything, the library says so and offers a Clear filters button rather than showing the empty-library message.
+Filters stay set between sessions, the same as the category tab and the sort order. Unlike those two, the filter is invisible once the flyout closes, so the button carries a badge showing how many filters are on. It disappears when none are. If a filter hides everything, the library says so and offers a Clear Filters button rather than showing the empty-library message.
 
-Clear in the flyout, or Clear filters in that message, removes every tick at once. Clear leaves the flyout open, so you can pick a different filter straight away.
+Clear in the flyout, or Clear Filters in that message, removes every tick at once. Clear leaves the flyout open, so you can pick a different filter straight away.
 
 ## Details
 

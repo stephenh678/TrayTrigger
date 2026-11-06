@@ -124,7 +124,10 @@ public static class ToolCatalog
         @"--processStart(?:AndWait)?(?:=|\s+)(?:""(?<app>[^""]+)""|(?<app>\S+))",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    /// <summary>The Tools page's tabs for the tools that start with games and the tools that close for them, each shown only while at least one does.</summary>
+    /// <summary>
+    /// Former Tools tabs (to 1.7.7) for the tools that start with games and close for them; the filter flyout
+    /// has both now. Still reserved, so a category never takes the name, and a saved tab still reads.
+    /// </summary>
     public const string StartWithGamesTab = "Start with Games";
     public const string CloseWithGamesTab = "Close with Games";
 
@@ -230,7 +233,7 @@ public static class ToolCatalog
              .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
              .ToList();
 
-    /// <summary>All Tools, Favorites, Start with Games while a tool starts with games, Close with Games while one closes for them, then each category A to Z.</summary>
+    /// <summary>All Tools, Favorites, then each category A to Z. Starts with games and Closes for games are filters, not tabs.</summary>
     public static IReadOnlyList<string> TabsFor(IEnumerable<ToolEntry> tools)
     {
         var list = tools as IReadOnlyCollection<ToolEntry> ?? tools.ToList();
@@ -238,8 +241,6 @@ public static class ToolCatalog
         [
             LibraryConstants.AllCategory,
             LibraryConstants.FavoritesCategory,
-            .. list.Any(StartsWithGames) ? [StartWithGamesTab] : Array.Empty<string>(),
-            .. list.Any(ClosesForGames) ? [CloseWithGamesTab] : Array.Empty<string>(),
             .. CategoriesOf(list),
         ];
     }

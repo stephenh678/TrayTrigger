@@ -170,11 +170,11 @@
                                           ToolTip="The hero banner and the icon follow the match only while they are Automatic."/>
                             </WrapPanel>
                             <WrapPanel>
-                                <Button Content="Change match..." Command="{Binding ChangeMatchCommand}" Margin="0,0,8,4"
+                                <Button Content="Change Match..." Command="{Binding ChangeMatchCommand}" Margin="0,0,8,4"
                                         Style="{StaticResource ModernOutlineButton}" Padding="12,5"/>
                                 <Button Content="Enter an App ID" Command="{Binding EnterAppIdCommand}" Margin="0,0,8,4"
                                         Style="{StaticResource ModernGhostButton}" Padding="8,5"/>
-                                <Button Content="Remove match" Command="{Binding RemoveMatchCommand}" Margin="0,0,8,4"
+                                <Button Content="Remove Match" Command="{Binding RemoveMatchCommand}" Margin="0,0,8,4"
                                         Style="{StaticResource ModernGhostButton}" Padding="8,5"/>
                                 <!-- Puts back the title, App ID, category and poster from before the last match change. -->
                                 <Button Content="Undo" Command="{Binding UndoLookUpCommand}" Margin="0,0,8,4"
@@ -241,9 +241,9 @@
                                 </TextBlock>
                                       </StackPanel>
                                         <WrapPanel DockPanel.Dock="Bottom">
-                                            <Button Content="Choose image..." Command="{Binding ChooseHeroCommand}" AutomationProperties.Name="Choose a hero banner"
+                                            <Button Content="Choose Image..." Command="{Binding ChooseHeroCommand}" AutomationProperties.Name="Choose a hero banner"
                                                     Style="{StaticResource ModernOutlineButton}" Padding="12,4" Margin="0,0,6,0"/>
-                                            <Button Content="Use automatic" Command="{Binding UseAutomaticHeroCommand}" AutomationProperties.Name="Use the automatic hero banner"
+                                            <Button Content="Use Automatic" Command="{Binding UseAutomaticHeroCommand}" AutomationProperties.Name="Use the automatic hero banner"
                                                     Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,2,0"/>
                                             <Button Command="{Binding FindHeroAgainCommand}" AutomationProperties.Name="Look for the hero banner again" ToolTip="Find again"
                                                     Style="{StaticResource ModernGhostButton}" Padding="8,4"
@@ -316,7 +316,7 @@
                                                 <WrapPanel>
                                                     <Button Content="Choose..." Command="{Binding BrowseCoverCommand}" AutomationProperties.Name="Choose a poster"
                                                             Style="{StaticResource ModernOutlineButton}" Padding="10,4" Margin="0,0,6,4"/>
-                                                    <Button Content="Use automatic" Command="{Binding UseAutomaticPosterCommand}" AutomationProperties.Name="Use the automatic poster"
+                                                    <Button Content="Use Automatic" Command="{Binding UseAutomaticPosterCommand}" AutomationProperties.Name="Use the automatic poster"
                                                             Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,2,4"/>
                                                     <Button Command="{Binding FindPosterAgainCommand}" AutomationProperties.Name="Look for the poster again" ToolTip="Find again"
                                                             Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,0,4"
@@ -353,7 +353,7 @@
                                                 <WrapPanel>
                                                     <Button Content="Choose..." Command="{Binding BrowseIconCommand}" AutomationProperties.Name="Choose an icon"
                                                             Style="{StaticResource ModernOutlineButton}" Padding="10,4" Margin="0,0,6,4"/>
-                                                    <Button Content="Use automatic" Command="{Binding UseAutomaticIconCommand}" AutomationProperties.Name="Use the automatic icon"
+                                                    <Button Content="Use Automatic" Command="{Binding UseAutomaticIconCommand}" AutomationProperties.Name="Use the automatic icon"
                                                             Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,0,4"/>
                                                 </WrapPanel>
                                             </StackPanel>
@@ -385,7 +385,7 @@
                                     <DockPanel LastChildFill="False" Margin="0,0,0,6">
                                         <TextBlock Text="{Binding PlatformDescription}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                        <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
+                                        <Button Content="Convert to Local Game" Command="{Binding ConvertToLocalCommand}"
                                                 Visibility="{Binding CanConvertToLocal, Converter={StaticResource BoolToVis}}"
                                                 Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
                                     </DockPanel>
@@ -405,7 +405,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Convert to Local game was clicked and not yet saved: the platform box is gone, so
+                            <!-- Convert to Local Game was clicked and not yet saved: the platform box is gone, so
                                  say so here and keep the way back one click away. -->
                             <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                     CornerRadius="{DynamicResource RadiusControl}" Padding="10,8" Margin="0,0,0,12"
@@ -418,7 +418,7 @@
                                     <TextBlock Grid.Column="0" Text="{Binding ConvertedNotice}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0"/>
                                     <Button Grid.Column="1" Content="Undo" Command="{Binding UndoConvertToLocalCommand}"
-                                            AutomationProperties.Name="Undo Convert to Local game"
+                                            AutomationProperties.Name="Undo Convert to Local Game"
                                             Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
                                 </Grid>
                             </Border>

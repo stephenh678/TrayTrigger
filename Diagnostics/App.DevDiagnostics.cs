@@ -1764,7 +1764,7 @@ public partial class App
                 {
                     activity.Record(ActivityLevel.Activity, "Updated to 1.6.1", detail: "From 1.6.0.");
                     var fixedSample = activity.Record(ActivityLevel.Critical, "Hades: couldn't put back Windows' multimedia scheduler settings", subject: "Hades",
-                        detail: "Restore Previous on this page tries again. Windows Settings can also change them back by hand.", groupKey: "sample.fixed");
+                        detail: "Put Back on this page tries again. Windows Settings can also change them back by hand.", groupKey: "sample.fixed");
                     activity.MarkFixed([fixedSample.Id]);
                     activity.Record(ActivityLevel.Activity, "The startup scan found 3 new games", detail: "Add them with Scan for Games on the Library page.");
                     activity.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades",
@@ -1781,10 +1781,10 @@ public partial class App
                     for (int n = 0; n < 7; n++)
                         activity.Record(ActivityLevel.Problem, "Overwatch: post-exit script failed (exit code 1)", subject: "Overwatch",
                             detail: "close-apps.ps1. Test it from Edit Game; what it printed is in the log.", groupKey: "script.postexit|ow");
-                    activity.Record(ActivityLevel.Critical, "Overwatch: couldn't put back the power plan", detail: "Restore Previous on this page tries again.",
+                    activity.Record(ActivityLevel.Critical, "Overwatch: couldn't put back the power plan", detail: "Put Back on this page tries again.",
                         groupKey: PerformanceProfileService.UnrestoredActivityKey);
                     activity.SetState(new AttentionItem(PerformanceProfileService.UnrestoredActivityKey, "The power plan wasn't put back",
-                        "A Performance Profile changed it for a game and couldn't change it back afterwards.", "Restore Previous", () => { }, IsCritical: true));
+                        "A Performance Profile changed it for a game and couldn't change it back afterwards.", "Put Back", () => { }, IsCritical: true));
                 }
                 _mainViewModel.ActivityVM.Refresh();
                 if (expanded && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Count > 1) is { } repeated) repeated.IsExpanded = true;

@@ -3,7 +3,7 @@
 The Game Details window (click a game card) is the page for one game. It opens on a header with the game's hero banner behind its name (Steam's wide hero banner art, or SteamGridDB's when you have given TrayTrigger a key and Steam has none; a blurred poster until it arrives or if there is none), its store and genres on one quiet line (with a small tag for how Steam's players rated it, such as 91% positive, and a Playing tag while the game runs), how long you have played, when you last played and its performance profile, with a **Play** button, the favorite star and a **...** menu (the store pages, and Remove from library). Under it are two tabs, **Overview** and **Settings**.
 
 - **Overview** is what the game is and what TrayTrigger does for it; see The Overview below.
-- **Settings** is where you edit the game: its artwork, title, category, launch options, profile, display and scripts. Everything under "Edit Game" in this help is on this tab. Right-click a game and choose Edit Game Properties, or press Settings, to open it. **Save Changes** writes your edits and keeps the page open; **Cancel** throws them away and starts again from what is saved. Closing the window, Play, or Remove while edits are still open asks before it throws them away.
+- **Settings** is where you edit the game: its artwork, title, category, launch options, profile, display and scripts. Everything under "Edit Game" in this help is on this tab. Right-click a game and choose Edit Game Properties, or press Settings, to open it. **Save Changes** writes your edits and keeps the page open; **Discard Changes**, shown only while there are edits, throws them away and starts again from what is saved. Closing the window, Play, or Remove while edits are still open asks before it throws them away.
 
 ## The Overview
 
@@ -52,13 +52,13 @@ After you launch a game, its details window shows an **Anti-cheat: Name** tag be
 - Poster art. RAWG's official title is used as the SteamGridDB search term for games with no Steam poster, which finds art the scanner's folder name often misses.
 - Ambient art. While RAWG is selected, its screenshot is the blurred backdrop behind the poster, and stands in for a game that has no poster at all. It is never saved as the poster.
 
-## Matching and Change match
+## Matching and Change Match
 
 Both sources are searched by the game's name, and the result whose title is closest to that name is kept, subject to the confidence threshold in Settings. The match is remembered so later opens skip the search.
 
-- The window title shows which Steam listing or RAWG entry the game matched. Point at "Change match" to see the Steam App ID it used.
-- If it matched the wrong game, or nothing was found, click "Change match", search by title, and pick the right entry. The pick is remembered for the game.
-- Changing the Steam match sets the game's Steam App ID, so its title details, genre and poster art follow the new listing. This is the same as Change match... in Edit Game's Online match card. How the game launches does not change.
+- The window title shows which Steam listing or RAWG entry the game matched. Point at "Change Match" to see the Steam App ID it used.
+- If it matched the wrong game, or nothing was found, click "Change Match", search by title, and pick the right entry. The pick is remembered for the game.
+- Changing the Steam match sets the game's Steam App ID, so its title details, genre and poster art follow the new listing. This is the same as Change Match... in Edit Game's Online match card. How the game launches does not change.
 - Changing the RAWG match updates the RAWG text and, if the game is still Uncategorized, its category.
 
 ## How fresh the info is
@@ -68,7 +68,7 @@ Both sources are saved to disk beside the poster cache, so Game Details opens in
 - Settings > Library & Art > "Refresh game info" sets how old a saved copy may get before the window quietly fetches a new one in the background. The default is every 3 days. "Every time details open" is the old behaviour; "Never" leaves it to you.
 - Steam news, review counts and RAWG ratings change over time, so a longer interval means fewer requests and slightly older numbers. Text, genres and art rarely change.
 - If a background refresh fails (offline, quota, bad key) the saved copy stays on screen.
-- Right-click > Refresh metadata and Change match always fetch fresh info.
+- Right-click > Refresh metadata and Change Match always fetch fresh info.
 - "Clear Cached Game Info" under the setting forgets every game's saved details. Posters and banners are kept.
 - Removing a game from the library also deletes its saved details, poster and icon once the ten-second undo has passed. Anything another game in the library still uses, such as a second entry for the same Steam game, is kept.
 

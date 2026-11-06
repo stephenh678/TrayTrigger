@@ -39,7 +39,7 @@ The filter box above the list narrows it by name, category or path, the tabs spl
 ## Categories, favorites and sorting
 
 - Tools have their own categories, separate from game categories. Set one with Change Category... or in Edit Tool; the picker suggests the categories your tools already use.
-- The tabs are All Tools, Favorites, Start with Games while a tool starts with games, Close with Games while one closes for them, then each category A to Z. A category tab disappears when its last tool leaves it, and the two game tabs when no tool uses them any more. "Start with Games" and "Close with Games" can't be category names, so a tool given one goes to Uncategorized.
+- The tabs are All Tools, Favorites, then each category A to Z. A category tab disappears when its last tool leaves it. To see the tools that start with games or close for them, tick Starts with games or Closes for games in the filter button. "Start with Games" and "Close with Games" can't be category names, so a tool given one goes to Uncategorized.
 - Click the star on a tool to make it a favorite.
 - Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category, program path or Store app ID.
 - Three views: Large Icons, Small Icons and List. The page remembers the view, sort and tab you last used.
@@ -70,7 +70,7 @@ The filter box above the list narrows it by name, category or path, the tabs spl
 
 - Edit Tool asks what to do with the tool when you launch a game: nothing (the default), start it, or close it. Choose "Start it" and the tool starts just before any game TrayTrigger launches, unless it's already running. Tick "Close it when the game exits" too and the copy TrayTrigger started is closed again once your last game has closed.
 - Choose "Close it" and the tool, say Discord or OneDrive, is closed just before any game TrayTrigger launches, so it isn't using memory and the graphics card while you play. Tick "Open it again when the game exits" too and it's started again once your last game has closed, unless you opened it yourself in the meantime.
-- A tool that starts with games shows the Library's controller icon, in blue, on its card and is listed on the Start with Games tab; one that closes for them shows a red power symbol and is on the Close with Games tab.
+- A tool that starts with games shows the Library's controller icon, in blue, on its card; one that closes for them shows a grey power symbol. The filter button lists either set on its own.
 - The Starting and closing tools with your games topic has the details, including the permission prompts for a program that runs as administrator.
 
 ## Hotkeys

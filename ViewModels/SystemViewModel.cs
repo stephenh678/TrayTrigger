@@ -138,9 +138,9 @@ public class SystemTweakViewModel : ViewModelBase
         : AppPalette.Hex("BrushTextPrimary");
     /// <summary>Part of the preset and currently off: what Apply Performance Preset would change.</summary>
     public bool IsNotApplied => IsRecommended && !IsOptimal;
-    // "Restore Previous", not "Revert to Default": it puts back the value TrayTrigger found before
+    // "Put Back", not "Revert to Default": it puts back the value TrayTrigger found before
     // it changed it, which is not always the Windows default (Help/tweaks/overview.md).
-    public string ActionButtonText => IsBusy ? "Working..." : IsOptimal ? "Restore Previous" : "Optimize";
+    public string ActionButtonText => IsBusy ? "Working..." : IsOptimal ? "Put Back" : "Optimize";
 
     /// <summary>
     /// The row as a screen reader should hear it: "Windows Game Mode, optimal, needs a restart".
@@ -245,23 +245,12 @@ public class SystemTweakViewModel : ViewModelBase
     {
         if (Id == "core_isolation")
         {
-            try
-            {
-                using var proc = Process.Start(new ProcessStartInfo("windowsdefender://coreisolation") { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Swallowed("System", ex, "opening Core Isolation in Windows Security");
-                try { using var proc = Process.Start(new ProcessStartInfo("ms-settings:privacy") { UseShellExecute = true }); } catch (Exception inner) { LoggingService.Swallowed("System", inner, "opening Windows Settings"); }
-            }
+            if (!ShellOpen.Open("windowsdefender://coreisolation", "System", "Core Isolation in Windows Security"))
+                ShellOpen.Open("ms-settings:privacy", "System", "Windows Settings");
         }
         else if (Id == "hags")
         {
-            try
-            {
-                using var proc = Process.Start(new ProcessStartInfo("ms-settings:display-advancedgraphics") { UseShellExecute = true });
-            }
-            catch (Exception ex) { LoggingService.Swallowed("System", ex, "opening Windows graphics settings"); }
+            ShellOpen.Open("ms-settings:display-advancedgraphics", "System", "Windows graphics settings");
         }
     }
 
@@ -716,7 +705,7 @@ public class SystemViewModel : ViewModelBase
     /// </summary>
     internal static string PresetNotAppliedText(IReadOnlyList<(string Name, bool Admin, bool Reboot)> missing)
     {
-        if (missing.Count == 0) return "Every preset tweak is on. Undo Preset puts them all back to what TrayTrigger found.";
+        if (missing.Count == 0) return "Every preset tweak is on. Put Back Preset puts them all back to what TrayTrigger found.";
         string apply = missing.Count == 1 ? "Apply turns it on" : missing.Count == 2 ? "Apply turns on both" : $"Apply turns on all {missing.Count}";
         string line = $"Not applied: {StutterCheckService.JoinNames(missing.Select(m => m.Name).ToList())}. {apply}";
         var notes = missing.Where(m => m.Admin || m.Reboot)
@@ -885,7 +874,7 @@ public class SystemViewModel : ViewModelBase
         };
     }
 
-    // Busy state for the Apply Preset / Undo Preset bulk actions. These can take anywhere
+    // Busy state for the Apply Preset / Put Back Preset bulk actions. These can take anywhere
     // from a couple seconds to well over a minute (elevated UAC prompts, powercfg, a restore
     // point snapshot), so the actual work runs off the UI thread and this drives a floating
     // toast + disables the action buttons for the duration instead of the window looking frozen.
@@ -1061,7 +1050,7 @@ public class SystemViewModel : ViewModelBase
 
     /// <summary>
     /// <paramref name="afterAction"/> is the re-check after Fix it, Apply Performance Preset or
-    /// Undo Preset: the action read the tweaks back itself and the status line says what it did
+    /// Put Back Preset: the action read the tweaks back itself and the status line says what it did
     /// (the restore point's fate, for one), so neither is redone here.
     /// </summary>
     private async Task RunStutterCheckAsync(bool afterAction)
@@ -1388,7 +1377,8 @@ public class SystemViewModel : ViewModelBase
         // cards yet. A re-detect keeps the cards up and swaps the values in when it finishes, so
         // nothing below them moves.
         IsLoadingSpecs = !HasSpecs;
-        StatusMessage = HasSpecs ? "Refreshing hardware specs..." : "Analyzing system hardware...";
+        // The first detect says so in the placeholder card itself; the status line would only repeat it.
+        if (HasSpecs) StatusMessage = "Refreshing hardware specs...";
         try
         {
             var report = await _infoService.GetFullHardwareReportAsync();
@@ -1455,7 +1445,7 @@ public class SystemViewModel : ViewModelBase
             groupKey: $"tweak|{tweak.Id}|{nowOptimal}");
     }
 
-    /// <summary>A preset or Undo Preset: what actually changed, as one entry.</summary>
+    /// <summary>A preset or Put Back Preset: what actually changed, as one entry.</summary>
     private void RecordBulkTweakChange(Dictionary<string, bool> before, bool applying)
     {
         var changed = Tweaks.Where(t => before.TryGetValue(t.Id, out bool was) && was != t.IsOptimal).ToList();
@@ -1577,9 +1567,9 @@ public class SystemViewModel : ViewModelBase
 
     private async Task ExecuteResetDefaultsAsync()
     {
-        // Undo Preset puts back what Apply Performance Preset turns on: the recommended tweaks
+        // Put Back Preset reverts what Apply Performance Preset turns on: the recommended tweaks
         // that are applied. An opt-in tweak the user switched on themselves is theirs, and has its
-        // own Restore Previous on its row. Only applied tweaks are reverted - never a Balanced plan
+        // own Put Back on its row. Only applied tweaks are reverted - never a Balanced plan
         // onto a machine that never used the power-plan tweak.
         var applied = Tweaks.Where(t => t.IsRecommended && t.IsOptimal).ToList();
         if (applied.Count == 0)
@@ -1588,7 +1578,7 @@ public class SystemViewModel : ViewModelBase
             return;
         }
         if (!ConfirmBulkAction(
-            "Undo Preset",
+            "Put Back Preset",
             "This will put back the following settings to what they were before TrayTrigger changed them:",
             applied.Select(t => t.Name).ToList()))
         {
@@ -1600,7 +1590,7 @@ public class SystemViewModel : ViewModelBase
         IsApplyingTweaks = true;
         try
         {
-            var restorePoint = await TryCreateRestorePointAsync("TrayTrigger: Before Undo Preset");
+            var restorePoint = await TryCreateRestorePointAsync("TrayTrigger: Before Put Back Preset");
 
             BusyToastMessage = "Undoing the preset...";
             StatusMessage = BusyToastMessage;
@@ -1685,17 +1675,7 @@ public class SystemViewModel : ViewModelBase
         }
     }
 
-    private static void SafeLaunchProcess(string target)
-    {
-        try
-        {
-            using var proc = Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("System", $"Could not launch utility '{target}': {ex.Message}");
-        }
-    }
+    private static void SafeLaunchProcess(string target) => ShellOpen.Open(target, "System", $"the utility '{target}'");
 }
 
 /// <summary>One Stutter Check row that needs attention: what was found, its badge, and its one button.</summary>

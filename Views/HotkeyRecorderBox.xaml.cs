@@ -22,7 +22,7 @@ namespace TrayTrigger.Views;
 public partial class HotkeyRecorderBox : UserControl
 {
     private const string Placeholder = "Click, then press keys";
-    private const string RecordingPrompt = "Press keys… (Esc cancels, Backspace clears)";
+    private const string RecordingPrompt = "Press keys... (Esc cancels, Backspace clears)";
 
     public static readonly DependencyProperty HotkeyProperty = DependencyProperty.Register(
         nameof(Hotkey), typeof(string), typeof(HotkeyRecorderBox),

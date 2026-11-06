@@ -43,7 +43,7 @@
                                  doesn't compete with the green and amber status badges. -->
                             <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Part of the Performance Preset: Apply Performance Preset turns it on, Undo Preset puts it back.">
+                                    ToolTip="Part of the Performance Preset: Apply Performance Preset turns it on, Put Back Preset puts it back.">
                                 <TextBlock Text="PRESET" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushInfoText}"/>
                             </Border>
                             <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
@@ -270,8 +270,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE770;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                            Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="HARDWARE SPECS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                                <TextBlock Text="HARDWARE SPECS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding SpecsRefreshedDisplay, StringFormat='·  {0}'}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                            VerticalAlignment="Center" Margin="8,0,0,0"
                                            Visibility="{Binding HasSpecs, Converter={StaticResource BoolToVis}}"/>
@@ -285,7 +284,7 @@
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Detecting hardware…" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Detecting hardware..." FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -561,7 +560,7 @@
 
 
                     <!-- 8. Windows Gaming Utilities. Hidden with the spec cards while they load: alone
-                         under the "Detecting hardware…" card it read as one more spec. -->
+                         under the "Detecting hardware..." card it read as one more spec. -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
@@ -585,33 +584,19 @@
 
                 </StackPanel>
 
-                <!-- ========================================================== -->
-                <!-- CATEGORY 2: PERFORMANCE TWEAKS                             -->
-                <!-- ========================================================== -->
-                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
-                            views:CardSearch.Tab="{x:Static vm:SystemSubSection.PerformanceTweaks}" views:CardSearch.TabLabel="Performance Tweaks">
-                    <!-- Section header, on every tab. Refresh here re-reads every tweak and re-runs Stutter Check. -->
-                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
-                        <DockPanel LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="&#x21BB; Refresh"
-                                    Command="{Binding RunStutterCheckCommand}"
-                                    AutomationProperties.Name="Refresh tweaks and re-run Stutter Check" VerticalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE9E9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
-                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="PERFORMANCE TWEAKS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
-                                <TextBlock Text="·  Always on, system-wide" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
-                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-
-                </StackPanel>
-
-                <!-- Stutter Check has its own tab, and still shows on All between the tweaks header and the preset. -->
-                <StackPanel Visibility="{Binding ShowStutterSection, Converter={StaticResource BoolToVis}}"
+                <!-- Stutter Check has its own tab, and on All its own header, between Hardware Specs and the tweaks. -->
+                <StackPanel Visibility="{Binding ShowStutterSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
                             views:CardSearch.Tab="{x:Static vm:SystemSubSection.StutterCheck}" views:CardSearch.TabLabel="Stutter Check">
+                    <!-- Section header, on every tab, like the others. It only reports, so it says so. -->
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="STUTTER CHECK" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                            <TextBlock Text="·  Checks this PC, changes nothing" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </Border>
                     <!-- Stutter Check: the verdict. It only reports; Fix it applies a tweak from the Performance Tweaks tab. -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
@@ -695,6 +680,29 @@
 
                 </StackPanel>
 
+                <!-- ========================================================== -->
+                <!-- CATEGORY 2: PERFORMANCE TWEAKS                             -->
+                <!-- ========================================================== -->
+                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}"
+                            views:CardSearch.Tab="{x:Static vm:SystemSubSection.PerformanceTweaks}" views:CardSearch.TabLabel="Performance Tweaks">
+                    <!-- Section header, on every tab. Refresh here re-reads every tweak and re-runs Stutter Check. -->
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="&#x21BB; Refresh"
+                                    Command="{Binding RunStutterCheckCommand}"
+                                    AutomationProperties.Name="Refresh tweaks and re-run Stutter Check" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE9E9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="PERFORMANCE TWEAKS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                                <TextBlock Text="·  Always on, system-wide" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                </StackPanel>
+
                 <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
                             views:CardSearch.Tab="{x:Static vm:SystemSubSection.PerformanceTweaks}" views:CardSearch.TabLabel="Performance Tweaks">
                     <!-- Performance Preset: the recommended tweaks below, applied and undone together -->
@@ -706,7 +714,7 @@
                                         <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
                                                 IsEnabled="{Binding CanRunBulkAction}"
                                                 Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
-                                        <Button Content="Undo Preset" Command="{Binding ResetDefaultsCommand}"
+                                        <Button Content="Put Back Preset" Command="{Binding ResetDefaultsCommand}"
                                                 IsEnabled="{Binding CanRunBulkAction}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                     </StackPanel>
@@ -739,7 +747,7 @@
                                  restore point) are defined in the "How tweaks work" help topic this links to. -->
                             <!-- The link follows the sentence it belongs to, like the other cards' Learn more links. -->
                             <views:NoteBar Kind="Tip" Background="{DynamicResource BrushDialogCard}" Margin="0,4,0,0"
-                                           Text="System-wide, always on until you restore them. Documented Windows settings only - no registry cleaners.">
+                                           Text="System-wide, always on until you put them back. Documented Windows settings only - no registry cleaners.">
                                 <views:NoteBar.Link>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="8,0,0,0"
                                             VerticalAlignment="Center"
@@ -811,8 +819,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="PERFORMANCE PROFILES" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="PERFORMANCE PROFILES" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                             <TextBlock Text="·  Per game, while it runs" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                        VerticalAlignment="Center" Margin="8,0,0,0"/>
                         </StackPanel>
@@ -877,7 +884,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Undo Preset runs) -->
+        <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Put Back Preset runs) -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
                 Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5"
                 CornerRadius="{DynamicResource RadiusCard}" Padding="16,10" Panel.ZIndex="100">

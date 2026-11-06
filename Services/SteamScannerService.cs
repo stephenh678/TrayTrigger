@@ -459,42 +459,21 @@ public partial class SteamScannerService
     public static void OpenStorePage(string appId)
     {
         if (!UrlProtocolHelper.IsValidSteamAppId(appId)) { LoggingService.Warn("SteamScanner", $"Not opening a store page: '{appId}' is not a Steam App ID."); return; }
-        try
-        {
-            Process.Start(new ProcessStartInfo($"https://store.steampowered.com/app/{appId}") { UseShellExecute = true });
+        if (ShellOpen.Open($"https://store.steampowered.com/app/{appId}", "SteamScanner", $"the store page for App ID {appId}"))
             LoggingService.Verbose("SteamScanner", $"Opened store page for App ID {appId}.");
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SteamScanner", $"Failed to open store page for App ID {appId}: {ex.Message}");
-        }
     }
 
     public static void OpenInSteamLibrary(string appId)
     {
         if (!UrlProtocolHelper.IsValidSteamAppId(appId)) { LoggingService.Warn("SteamScanner", $"Not opening Steam: '{appId}' is not a Steam App ID."); return; }
-        try
-        {
-            Process.Start(new ProcessStartInfo($"steam://nav/games/details/{appId}") { UseShellExecute = true });
+        if (ShellOpen.Open($"steam://nav/games/details/{appId}", "SteamScanner", $"the Steam library for App ID {appId} (is Steam installed?)"))
             LoggingService.Verbose("SteamScanner", $"Opened Steam library page for App ID {appId}.");
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SteamScanner", $"Failed to open Steam library for App ID {appId} (is Steam installed?): {ex.Message}");
-        }
     }
 
     public static void VerifyGameFiles(string appId)
     {
         if (!UrlProtocolHelper.IsValidSteamAppId(appId)) { LoggingService.Warn("SteamScanner", $"Not verifying files: '{appId}' is not a Steam App ID."); return; }
-        try
-        {
-            Process.Start(new ProcessStartInfo($"steam://validate/{appId}") { UseShellExecute = true });
+        if (ShellOpen.Open($"steam://validate/{appId}", "SteamScanner", $"Steam's file verification for App ID {appId} (is Steam installed?)"))
             LoggingService.Info("SteamScanner", $"Requested file verification via Steam for App ID {appId}.");
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SteamScanner", $"Failed to request file verification for App ID {appId} (is Steam installed?): {ex.Message}");
-        }
     }
 }

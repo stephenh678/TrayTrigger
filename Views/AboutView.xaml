@@ -93,8 +93,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="APPLICATION OVERVIEW" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="APPLICATION OVERVIEW" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -200,8 +199,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7C3;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="KEY FEATURES" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="KEY FEATURES" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -467,8 +465,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE765;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="SHORTCUTS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="SHORTCUTS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -700,8 +697,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8F1;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="SUPPORT &amp; LINKS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="SUPPORT &amp; LINKS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 

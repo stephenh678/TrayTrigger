@@ -113,7 +113,7 @@
                            FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Application Settings" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
+                <TextBlock Text="Settings" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                            FontFamily="{DynamicResource AppFont}" FontWeight="Normal"/>
                 <TextBlock Text="Startup and updates, launcher integrations and artwork, the tray menu, launch scripts and tweak safety, and diagnostics"
                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" 
@@ -187,8 +187,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="GENERAL" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="GENERAL" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -316,10 +315,10 @@
                                         <TextBlock Text="{Binding Appearance.EditLabel}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Content="Import theme..." Command="{Binding Appearance.ImportCommand}" Margin="0,0,8,4" VerticalAlignment="Center"
+                                <Button Content="Import Theme..." Command="{Binding Appearance.ImportCommand}" Margin="0,0,8,4" VerticalAlignment="Center"
                                         Style="{StaticResource ModernOutlineButton}" Padding="10,5"
                                         ToolTip="Add a theme made elsewhere: choose its .theme.json (or .json) and, if it has one, its picture."/>
-                                <Button Content="Open themes folder" Command="{Binding Appearance.OpenFolderCommand}" Margin="0,0,0,4" VerticalAlignment="Center"
+                                <Button Content="Open Themes Folder" Command="{Binding Appearance.OpenFolderCommand}" Margin="0,0,0,4" VerticalAlignment="Center"
                                         Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                             </WrapPanel>
                             <TextBlock Text="{Binding Appearance.Summary}" FontSize="{DynamicResource FontSizeBody}"
@@ -533,8 +532,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="LIBRARY &amp; ART" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="LIBRARY &amp; ART" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -980,8 +978,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="TRAY MENU" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="TRAY MENU" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -1126,8 +1123,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="LAUNCH &amp; PERFORMANCE" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="LAUNCH &amp; PERFORMANCE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -1341,11 +1337,11 @@
                                         <Run Text="DLSS Override:"/>
                                         <Run Text="{Binding Dlss.OverrideCountText, Mode=OneWay}" FontWeight="SemiBold"/>
                                     </TextBlock>
-                                    <TextBlock Text="Restore All turns it off for every game and puts NVIDIA's settings back the way they were. The setting lives in NVIDIA's driver, not in TrayTrigger, so do this before uninstalling."
+                                    <TextBlock Text="Put Back All turns it off for every game and puts NVIDIA's settings back the way they were. The setting lives in NVIDIA's driver, not in TrayTrigger, so do this before uninstalling."
                                                Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,3,12,2" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Content="Restore All" VerticalAlignment="Center"
-                                        AutomationProperties.Name="Restore the DLSS settings of every game"
+                                <Button Grid.Column="1" Content="Put Back All" VerticalAlignment="Center"
+                                        AutomationProperties.Name="Put back the DLSS settings of every game"
                                         Style="{StaticResource ModernOutlineButton}"
                                         Command="{Binding Dlss.RestoreAllCommand}"/>
                             </Grid>
@@ -1376,10 +1372,10 @@
                         <StackPanel>
                             <TextBlock Text="Performance Tweak Safety" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Applies to Apply Performance Preset and Undo Preset on the System &amp; Performance page."
+                            <TextBlock Text="Applies to Apply Performance Preset and Put Back Preset on the System &amp; Performance page."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox Content="Create a System Restore point before Apply Performance Preset or Undo Preset"
+                            <CheckBox Content="Create a System Restore point before Apply Performance Preset or Put Back Preset"
                                       IsChecked="{Binding CreateRestorePointBeforeTweaks}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
                             <TextBlock Text="A Windows rollback point in case a bulk change causes problems. Recommended on."
@@ -1411,8 +1407,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="DIAGNOSTICS &amp; STORAGE" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="DIAGNOSTICS &amp; STORAGE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -1580,7 +1575,7 @@
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Content="Restore Defaults" Command="{Binding ResetSettingsCommand}" 
+                            <Button DockPanel.Dock="Right" Content="Reset to Defaults" Command="{Binding ResetSettingsCommand}" 
                                     Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="12,6"/>
                             <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
                                 <TextBlock Text="Reset Settings to Defaults" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" 

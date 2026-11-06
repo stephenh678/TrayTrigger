@@ -46,7 +46,7 @@
             </Border>
 
             <DockPanel Grid.Row="2" LastChildFill="False">
-                <Button Content="Release notes on GitHub" Style="{StaticResource ModernOutlineButton}"
+                <Button Content="Release Notes on GitHub" Style="{StaticResource ModernOutlineButton}"
                         Padding="14,6" DockPanel.Dock="Left" Click="OnGitHubClick"/>
                 <Button Content="Close" Style="{StaticResource ModernAccentButton}"
                         Padding="16,6" DockPanel.Dock="Right" IsDefault="True" IsCancel="True" Click="OnCloseClick"/>

@@ -1,6 +1,6 @@
 # Selecting several games at once
 
-You can act on several games in one step: add or remove favorites, hide or unhide, change category, or remove from the library. Selection works the way it does in File Explorer and only exists in the Games Library. The Scan for Games and Add Folder dialogs already have their own checkboxes for choosing what to import.
+You can act on several games in one step: add or remove favorites, hide or unhide, change category, or remove from the library. Selection works the way it does in File Explorer and only exists in the Library. The Scan for Games and Add Folder dialogs already have their own checkboxes for choosing what to import.
 
 ## Selecting
 

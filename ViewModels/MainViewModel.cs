@@ -277,7 +277,7 @@ public class MainViewModel : ViewModelBase
         Library.IsLibraryVisible = () => CurrentSection == NavSection.Library;
 
         // The tweaks service records what it found on the machine before applying a tweak (prior
-        // power plan, prior visual-effects state) into settings so "Restore Previous" is exact.
+        // power plan, prior visual-effects state) into settings so "Put Back" is exact.
         _systemTweaksService = new SystemTweaksService(() => _settings, () => _storageService.SaveSettings(_settings, source: "SystemTweaksService.TweakApplied"));
         // The Settings DLSS card counts and restores games, which only the library knows.
         SettingsVM.Dlss = new DlssSettingsViewModel(_systemTweaksService,
@@ -342,28 +342,10 @@ public class MainViewModel : ViewModelBase
             ShowSettingsCardRequested?.Invoke(HotkeysCardTitle);
         });
         OpenGitHubCommand = new RelayCommand(() =>
-        {
-            try
-            {
-                Process.Start(new ProcessStartInfo($"https://github.com/{UpdateService.Repository}") { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Error("Main", "Failed to open GitHub repo link", ex);
-            }
-        });
+            ShellOpen.Open($"https://github.com/{UpdateService.Repository}", "Main", "the GitHub page"));
+        // The template chooser, not the issue list: it is where a report starts.
         OpenGitHubIssuesCommand = new RelayCommand(() =>
-        {
-            try
-            {
-                // The template chooser, not the issue list: it is where a report starts.
-                Process.Start(new ProcessStartInfo($"https://github.com/{UpdateService.Repository}/issues/new/choose") { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Error("Main", "Failed to open GitHub issues link", ex);
-            }
-        });
+            ShellOpen.Open($"https://github.com/{UpdateService.Repository}/issues/new/choose", "Main", "GitHub's new issue page"));
         CopySystemInfoCommand = new RelayCommand(() =>
         {
             try
