@@ -79,7 +79,7 @@ public class ActivityServiceTests : IDisposable
         var service = Service();
         service.Record(ActivityLevel.Change, "Played Hades · 48m", subject: "Hades");
         service.Record(ActivityLevel.Problem, "A script failed");
-        service.SetState(new AttentionItem("profile.unrestored", "Power plan wasn't put back", "Restore Previous puts it back.", "Restore Previous", () => { }, IsCritical: true));
+        service.SetState(new AttentionItem("profile.unrestored", "Power plan wasn't put back", "Put Back puts it back.", "Put Back", () => { }, IsCritical: true));
         int changed = 0;
         service.Changed += () => changed++;
 
@@ -212,7 +212,7 @@ public class ActivityServiceTests : IDisposable
     {
         var service = Service();
         service.Record(ActivityLevel.Critical, "Elden Ring: couldn't put back the power plan", groupKey: "profile.unrestored");
-        service.SetState(new AttentionItem("profile.unrestored", "The power plan wasn't put back", "...", "Restore Previous", () => { }, IsCritical: true));
+        service.SetState(new AttentionItem("profile.unrestored", "The power plan wasn't put back", "...", "Put Back", () => { }, IsCritical: true));
 
         Assert.Equal(1, service.AttentionCount);
         _now = _now.AddMinutes(1);
@@ -422,6 +422,28 @@ public class ActivityServiceTests : IDisposable
         var nowLocal = new DateTime(2026, 10, 4, 21, 0, 0, DateTimeKind.Local);
         var then = nowLocal.AddDays(-daysAgo).AddHours(-1).ToUniversalTime();
         Assert.StartsWith(expectedStart, ActivityViewModel.FormatWhen(then, nowLocal));
+    }
+
+    [Theory]
+    [InlineData(0, true)]   // under Today
+    [InlineData(1, true)]   // under Yesterday
+    [InlineData(10, false)] // an older heading names no day, so the row keeps its date
+    public void RowWhen_DropsTheDay_OnlyWhereTheHeadingSaysIt(int daysLater, bool timeOnly)
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Activity, "Played Hades");
+
+        var row = new ActivityGroupViewModel(ActivityService.Group(service.Entries)[0], _now.ToLocalTime().AddDays(daysLater));
+
+        if (timeOnly)
+        {
+            Assert.StartsWith(row.Section + " ", row.When);
+            Assert.Equal(row.When[(row.Section.Length + 1)..], row.RowWhen);
+        }
+        else
+        {
+            Assert.Equal(row.When, row.RowWhen);
+        }
     }
 
     /// <summary>
@@ -771,6 +793,9 @@ public class ActivityServiceTests : IDisposable
         Assert.True(row.IsFixed);
         Assert.StartsWith("Put back ", row.FixedLabel);
         Assert.Equal("Critical, fixed: Couldn't put back the power plan", row.AccessibleName);
+        // Under the Today heading the row shows only the time; the heading already says the day.
+        Assert.Equal("Today", row.Section);
+        Assert.Equal(row.When["Today ".Length..], row.RowWhen);
         Assert.Contains("Fixed ", row.DetailsText());
 
         _now = _now.AddMinutes(10);
@@ -782,7 +807,7 @@ public class ActivityServiceTests : IDisposable
 
     /// <summary>
     /// FIXED goes only on the entries the fix covered. An earlier failure in the same row - from a
-    /// run Restore Previous never retried - stays unfixed, and keeps the row's FIXED badge off.
+    /// run Put Back never retried - stays unfixed, and keeps the row's FIXED badge off.
     /// </summary>
     [Fact]
     public void Fixed_IsPerEntry_AndAnEarlierUnfixedFailure_KeepsTheRowUnfixed()
@@ -802,7 +827,7 @@ public class ActivityServiceTests : IDisposable
 
         service.MarkFixed([earlier.Id]);
         Assert.True(Assert.Single(ActivityService.Group(service.Entries)).Fixed);
-        Assert.EndsWith("- fixed with Restore Previous", Assert.Single(service.RecentProblemLines()));
+        Assert.EndsWith("- fixed with Put Back", Assert.Single(service.RecentProblemLines()));
     }
 
     [Fact]
@@ -874,7 +899,7 @@ public class ActivityServiceTests : IDisposable
         Assert.True(page.Groups.Single(g => g.Group.Latest.Level == ActivityLevel.Problem).CanRemove);
         Assert.True(page.Groups.Single(g => g.Group.Latest.Level == ActivityLevel.Activity).CanRemove);
 
-        service.SetState(new AttentionItem("plan", "The power plan wasn't put back", "detail", "Restore Previous", null, IsCritical: true));
+        service.SetState(new AttentionItem("plan", "The power plan wasn't put back", "detail", "Put Back", null, IsCritical: true));
         page.Refresh();
         Assert.False(Critical().CanRemove);
         Assert.True(page.Groups.Single(g => g.Group.Latest.Level == ActivityLevel.Problem).CanRemove);

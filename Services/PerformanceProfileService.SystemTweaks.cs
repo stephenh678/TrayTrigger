@@ -373,7 +373,7 @@ public partial class PerformanceProfileService
 
     /// <summary>
     /// What needs administrator rights, put back together as it was applied: one prompt for the registry values and the
-    /// NVIDIA Resizable BAR setting. What can't be put back stays on record, and is noted for Restore Previous.
+    /// NVIDIA Resizable BAR setting. What can't be put back stays on record, and is noted for Put Back.
     /// </summary>
     private void RestoreAdminTweaks(PerformanceProfileSessionSnapshot snapshot)
     {

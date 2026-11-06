@@ -86,14 +86,7 @@ public class BatchGameItemViewModel : ViewModelBase
     public string Name
     {
         get => _name;
-        set
-        {
-            if (_name != value)
-            {
-                _name = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _name, value);
     }
 
     public string ExePath => Candidate.ExePath;
@@ -102,14 +95,7 @@ public class BatchGameItemViewModel : ViewModelBase
     public bool IsSelected
     {
         get => _isSelected;
-        set
-        {
-            if (_isSelected != value)
-            {
-                _isSelected = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _isSelected, value);
     }
 
     private static System.Windows.Media.ImageSource? ExtractExeIcon(string path)

@@ -65,9 +65,7 @@ public sealed class ThemeColorRow : ViewModelBase
         get => _hex;
         set
         {
-            if (_hex == value) return;
-            _hex = value;
-            OnPropertyChanged();
+            if (!SetProperty(ref _hex, value)) return;
             if (ThemeColor.TryParseTyped(value, out var typed))
             {
                 Error = null;
@@ -885,7 +883,6 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     private void OpenFile()
     {
         if (_source.Path == null) return;
-        try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_source.Path}\"") { UseShellExecute = true }); }
-        catch (Exception ex) { LoggingService.Swallowed("Theme", ex, "showing the theme file in Explorer"); }
+        ShellOpen.Reveal(_source.Path, "Theme", "the theme file in Explorer");
     }
 }

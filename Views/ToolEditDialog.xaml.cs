@@ -9,7 +9,8 @@ namespace TrayTrigger.Views;
 
 public partial class ToolEditDialog : Window
 {
-    public ToolEditDialog(ToolEntry tool, IEnumerable<string> categories, IconExtractorService iconExtractorService)
+    /// <param name="showHotkey">Scrolls to the hotkey and outlines it (About's list of hotkeys opens the tool at it).</param>
+    public ToolEditDialog(ToolEntry tool, IEnumerable<string> categories, IconExtractorService iconExtractorService, bool showHotkey = false)
     {
         InitializeComponent();
         TrayTrigger.Services.WindowSizeMemory.Attach(this, "ToolEdit");
@@ -38,6 +39,7 @@ public partial class ToolEditDialog : Window
         {
             WindowThemeService.CenterOverOwner(this);
             Activate();
+            if (showHotkey) FieldHighlight.Show(ToolHotkeyRow);
         };
 
         viewModel.RequestClose += success =>

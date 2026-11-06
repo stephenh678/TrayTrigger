@@ -39,8 +39,7 @@
                 </Border>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="BreadcrumbText" Text="TRAYTRIGGER HELP" FontSize="{DynamicResource FontSizeBody}" FontWeight="Bold"
-                               Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,3"/>
+                    <TextBlock Style="{StaticResource SectionLabel}" x:Name="BreadcrumbText" Text="TRAYTRIGGER HELP" Margin="0,0,0,3"/>
                     <TextBlock x:Name="TitleText" Text="Topic" FontSize="{DynamicResource FontSizeTitle}" FontWeight="SemiBold"
                                Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"/>
                 </StackPanel>

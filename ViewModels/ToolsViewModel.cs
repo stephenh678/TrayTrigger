@@ -49,11 +49,22 @@ public sealed class ToolsViewModel : ViewModelBase
         _settings = settings;
         _selectedCategory = string.IsNullOrWhiteSpace(settings.LastToolsCategoryTab) ? LibraryConstants.AllCategory : settings.LastToolsCategoryTab;
 
+        Filter = new ToolFilterViewModel(OnFilterChanged,
+            saved: settings.SavedToolFilters,
+            onSavedChanged: filters =>
+            {
+                _settings.SavedToolFilters = filters.ToList();
+                SaveSettings();
+            });
+        Filter.RestoreKeys(settings.ToolFilterKeys);
+        Filter.CountProvider = CountForFilterSummary;
+
         FilteredTools = new ListCollectionView(Tools)
         {
             Filter = item => item is ToolCardViewModel card
                 && ToolCatalog.IsInTab(card.Tool, SelectedCategory)
-                && ToolCatalog.MatchesSearch(card.Tool, SearchText),
+                && ToolCatalog.MatchesSearch(card.Tool, SearchText)
+                && Filter.Matches(card),
             CustomSort = new CardComparer(this)
         };
 
@@ -66,6 +77,41 @@ public sealed class ToolsViewModel : ViewModelBase
     // ------------------------------------------------------------------ collections & state
 
     public ObservableCollection<ToolCardViewModel> Tools { get; } = new();
+
+    /// <summary>The toolbar's filter flyout: kind and per-tool state. Runs on top of the category tabs and the filter box, never instead of them.</summary>
+    public ToolFilterViewModel Filter { get; }
+
+    private void OnFilterChanged()
+    {
+        RefreshView();
+        // A selection made under one filter must not be acted on invisibly under another.
+        SelectionClearRequested?.Invoke();
+        _settings.ToolFilterKeys = Filter.ActiveKeys();
+        SaveSettings();
+    }
+
+    /// <summary>"Showing 3 of 9": the tools the tab and the box would show, and how many of them the ticks keep.</summary>
+    private (int Shown, int InView) CountForFilterSummary()
+    {
+        int inView = 0, shown = 0;
+        foreach (var card in Tools)
+        {
+            if (!ToolCatalog.IsInTab(card.Tool, SelectedCategory) || !ToolCatalog.MatchesSearch(card.Tool, SearchText)) continue;
+            inView++;
+            if (Filter.Matches(card)) shown++;
+        }
+        return (shown, inView);
+    }
+
+    /// <summary>
+    /// True when the list is empty only because of the filter flyout: there are tools and the tab and box
+    /// would show some, but a tick box is hiding them. Drives the "Clear Filters" button in the empty
+    /// state, so a filter kept from an earlier run can never read as tools that went missing.
+    /// </summary>
+    public bool IsEmptyBecauseOfFilters => HasAnyTools && Filter.HasActiveFilters && IsFilteredEmpty;
+
+    /// <summary>Clears every filter tick: the empty state's escape hatch and the flyout's button.</summary>
+    public void ClearFilters() => Filter.ClearAll();
     public ICollectionView FilteredTools { get; }
     public ObservableCollection<CategoryTabItem> CategoryTabs { get; } = new();
 
@@ -171,6 +217,7 @@ public sealed class ToolsViewModel : ViewModelBase
     public bool IsFilteredEmpty => FilteredTools.IsEmpty;
     public bool ShowEmptyLibrary => !HasAnyTools;
     public bool ShowFavoritesEmpty => HasAnyTools && IsFilteredEmpty && SearchText.Trim().Length == 0
+        && !Filter.HasActiveFilters
         && string.Equals(SelectedCategory, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
     public bool ShowNoMatches => HasAnyTools && IsFilteredEmpty && !ShowFavoritesEmpty;
     public bool ShowListHeader => IsListView && !IsFilteredEmpty;
@@ -206,6 +253,7 @@ public sealed class ToolsViewModel : ViewModelBase
         }
         TakeSnapshot();
         RebuildTabs();
+        Filter.RefreshAvailability(Tools);
         RefreshView();
         if (!string.IsNullOrWhiteSpace(_storage.ToolsLoadWarning))
         {
@@ -222,6 +270,7 @@ public sealed class ToolsViewModel : ViewModelBase
             Tools.Add(new ToolCardViewModel(tool, this));
         }
         RebuildTabs();
+        Filter.RefreshAvailability(Tools);
         RefreshView();
         OnPropertyChanged(string.Empty);
     }
@@ -235,6 +284,7 @@ public sealed class ToolsViewModel : ViewModelBase
     {
         TakeSnapshot();
         RebuildTabs();
+        Filter.RefreshAvailability(Tools);
         RefreshView();
         Save();
         if (status != null) StatusMessage = status;
@@ -261,10 +311,7 @@ public sealed class ToolsViewModel : ViewModelBase
         {
             string display = tab == LibraryConstants.AllCategory ? "All Tools" : tab;
             bool isSelected = string.Equals(tab, _selectedCategory, StringComparison.OrdinalIgnoreCase);
-            CategoryTabs.Add(new CategoryTabItem(tab, display, isSelected, name => SelectedCategory = name,
-                glyph: tab == ToolCatalog.StartWithGamesTab ? ToolCardViewModel.StartsWithGamesGlyph
-                     : tab == ToolCatalog.CloseWithGamesTab ? ToolCardViewModel.ClosesForGamesGlyph
-                     : string.Empty));
+            CategoryTabs.Add(new CategoryTabItem(tab, display, isSelected, name => SelectedCategory = name));
         }
         OnPropertyChanged(nameof(SelectedCategory));
     }
@@ -277,6 +324,7 @@ public sealed class ToolsViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowEmptyLibrary));
         OnPropertyChanged(nameof(ShowFavoritesEmpty));
         OnPropertyChanged(nameof(ShowNoMatches));
+        OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
         OnPropertyChanged(nameof(ShowListHeader));
         OnPropertyChanged(nameof(ToolCountDisplay));
     }
@@ -304,15 +352,8 @@ public sealed class ToolsViewModel : ViewModelBase
     /// </summary>
     private void OpenAppsFolder()
     {
-        try
-        {
-            using var _ = Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, "shell:AppsFolder") { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("Tools", $"Could not open the Applications folder: {ex.Message}");
+        if (!ShellOpen.OpenFolder("shell:AppsFolder", "Tools", "the Applications folder"))
             StatusMessage = "Couldn't open the Applications folder.";
-        }
     }
 
     /// <summary>Files dropped on the Tools page (or anywhere on the window while it is showing).</summary>
@@ -698,9 +739,9 @@ public sealed class ToolsViewModel : ViewModelBase
         CommitChanges();
     }
 
-    public void Edit(ToolCardViewModel card)
+    public void Edit(ToolCardViewModel card, bool showHotkey = false)
     {
-        var dialog = new ToolEditDialog(card.Tool, ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)), _icons);
+        var dialog = new ToolEditDialog(card.Tool, ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)), _icons, showHotkey);
         if (dialog.ShowDialog() == true)
         {
             card.Refresh();
@@ -763,25 +804,18 @@ public sealed class ToolsViewModel : ViewModelBase
     public void OpenFolder(ToolCardViewModel card)
     {
         if (card.IsStoreApp) return;
-        try
+        if (File.Exists(card.TargetPath))
         {
-            if (File.Exists(card.TargetPath))
-            {
-                Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"/select,\"{card.TargetPath}\"") { UseShellExecute = true });
-                return;
-            }
-            string? folder = Path.GetDirectoryName(card.TargetPath);
-            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
-            {
-                Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"\"{folder}\"") { UseShellExecute = true });
-                return;
-            }
-            StatusMessage = $"The folder for \"{card.Name}\" no longer exists.";
+            ShellOpen.Reveal(card.TargetPath, "Tools", $"the folder for '{card.Name}'");
+            return;
         }
-        catch (Exception ex)
+        string? folder = Path.GetDirectoryName(card.TargetPath);
+        if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
         {
-            LoggingService.Warn("Tools", $"Could not open the folder for '{card.Name}': {ex.Message}");
+            ShellOpen.OpenFolder(folder, "Tools", $"the folder for '{card.Name}'");
+            return;
         }
+        StatusMessage = $"The folder for \"{card.Name}\" no longer exists.";
     }
 
     public void Remove(ToolCardViewModel card)

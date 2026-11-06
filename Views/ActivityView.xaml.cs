@@ -12,6 +12,9 @@ public partial class ActivityView : UserControl
         InitializeComponent();
     }
 
+    /// <summary>Puts the caret in the filter box and selects what is there (Ctrl+F).</summary>
+    public void FocusSearchBox() => ActivitySearchBox.FocusBox();
+
     /// <summary>Esc clears the search from anywhere on the page, as on the Library and Tools pages.</summary>
     private void OnKeyDown(object sender, KeyEventArgs e)
     {

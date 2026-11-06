@@ -91,8 +91,30 @@
 
                     <!-- Top Navigation Items -->
                     <StackPanel Grid.Row="0">
-                        <!-- 1. Games Library -->
-                        <Button Command="{Binding SelectLibraryCommand}" AutomationProperties.Name="Games Library" Margin="0,0,0,6">
+                        <!-- 0. Search: finds a game, tool or setting from any page (Ctrl+K). Not a page, so it has no
+                             selected state; it opens the box over whatever is on screen. -->
+                        <Button Click="OnSearchButtonClick" AutomationProperties.Name="Search" ToolTip="Search everything (Ctrl+K)"
+                                Style="{StaticResource SidebarNavButton}" Margin="0,0,0,6">
+                            <DockPanel LastChildFill="True" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}"
+                                           Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                <TextBlock Text="Search" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DockPanel>
+                        </Button>
+
+                        <!-- 1. Library -->
+                        <Button Command="{Binding SelectLibraryCommand}" AutomationProperties.Name="Library" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>
@@ -183,7 +205,7 @@
                         </Button>
 
                         <!-- 3. Settings -->
-                        <Button Command="{Binding SelectSettingsCommand}" AutomationProperties.Name="Application Settings" Margin="0,0,0,6">
+                        <Button Command="{Binding SelectSettingsCommand}" AutomationProperties.Name="Settings" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>
@@ -364,7 +386,7 @@
             <!-- ========================================================== -->
             <!-- 2. IN-WINDOW SETTINGS VIEW                                 -->
             <!-- ========================================================== -->
-            <Grid>
+            <Grid x:Name="SettingsPageHost">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -382,7 +404,7 @@
             <!-- ========================================================== -->
             <!-- 3. IN-WINDOW ABOUT VIEW                                    -->
             <!-- ========================================================== -->
-            <Grid>
+            <Grid x:Name="AboutPageHost">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -400,7 +422,7 @@
             <!-- ========================================================== -->
             <!-- 4. SYSTEM & PERFORMANCE VIEW                               -->
             <!-- ========================================================== -->
-            <Grid>
+            <Grid x:Name="SystemPageHost">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -452,5 +474,8 @@
             </Grid>
 
         </Grid>
+
+        <!-- The window's search (Ctrl+K), over everything including the sidebar. -->
+        <views:GlobalSearchOverlay x:Name="SearchOverlay" Grid.ColumnSpan="2" Panel.ZIndex="200"/>
     </Grid>
 </Window>

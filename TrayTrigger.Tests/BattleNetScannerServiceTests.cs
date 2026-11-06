@@ -144,7 +144,7 @@ public sealed class BattleNetScannerServiceTests : IDisposable
     }
 
     /// <summary>A DisplayIcon that is an .ico was taken as the game's exe (antigravity review, 1.2),
-    /// so "Convert to Local game" would have tried to launch the icon.</summary>
+    /// so "Convert to Local Game" would have tried to launch the icon.</summary>
     [Fact]
     public void ResolveExe_IconFileInDisplayIcon_IsKeptAsTheIcon_AndTheExeIsFound()
     {

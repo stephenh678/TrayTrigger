@@ -11,6 +11,7 @@
             <ResourceDictionary Source="Resources/Colors.xaml"/>
             <ResourceDictionary Source="Resources/Typography.xaml"/>
             <ResourceDictionary Source="Resources/Shapes.xaml"/>
+            <ResourceDictionary Source="Resources/Spacing.xaml"/>
         </ResourceDictionary.MergedDictionaries>
 
         <!-- The height of the segmented tab strip at the top of every page (About, Settings, System, Activity, Tools, Library), so the
@@ -1055,53 +1056,6 @@
             </Setter>
         </Style>
 
-        <!-- A plain disclosure: chevron and label on one line, content below when open. Used for
-             Edit Game's "Advanced launch options". The header is a ToggleButton, so it takes Tab,
-             Space and the keyboard focus ring like any button. -->
-        <Style x:Key="DisclosureExpander" TargetType="Expander">
-            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
-            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
-            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Expander">
-                        <DockPanel>
-                            <ToggleButton x:Name="HeaderToggle" DockPanel.Dock="Top" HorizontalAlignment="Left"
-                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-                                          AutomationProperties.Name="{TemplateBinding Header}"
-                                          FocusVisualStyle="{StaticResource KeyboardFocusRing}" Cursor="Hand"
-                                          Foreground="{TemplateBinding Foreground}">
-                                <ToggleButton.Template>
-                                    <ControlTemplate TargetType="ToggleButton">
-                                        <StackPanel Orientation="Horizontal" Background="Transparent">
-                                            <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}"
-                                                       VerticalAlignment="Center" Margin="0,1,6,0" Foreground="{TemplateBinding Foreground}"/>
-                                            <ContentPresenter VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsChecked" Value="True">
-                                                <Setter TargetName="Chevron" Property="Text" Value="&#xE70D;"/>
-                                            </Trigger>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </ToggleButton.Template>
-                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
-                            </ToggleButton>
-                            <ContentPresenter x:Name="Body" Visibility="Collapsed"/>
-                        </DockPanel>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsExpanded" Value="True">
-                                <Setter TargetName="Body" Property="Visibility" Value="Visible"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- The floating selection bar over the Library and Tools grids (UX-06), and its
              compact buttons: icon plus label, ghost until hovered. -->
         <Style x:Key="SelectionBarStyle" TargetType="Border">
@@ -1346,6 +1300,44 @@
         <!-- Tray Context Menu Section Header (Non-interactive) -->
         <!-- A non-interactive label inside a menu. Used for the tray menu's section headings and
              for the batch context menu's selection count. -->
+        <!-- Text roles, so the same kind of text looks the same on every page (WordingGuardTests keeps them in use).
+             SectionLabel: a page section's capitalised header, in the accent, with its icon (HARDWARE SPECS, GENERAL).
+             CardLabel: a heading inside a card or a dialog panel (ABOUT THE GAME, DETAILS, User Data &amp; Settings).
+             CardTitle: a card's title (Appearance, Identity &amp; Library, Display &amp; Input), Title Case.
+             StrongText: body text that stands out - a value, a setting's name in a row, a count.
+             FieldLabel: a capitalised label over a value or a column (WINDOWS, DATA FOLDER, HOTKEY).
+             BadgeText: the words in a badge or a key cap (CRITICAL, MISSING, Ctrl+K); the badge sets the colour. -->
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+        </Style>
+        <Style x:Key="CardLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+        </Style>
+
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeSubhead}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        </Style>
+        <Style x:Key="StrongText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+        </Style>
+        <Style x:Key="BadgeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBadge}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
         <Style x:Key="MenuSectionHeaderStyle" TargetType="MenuItem">
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="IsHitTestVisible" Value="False"/>

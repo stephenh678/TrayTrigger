@@ -75,14 +75,6 @@ public partial class GameEditViewModel
     /// <summary>The mouse and dimming options only exist with more than one monitor, so the Screens card does too.</summary>
     public bool ShowScreensCard => ShowDisplayCard && (ShowMouseLock || ShowDim);
 
-    private bool _showScriptRunOptions;
-
-    /// <summary>The "How the scripts run" section: shut for a game with no script, open once it has one or a value in it is refused.</summary>
-    public bool ShowScriptRunOptions
-    {
-        get => _showScriptRunOptions;
-        set => SetProperty(ref _showScriptRunOptions, value);
-    }
     public bool ShowScriptsCardOnTab => ShowScriptsCard && (IsAllSection || IsScriptsSection);
     /// <summary>The "scripts are turned off" note shows on the Scripts tab, and last on All.</summary>
     public bool ShowScriptsStubOnTab => ShowScriptsStub && (IsAllSection || IsScriptsSection);
@@ -102,7 +94,43 @@ public partial class GameEditViewModel
     }
 
     /// <summary>The fields Save can reject, so the dialog can bring the right one into view.</summary>
-    public enum EditField { SteamAppId, PreLaunchScript, PostExitScript, PreLaunchTimeout, CpuCoresDelay }
+    public enum EditField
+    {
+        SteamAppId, PreLaunchScript, PostExitScript, PreLaunchTimeout, CpuCoresDelay,
+        // Where a link from elsewhere in the app lands (ShowField): the setting itself, or the card that holds the area.
+        LaunchHotkey, RunOptionsCard, ProfileCard, DlssCard, DisplayCard, ScriptsCard
+    }
+
+    /// <summary>A field a link asked to be shown (<see cref="ShowField"/>), until the panel has brought it on screen.</summary>
+    private EditField? _fieldToShow;
+
+    /// <summary>Raised when <see cref="ShowField"/> is called while the panel is already up.</summary>
+    public event Action? FieldRequested;
+
+    /// <summary>
+    /// Puts a field on screen: the tab you are on if it shows it, otherwise the tab that holds it. The panel
+    /// scrolls to it and outlines it (<see cref="TakeFieldToShow"/>), whether it is up yet or built a moment later.
+    /// </summary>
+    public void ShowField(EditField field)
+    {
+        var section = SectionOf(field);
+        if (!IsAllSection && SelectedSection != section) SelectedSection = section;
+        _fieldToShow = field;
+        FieldRequested?.Invoke();
+    }
+
+    /// <summary>The field <see cref="ShowField"/> asked for, once: the panel takes it and shows it.</summary>
+    public EditField? TakeFieldToShow()
+    {
+        var field = _fieldToShow;
+        _fieldToShow = null;
+        return field;
+    }
+
+    internal bool HasFieldToShow => _fieldToShow != null;
+
+    /// <summary>The field <see cref="ShowField"/> asked for, until the panel has shown it (see <see cref="TakeFieldToShow"/>).</summary>
+    internal EditField? PendingField => _fieldToShow;
 
     /// <summary>Raised when Save refuses a value. The tab has already been switched to show it.</summary>
     public event Action<EditField>? ValidationFailed;
@@ -111,6 +139,9 @@ public partial class GameEditViewModel
     {
         EditField.SteamAppId => GameEditSection.Identity,
         EditField.CpuCoresDelay => GameEditSection.Performance,
+        EditField.LaunchHotkey or EditField.RunOptionsCard => GameEditSection.Launch,
+        EditField.ProfileCard or EditField.DlssCard => GameEditSection.Performance,
+        EditField.DisplayCard => GameEditSection.Display,
         _ => GameEditSection.Scripts
     };
 
@@ -125,7 +156,6 @@ public partial class GameEditViewModel
         SetFieldError(field, message);
         // The App ID box sits behind "Enter an App ID": a refused ID opens it.
         if (field == EditField.SteamAppId) ShowAppIdEntry = true;
-        if (field == EditField.PreLaunchTimeout) ShowScriptRunOptions = true;
         ShowProblem("Not saved: one field needs fixing. The reason is under it.");
         var section = SectionOf(field);
         if (!IsAllSection && SelectedSection != section) SelectedSection = section;
@@ -213,9 +243,7 @@ public partial class GameEditViewModel
         get => _useSameScriptForBoth;
         set
         {
-            if (_useSameScriptForBoth == value) return;
-            _useSameScriptForBoth = value;
-            OnPropertyChanged();
+            if (!SetProperty(ref _useSameScriptForBoth, value)) return;
             OnPropertyChanged(nameof(CanEditPostExitScript));
             if (value) PostExitScriptPath = PreLaunchScriptPath;
         }

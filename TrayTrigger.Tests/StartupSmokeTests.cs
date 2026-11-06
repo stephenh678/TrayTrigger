@@ -45,7 +45,7 @@ public class StartupSmokeTests
     /// Runs the body with the app's resources in place, and takes them out again after: other tests share this Application, and
     /// some of them rely on it having none. The body runs as one piece on the UI thread, so no other test sees them in between.
     /// </summary>
-    private static void WithAppResources(Action<ResourceDictionary> body) => WpfTestHost.Run(() =>
+    internal static void WithAppResources(Action<ResourceDictionary> body) => WpfTestHost.Run(() =>
     {
         var app = LoadAppResources();
         Application.Current.Resources.MergedDictionaries.Add(app);
@@ -71,7 +71,7 @@ public class StartupSmokeTests
     public void TheAppsResources_LoadWithTheirStylesAndConverters() => WithAppResources(app =>
     {
         Assert.True(app.Count > 30, $"App.xaml loaded only {app.Count} resources.");
-        Assert.Equal(3, app.MergedDictionaries.Count);
+        Assert.Equal(4, app.MergedDictionaries.Count); // Colors, Typography, Shapes, Spacing
         foreach (string key in new[] { "AppFont", "IconFont", "MonoFont", "ModernComboBox", "BoolToVis" })
             Assert.True(app.Contains(key), $"App.xaml has no resource named {key}.");
     });

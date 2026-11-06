@@ -50,7 +50,7 @@
 
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Label}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                <TextBlock Style="{StaticResource StrongText}" Text="{Binding Label}"/>
                 <!-- Marks a color that makes some text hard to read. An icon, and the reason on hover and to a screen reader: not color alone. -->
                 <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="6,0,0,0" VerticalAlignment="Center"
                            Foreground="{DynamicResource BrushWarning}" ToolTip="{Binding ContrastNote}"

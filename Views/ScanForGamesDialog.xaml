@@ -7,7 +7,7 @@
         xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="New Games Found"
-        Height="580" Width="680"
+        Height="580" Width="680" MinHeight="420" MinWidth="560"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Background="{DynamicResource BrushSurface}"

@@ -1,6 +1,6 @@
 # How a game is launched
 
-Edit Game's Launch tab has two cards: **How it starts** (which client, if any, starts the game, and the file to run) and **Run options** (from where, with what, and as whom: the working folder, arguments, administrator and the hotkey). This is what each field does and, just as important, when it is ignored.
+Edit Game's Launch tab has two cards: **How It Starts** (which client, if any, starts the game, and the file to run) and **Run Options** (from where, with what, and as whom: the working folder, arguments, administrator and the hotkey). This is what each field does and, just as important, when it is ignored.
 
 Edit Game is the Settings tab of a game's Game Details window. It opens on its own All tab, with every card in one scrolling column. The Launch tab shows these cards on their own; Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and nothing you type is lost when you switch.
 
@@ -10,7 +10,7 @@ Pressing Play (or the game's hotkey) on a game that is already running, starting
 
 TrayTrigger decides how to start a game from what the entry is, not from the path alone:
 
-- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, Battle.net** - imported by Scan for Games, or linked to a platform record when you dropped its exe. These start through their own client (or, for Game Pass, through Windows), so the client can sign you in, sync saves, and run its overlay. The executable path is kept for the icon and "Open Containing Folder", but the client is what runs the game.
+- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, Battle.net** - imported by Scan for Games, or linked to a platform record when you dropped its exe. These start through their own client (or, for Game Pass, through Windows), so the client can sign you in, sync saves, and run its overlay. The executable path is kept for the icon and "Open File Location", but the client is what runs the game.
 - **Local** - anything else: an exe, a `.lnk` shortcut, or a `.url` file. Runs directly.
 - **Launcher links** - a `.url` whose target is a launcher scheme such as `steam://` or `com.epicgames.launcher://` is opened as a link. Only the schemes TrayTrigger knows are allowed; anything else is refused rather than handed to Windows. A bare link has no exit signal, so it supports a pre-launch script only.
 
@@ -18,10 +18,10 @@ TrayTrigger decides how to start a game from what the entry is, not from the pat
 
 Shown at the top of the card for a platform game; a Local game has none.
 
-- **Imported from / Linked to** - which platform record the entry is tied to and the id the launcher knows it by. Convert to Local game drops the link and turns the entry into a plain exe launch (not offered for Xbox / Game Pass, whose exe can't run outside its package). Until you press Save Changes, Undo beside it puts the link back. Once saved, the game stays Local: a scan sees its executable is already in your library and does not offer the platform's record again.
+- **Imported from / Linked to** - which platform record the entry is tied to and the id the launcher knows it by. Convert to Local Game drops the link and turns the entry into a plain exe launch (not offered for Xbox / Game Pass, whose exe can't run outside its package). Until you press Save Changes, Undo beside it puts the link back. Once saved, the game stays Local: a scan sees its executable is already in your library and does not offer the platform's record again.
 - **Launch this executable directly** - for GOG, EA, Epic, Ubisoft and Steam entries: bypass the client and run the executable below, with the arguments and Run as Administrator from the fields below applied. You lose whatever the client provides (sign-in, cloud saves, overlay). Not offered for Xbox (a GDK exe can't run outside its package) or Battle.net (the game needs the sign-in token only the client passes).
 - **Close the launcher after this game exits** - when the session ends, the client (Steam, GOG Galaxy, EA app, Epic, Ubisoft Connect, the Xbox app, or Battle.net) is closed, so it doesn't stay resident with its overlay and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows. "Keep game launchers minimized when launching a game" in Settings > Launch & Performance > Launching Games does this for every game.
-- **Launch through the Steam client** - offered for a Local game that has a Steam App ID. Ticking it makes the entry a Steam game, launched with `steam://rungameid/`, and the options above take over. Leave it off for a standalone game that merely shares a Steam listing. It is also offered right after Convert to Local game, and ticking it there is kept when you save.
+- **Launch through the Steam client** - offered for a Local game that has a Steam App ID. Ticking it makes the entry a Steam game, launched with `steam://rungameid/`, and the options above take over. Leave it off for a standalone game that merely shares a Steam listing. It is also offered right after Convert to Local Game, and ticking it there is kept when you save.
 
 ## Keeping the launcher minimized
 
@@ -81,3 +81,5 @@ Click the box and press the keys. The combination is recorded from what you pres
 - Escape keeps the old value; Backspace, Delete or the × clears it.
 
 Hotkeys stay active while the window is hidden, and a hidden game's hotkey still works.
+
+About > Shortcuts lists every game and tool that has a hotkey, in one place. Choose a name to open its editor at the hotkey, outlined. One Windows could not give to it, because something else holds the key, is marked "Not active: already in use". Tool hotkeys are left out of the list while Enable Tools is off.

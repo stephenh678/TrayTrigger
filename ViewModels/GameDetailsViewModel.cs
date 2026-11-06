@@ -59,7 +59,7 @@ public partial class GameDetailsViewModel : ViewModelBase
     public bool ShowRawgAttribution => IsRawgActive && _rawgDetails != null;
     public string RawgUrl => !string.IsNullOrWhiteSpace(_rawgDetails?.RawgPageUrl) ? _rawgDetails!.RawgPageUrl : "https://rawg.io";
 
-    /// <summary>"Change match" is offered for whichever source is showing (matched or not) once
+    /// <summary>"Change Match" is offered for whichever source is showing (matched or not) once
     /// its fetch is done - a wrong pick is visible right there, so the fix lives right there. The
     /// Steam side needs nothing configured; the RAWG side needs the key.</summary>
     public bool CanChangeMatch => IsRawgActive ? (CanToggleSource && !IsRawgLoading) : !IsLoading;
@@ -104,7 +104,7 @@ public partial class GameDetailsViewModel : ViewModelBase
             {
                 RawgLookupStatus.Unauthorized => "RAWG rejected the API key. Check the key in Settings › Library.",
                 RawgLookupStatus.Failed => "Could not reach RAWG. Check your internet connection and try again.",
-                _ => $"RAWG has no entry matching \"{RawgSearchName}\". Use Change match to search RAWG yourself, or switch back to Steam.",
+                _ => $"RAWG has no entry matching \"{RawgSearchName}\". Use Change Match to search RAWG yourself, or switch back to Steam.",
             };
         }
     }
@@ -715,7 +715,7 @@ public partial class GameDetailsViewModel : ViewModelBase
         RaiseSourceDependentChanged();
     }
 
-    /// <summary>Routes "Change match" to the picker for whichever source is on screen.</summary>
+    /// <summary>Routes "Change Match" to the picker for whichever source is on screen.</summary>
     private void ChangeMatch()
     {
         if (IsRawgActive)
@@ -1228,17 +1228,6 @@ public partial class GameDetailsViewModel : ViewModelBase
             return;
         }
 
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = uri.AbsoluteUri,
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("GameDetails", $"Failed to open URL '{url}': {ex.Message}");
-        }
+        ShellOpen.Open(uri.AbsoluteUri, "GameDetails", $"the URL '{url}'");
     }
 }

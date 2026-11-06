@@ -83,8 +83,8 @@ public partial class SettingsViewModel : ViewModelBase
 
     private string _settingsSearchText = string.Empty;
     /// <summary>
-    /// The card search beside the tabs (see Views/CardSearch). It searches the tab you're on (All
-    /// searches everything) and stays as you switch tabs, filtering each one in turn.
+    /// The card search beside the tabs (see Views/CardSearch). It lists matching cards from every tab and
+    /// stays as you switch tabs, highlighting its words in each one.
     /// </summary>
     public string SettingsSearchText
     {
@@ -196,6 +196,8 @@ public partial class SettingsViewModel : ViewModelBase
     public ICommand ClearMetadataCacheCommand { get; }
 
     // Category Tab Commands
+    /// <summary>Search results take the page to a card's tab (see Views/CardSearch). On All the card is already on screen.</summary>
+    public ICommand GoToTabCommand { get; }
     public ICommand SelectAllTabCommand { get; }
     public ICommand SelectGeneralTabCommand { get; }
     public ICommand SelectLibraryTabCommand { get; }
@@ -289,6 +291,10 @@ public partial class SettingsViewModel : ViewModelBase
         _onProfileTweaksReset = onProfileTweaksReset;
 
         // Initialize Tab Commands
+        GoToTabCommand = new RelayCommand(tab =>
+        {
+            if (tab is SettingsCategoryTab target && SelectedTab != SettingsCategoryTab.All) SelectedTab = target;
+        });
         SelectAllTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.All);
         SelectGeneralTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.General);
         SelectLibraryTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.Library);
@@ -445,9 +451,7 @@ public partial class SettingsViewModel : ViewModelBase
         get => _trayPromotionStatus;
         set
         {
-            if (_trayPromotionStatus == value) return;
-            _trayPromotionStatus = value;
-            OnPropertyChanged();
+            if (!SetProperty(ref _trayPromotionStatus, value)) return;
             OnPropertyChanged(nameof(HasTrayPromotionStatus));
         }
     }

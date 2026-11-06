@@ -1,0 +1,236 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
+                    xmlns:views="clr-namespace:TrayTrigger.Views"
+                    xmlns:services="clr-namespace:TrayTrigger.Services"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:models="clr-namespace:TrayTrigger.Models">
+    <!-- The Library's poster cards: the hover zoom, the details fade, the card sizes and the
+         not-installed look. LibraryView merges this file into its resources. -->
+
+    <!-- ==================================================================== -->
+    <!-- POSTER CARD HOVER ZOOM                                               -->
+    <!-- The Xbox dashboard lift: the whole tile grows slightly under the      -->
+    <!-- pointer. Both poster grids name their card "CardBorder" and give it a -->
+    <!-- ScaleTransform, so one pair of storyboards drives both.               -->
+    <!--                                                                       -->
+    <!-- Scale is deliberately small. A card is 184x276 (240x360 extra large)  -->
+    <!-- with a 7px margin, so at 1.05 the growth is ~4.6px per side normally  -->
+    <!-- and ~9px vertically when extra large - i.e. it mostly grows into its  -->
+    <!-- own margin rather than over its neighbours. RenderTransform does not  -->
+    <!-- affect layout, so nothing reflows and the WrapPanel never rewraps.    -->
+    <!--                                                                       -->
+    <!-- Out is quicker than in: a slow shrink feels sluggish when sweeping     -->
+    <!-- across a shelf of cards. -->
+    <!-- ==================================================================== -->
+    <Storyboard x:Key="PosterCardZoomIn">
+        <DoubleAnimation Storyboard.TargetName="CardBorder"
+                         Storyboard.TargetProperty="RenderTransform.ScaleX"
+                         To="1.05" Duration="0:0:0.16">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetName="CardBorder"
+                         Storyboard.TargetProperty="RenderTransform.ScaleY"
+                         To="1.05" Duration="0:0:0.16">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <Storyboard x:Key="PosterCardZoomOut">
+        <DoubleAnimation Storyboard.TargetName="CardBorder"
+                         Storyboard.TargetProperty="RenderTransform.ScaleX"
+                         To="1.0" Duration="0:0:0.12">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetName="CardBorder"
+                         Storyboard.TargetProperty="RenderTransform.ScaleY"
+                         To="1.0" Duration="0:0:0.12">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <!-- ==================================================================== -->
+    <!-- "SHOW DETAILS ON HOVER" (Settings: PosterDetailsOnHover)             -->
+    <!-- The card stays where it is and the art pushes in behind its rounded  -->
+    <!-- clip, while the badges, title and playtime fade in over it. The card -->
+    <!-- lift above is off in this mode: a frame that grows and art that      -->
+    <!-- zooms inside it at once is two motions where one reads better.      -->
+    <!--                                                                       -->
+    <!-- Everything that fades binds its Opacity to the card template's       -->
+    <!-- "DetailsOpacity" element, so one value drives them all and the       -->
+    <!-- PLAYING tag and the not-installed dimming, which stay put, are       -->
+    <!-- simply the elements that don't bind to it. These two storyboards    -->
+    <!-- animate "DetailsFade" towards where PosterDetailsTarget says the     -->
+    <!-- details should be; DetailsOpacity reads that animated value, or the  -->
+    <!-- target itself while Windows' Animation effects are off               -->
+    <!-- (Views/Motion.cs), so the details then appear with no fade.          -->
+    <!-- ==================================================================== -->
+    <Storyboard x:Key="PosterDetailsFadeIn">
+        <DoubleAnimation Storyboard.TargetName="DetailsFade" Storyboard.TargetProperty="Opacity"
+                         To="1" Duration="0:0:0.16">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <Storyboard x:Key="PosterDetailsFadeOut">
+        <DoubleAnimation Storyboard.TargetName="DetailsFade" Storyboard.TargetProperty="Opacity"
+                         To="0" Duration="0:0:0.12">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <!-- Where the details should be: hidden while the setting is on and the card is at
+         rest, shown otherwise. Tag is the card's "in use" flag (see DetailsFade in the
+         card template). Shared by DetailsFade, whose animations start from it, and
+         DetailsTarget, which is never animated. -->
+    <Style x:Key="PosterDetailsTarget" TargetType="FrameworkElement">
+        <Setter Property="Opacity" Value="1"/>
+        <Style.Triggers>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding DataContext.SettingsVM.PosterDetailsOnHover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
+                    <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="False"/>
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Opacity" Value="0"/>
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- 1.08 crops 4% off each edge: enough to read as a push-in, not so much that a
+         title in the art's corner disappears. Slower than the card lift, because it
+         moves the whole picture rather than a frame around it. -->
+    <Storyboard x:Key="PosterArtZoomIn">
+        <DoubleAnimation Storyboard.TargetName="PosterArt"
+                         Storyboard.TargetProperty="RenderTransform.ScaleX"
+                         To="1.08" Duration="0:0:0.30">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetName="PosterArt"
+                         Storyboard.TargetProperty="RenderTransform.ScaleY"
+                         To="1.08" Duration="0:0:0.30">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <Storyboard x:Key="PosterArtZoomOut">
+        <DoubleAnimation Storyboard.TargetName="PosterArt"
+                         Storyboard.TargetProperty="RenderTransform.ScaleX"
+                         To="1.0" Duration="0:0:0.20">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetName="PosterArt"
+                         Storyboard.TargetProperty="RenderTransform.ScaleY"
+                         To="1.0" Duration="0:0:0.20">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <!-- A WrapPanel paints its children in order, so without this the card being
+         hovered is drawn underneath every card after it in the row and the zoom
+         looks clipped on its right and bottom edges. Lifting the container (the
+         ContentPresenter the panel actually lays out - the template's own Border
+         is too deep for Panel.ZIndex to reach) puts the growing card on top. -->
+    <Style x:Key="PosterCardContainerStyle" TargetType="ContentPresenter">
+        <Setter Property="Panel.ZIndex" Value="0"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Panel.ZIndex" Value="1"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <!-- ==================================================================== -->
+    <!-- POSTER CARD SIZES                                                    -->
+    <!-- The Poster Grid and Extra Large views share one card template; these -->
+    <!-- are the only things that differ between them. The clip geometries    -->
+    <!-- are the card minus its 1px border, for the poster's rounded corners. -->
+    <!-- ==================================================================== -->
+    <sys:Double x:Key="PosterCardWidth">184</sys:Double>
+    <sys:Double x:Key="PosterCardHeight">276</sys:Double>
+    <sys:Double x:Key="PosterCardWidthExtraLarge">240</sys:Double>
+    <sys:Double x:Key="PosterCardHeightExtraLarge">360</sys:Double>
+
+    <!-- The poster's rounded-corner clip: the border's own size and CornerRadius (RadiusPoster), so it follows the
+         card size in every view and the theme's corners. -->
+    <Style x:Key="PosterArtClip" TargetType="Border">
+        <Setter Property="Clip">
+            <Setter.Value>
+                <MultiBinding Converter="{StaticResource RoundedClipConverter}"><Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}"/><Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/><Binding Path="CornerRadius" RelativeSource="{RelativeSource Self}"/><Binding Path="BorderThickness" RelativeSource="{RelativeSource Self}"/></MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================== -->
+    <!-- "THIS GAME ISN'T THERE" BADGE                                        -->
+    <!-- One badge, two readings: orange MISSING for a local exe that is not  -->
+    <!-- on disk (which may only have moved - hence "Locate Executable..."),  -->
+    <!-- and a quieter blue-grey NOT INSTALLED for a launcher game its own    -->
+    <!-- launcher no longer has. Uninstalling a game is an ordinary thing to  -->
+    <!-- do, so it does not get an error colour. Every card layout uses these -->
+    <!-- and sets only its own size, padding and margin locally.              -->
+    <!-- ==================================================================== -->
+    <Style x:Key="UnavailableBadgeBorder" TargetType="Border">
+        <Setter Property="Visibility" Value="Collapsed"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource BrushWarningWash}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushWarningBorder}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                <Setter Property="Visibility" Value="Visible"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- The game's own art, pushed well back when the game isn't there to play. Dimming the
+         whole card instead would take the badge and the title down with it, and those are
+         exactly what has to stay readable. -->
+    <Style x:Key="UnavailableDimmedArt" TargetType="Image">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                <Setter Property="Opacity" Value="0.22"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- The same job for full-bleed poster art, which has no single Image to fade: a near-black
+         wash over the artwork layers, under the title and badges. -->
+    <Style x:Key="UnavailablePosterScrim" TargetType="Border" BasedOn="{StaticResource PosterArtClip}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource BrushScrim}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="UnavailableBadgeText" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
+        <Setter Property="Text" Value="{Binding UnavailableLabel}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource BrushInfoText}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

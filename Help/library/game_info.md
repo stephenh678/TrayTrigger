@@ -3,7 +3,7 @@
 The Game Details window (click a game card) is the page for one game. It opens on a header with the game's hero banner behind its name (Steam's wide hero banner art, or SteamGridDB's when you have given TrayTrigger a key and Steam has none; a blurred poster until it arrives or if there is none), its store and genres on one quiet line (with a small tag for how Steam's players rated it, such as 91% positive, and a Playing tag while the game runs), how long you have played, when you last played and its performance profile, with a **Play** button, the favorite star and a **...** menu (the store pages, and Remove from library). Under it are two tabs, **Overview** and **Settings**.
 
 - **Overview** is what the game is and what TrayTrigger does for it; see The Overview below.
-- **Settings** is where you edit the game: its artwork, title, category, launch options, profile, display and scripts. Everything under "Edit Game" in this help is on this tab. Right-click a game and choose Edit Game Properties, or press Settings, to open it. **Save Changes** writes your edits and keeps the page open; **Cancel** throws them away and starts again from what is saved. Closing the window, Play, or Remove while edits are still open asks before it throws them away.
+- **Settings** is where you edit the game: its artwork, title, category, launch options, profile, display and scripts. Everything under "Edit Game" in this help is on this tab. Right-click a game and choose Edit Game Properties, or press Settings, to open it. **Save Changes** writes your edits and keeps the page open; **Discard Changes**, shown only while there are edits, throws them away and starts again from what is saved. Closing the window, Play, or Remove while edits are still open asks before it throws them away.
 
 ## The Overview
 
@@ -12,8 +12,8 @@ On the left: the synopsis, the three newest Steam news posts (with a PATCH tag o
 On the right, in this order:
 
 - **Details** is the developer and publisher (one row when they are the same company), release date, the drive the game is installed on and **Size on disk**, then the scores, the play modes and the links: the store page, PCGamingWiki, SteamDB and the developer's website, each only when the game has one. Size on disk is counted on this PC from the game's own folder when the page opens, and left out when the folder cannot be found or is too big to be one game; nothing is sent anywhere. The links open in your browser.
-- **Your setup** is one card with a row for each area TrayTrigger changes for the game: Performance (always), DLSS while TrayTrigger holds an override, and Display and sound, Scripts and Launch when something is set for the game. Each row says what it is doing now and has a link to the settings that change it. Anything not listed is at its default: an area left alone has no row, and its tab on Settings is still there. The rows read the game as it is saved.
-- **Last session** is the game's most recent session as Activity & History wrote it, kept to three lines (when it ran, the profile, and that everything was put back). **See this game in Activity** closes the page and opens Activity & History with the game's name in the search box, so the list shows just this game. It is left out for a game with no session on record.
+- **Your setup** is one card with a row for each area TrayTrigger changes for the game: Performance (always), DLSS while TrayTrigger holds an override, and Display and sound, Scripts and Launch when something is set for the game. Each row says what it is doing now and has a link that opens the settings for it, scrolled to the right card and outlined. Anything not listed is at its default: an area left alone has no row, and its tab on Settings is still there. The rows read the game as it is saved.
+- **Last session** is the game's most recent session as Activity & History wrote it, kept to three lines (when it ran, the profile, and that everything was put back). **See this game in Activity** closes the page and opens Activity & History with the game's name in the filter box, so the list shows just this game. It is left out for a game with no session on record.
 
 The text on the Overview can come from one of two sources. Which one, and how fresh it is, are on the About card: its **Steam** or **RAWG** menu switches the source (RAWG only with a key), refreshes the info now, changes which listing the game is matched to, and opens this help.
 
@@ -52,13 +52,13 @@ After you launch a game, its details window shows an **Anti-cheat: Name** tag be
 - Poster art. RAWG's official title is used as the SteamGridDB search term for games with no Steam poster, which finds art the scanner's folder name often misses.
 - Ambient art. While RAWG is selected, its screenshot is the blurred backdrop behind the poster, and stands in for a game that has no poster at all. It is never saved as the poster.
 
-## Matching and Change match
+## Matching and Change Match
 
 Both sources are searched by the game's name, and the result whose title is closest to that name is kept, subject to the confidence threshold in Settings. The match is remembered so later opens skip the search.
 
-- The window title shows which Steam listing or RAWG entry the game matched. Point at "Change match" to see the Steam App ID it used.
-- If it matched the wrong game, or nothing was found, click "Change match", search by title, and pick the right entry. The pick is remembered for the game.
-- Changing the Steam match sets the game's Steam App ID, so its title details, genre and poster art follow the new listing. This is the same as Change match... in Edit Game's Online match card. How the game launches does not change.
+- The window title shows which Steam listing or RAWG entry the game matched. Point at "Change Match" to see the Steam App ID it used.
+- If it matched the wrong game, or nothing was found, click "Change Match", search by title, and pick the right entry. The pick is remembered for the game.
+- Changing the Steam match sets the game's Steam App ID, so its title details, genre and poster art follow the new listing. This is the same as Change Match... in Edit Game's Online Match card. How the game launches does not change.
 - Changing the RAWG match updates the RAWG text and, if the game is still Uncategorized, its category.
 
 ## How fresh the info is
@@ -68,8 +68,8 @@ Both sources are saved to disk beside the poster cache, so Game Details opens in
 - Settings > Library & Art > "Refresh game info" sets how old a saved copy may get before the window quietly fetches a new one in the background. The default is every 3 days. "Every time details open" is the old behaviour; "Never" leaves it to you.
 - Steam news, review counts and RAWG ratings change over time, so a longer interval means fewer requests and slightly older numbers. Text, genres and art rarely change.
 - If a background refresh fails (offline, quota, bad key) the saved copy stays on screen.
-- Right-click > Refresh metadata and Change match always fetch fresh info.
-- "Clear Cached Game Info" under the setting forgets every game's saved details. Posters are kept.
+- Right-click > Refresh metadata and Change Match always fetch fresh info.
+- "Clear Cached Game Info" under the setting forgets every game's saved details. Posters and banners are kept.
 - Removing a game from the library also deletes its saved details, poster and icon once the ten-second undo has passed. Anything another game in the library still uses, such as a second entry for the same Steam game, is kept.
 
 > RAWG needs a free API key from rawg.io/apidocs. The key is stored encrypted in your settings file and only sent to RAWG. RAWG's terms require the "Data from RAWG" link shown under the synopsis whenever their data is on screen.

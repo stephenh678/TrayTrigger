@@ -38,7 +38,7 @@ public class ActivityEntry
     /// it happened. Defaults to the level and text, so the same failure for the same game groups.
     /// </summary>
     public string GroupKey { get; set; } = string.Empty;
-    /// <summary>When a Critical entry was put right (Restore Previous); null until then. Shown as FIXED.</summary>
+    /// <summary>When a Critical entry was put right (Put Back); null until then. Shown as FIXED.</summary>
     public DateTime? FixedUtc { get; set; }
 }
 

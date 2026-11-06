@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
         mc:Ignorable="d"
         Title="Add Games from Folder"
-        Height="560" Width="680"
+        Height="560" Width="680" MinHeight="420" MinWidth="560"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Background="{DynamicResource BrushSurface}"
@@ -147,15 +147,14 @@
                                         </Style>
                                     </Border.Style>
                                     <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1.5">
-                                        <TextBlock Text="IN LIBRARY" Foreground="{DynamicResource BrushSuccessText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold"/>
+                                        <TextBlock Style="{StaticResource BadgeText}" Text="IN LIBRARY" Foreground="{DynamicResource BrushSuccessText}"/>
                                     </Border>
                                 </Border>
                             </StackPanel>
 
                             <!-- Name and Branch Path -->
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource BrushTextPrimary}" 
+                                <TextBlock Style="{StaticResource CardTitle}" Text="{Binding Name}" 
                                            FontFamily="{DynamicResource AppFont}"/>
                                 <TextBlock Text="{Binding DisplayPath}" FontSize="{DynamicResource FontSizeBody}" 
                                            Foreground="{DynamicResource BrushTextSecondary}" 

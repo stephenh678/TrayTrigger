@@ -58,39 +58,13 @@ public class ToolStartWithGamesSettingsTests : IDisposable
         Assert.Equal(expected, ToolCatalog.CanStartWithGames(new ToolEntry { TargetPath = target, AppId = appId }));
 
     [Fact]
-    public void Tabs_GameTabsOnlyWhileAToolUsesThem_AfterFavorites_StartBeforeClose()
+    public void Tabs_AreAllFavoritesAndCategories_TheGameSetsAreFilters()
     {
-        var afterburner = new ToolEntry { Name = "MSI Afterburner", TargetPath = @"C:\Tools\MSIAfterburner.exe", Category = "Graphics" };
-        var discord = new ToolEntry { Name = "Discord", TargetPath = @"C:\Tools\Discord.exe", Category = "Chat" };
+        var afterburner = new ToolEntry { Name = "MSI Afterburner", TargetPath = @"C:\Tools\MSIAfterburner.exe", Category = "Graphics", StartWithGames = true };
+        var discord = new ToolEntry { Name = "Discord", TargetPath = @"C:\Tools\Discord.exe", Category = "Chat", CloseForGames = true };
         var vortex = new ToolEntry { Name = "Vortex", TargetPath = @"C:\Tools\Vortex.exe", Category = "Mods" };
+
         Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
-
-        afterburner.StartWithGames = true;
-        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, ToolCatalog.StartWithGamesTab, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
-
-        discord.CloseForGames = true;
-        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, ToolCatalog.StartWithGamesTab, ToolCatalog.CloseWithGamesTab, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
-
-        afterburner.StartWithGames = false;
-        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, ToolCatalog.CloseWithGamesTab, "Chat", "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, discord, vortex]));
-    }
-
-    [Fact]
-    public void GameTabs_ListTheirOwnTools()
-    {
-        var afterburner = new ToolEntry { TargetPath = @"C:\Tools\MSIAfterburner.exe", StartWithGames = true };
-        var discord = new ToolEntry { TargetPath = @"C:\Tools\Discord.exe", CloseForGames = true };
-        var vortex = new ToolEntry { TargetPath = @"C:\Tools\Vortex.exe" };
-        // Ticked in a hand-edited tools.json; a script can't start with games, so it isn't listed.
-        var script = new ToolEntry { TargetPath = @"C:\Tools\backup.ps1", StartWithGames = true };
-
-        Assert.True(ToolCatalog.IsInTab(afterburner, ToolCatalog.StartWithGamesTab));
-        Assert.False(ToolCatalog.IsInTab(afterburner, ToolCatalog.CloseWithGamesTab));
-        Assert.True(ToolCatalog.IsInTab(discord, ToolCatalog.CloseWithGamesTab));
-        Assert.False(ToolCatalog.IsInTab(discord, ToolCatalog.StartWithGamesTab));
-        Assert.False(ToolCatalog.IsInTab(vortex, ToolCatalog.StartWithGamesTab));
-        Assert.False(ToolCatalog.IsInTab(vortex, ToolCatalog.CloseWithGamesTab));
-        Assert.False(ToolCatalog.IsInTab(script, ToolCatalog.StartWithGamesTab));
     }
 
     [Fact]
@@ -127,17 +101,16 @@ public class ToolStartWithGamesSettingsTests : IDisposable
         Assert.Null(ToolCatalog.SquirrelApp(new ToolEntry { TargetPath = target, Arguments = arguments }));
 
     [Theory]
-    [InlineData("start with games", "Start with Games")]
-    [InlineData("CLOSE WITH GAMES", "Close with Games")]
-    public void ACategoryNamedLikeAGameTab_IsUncategorized_SoItCantBeTakenForTheTab(string category, string tab)
+    [InlineData("Start with Games")]
+    [InlineData("Close with Games")]
+    public void TheOldGameTabNames_AreOrdinaryCategoriesNow(string category)
     {
+        // Until 1.7.7 these names were kept for tabs; the tabs are filters now, so a category may use them.
         var tool = new ToolEntry { TargetPath = @"C:\Tools\Vortex.exe", Category = category };
 
-        Assert.Equal(LibraryConstants.Uncategorized, ToolCatalog.NormalizeCategory(tool.Category));
-        Assert.Equal([LibraryConstants.Uncategorized], ToolCatalog.CategoriesOf([tool]));
-        Assert.False(ToolCatalog.IsInTab(tool, tab));
-        // Adding a tool while the tab is selected doesn't make a category of it either.
-        Assert.Equal(LibraryConstants.Uncategorized, ToolCatalog.CategoryForNewTool(tab));
+        Assert.Equal(category, ToolCatalog.NormalizeCategory(tool.Category));
+        Assert.Equal([category], ToolCatalog.CategoriesOf([tool]));
+        Assert.True(ToolCatalog.IsInTab(tool, category));
     }
 
     [Fact]

@@ -84,6 +84,9 @@ public partial class SettingsViewModel
             nameof(AppSettings.LibraryFilterKeys),
             // Filters the player named and saved: curated by hand, like the library itself.
             nameof(AppSettings.SavedLibraryFilters),
+            // The Tools page's filter, the same two buckets.
+            nameof(AppSettings.ToolFilterKeys),
+            nameof(AppSettings.SavedToolFilters),
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
@@ -318,6 +321,21 @@ public partial class SettingsViewModel
         }
     }
 
+    /// <summary>Restore opens on the automatic backups folder once it exists, since that is where the backups are; otherwise Documents.</summary>
+    private string RestoreStartFolder()
+    {
+        try
+        {
+            string folder = new AutoBackupService(_storageService).BackupFolder;
+            if (Directory.Exists(folder)) return folder;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Info("Restore", $"The automatic backups folder wasn't used as the start folder: {ex.Message}");
+        }
+        return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+    }
+
     private async Task RestoreAsync()
     {
         var owner = WindowHelper.ActiveOwner();
@@ -332,7 +350,7 @@ public partial class SettingsViewModel
         {
             Title = "Restore TrayTrigger from a Backup",
             Filter = "TrayTrigger backup (*.zip)|*.zip|All files (*.*)|*.*",
-            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            InitialDirectory = RestoreStartFolder(),
         };
         if (FileDialogCloak.Show(dialog) != true) return;
         string path = dialog.FileName;
@@ -401,7 +419,7 @@ public partial class SettingsViewModel
         try
         {
             _storageService.EnsureDirectories();
-            Process.Start(SystemExecutables.Explorer, _storageService.BaseDirectory);
+            ShellOpen.OpenFolder(_storageService.BaseDirectory, "Storage", "the data folder");
         }
         catch (Exception ex)
         {
@@ -414,7 +432,7 @@ public partial class SettingsViewModel
         try
         {
             _storageService.EnsureDirectories();
-            Process.Start(SystemExecutables.Explorer, _storageService.LocalCacheDirectory);
+            ShellOpen.OpenFolder(_storageService.LocalCacheDirectory, "Storage", "the cache folder");
         }
         catch (Exception ex)
         {
@@ -439,7 +457,7 @@ public partial class SettingsViewModel
         try
         {
             string dir = Path.GetDirectoryName(LoggingService.LogFilePath) ?? _storageService.BaseDirectory;
-            Process.Start(SystemExecutables.Explorer, dir);
+            ShellOpen.OpenFolder(dir, "App", "the log folder");
         }
         catch (Exception ex)
         {

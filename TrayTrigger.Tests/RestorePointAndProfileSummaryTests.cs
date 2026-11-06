@@ -7,8 +7,8 @@ using TrayTrigger.ViewModels;
 namespace TrayTrigger.Tests;
 
 /// <summary>
-/// UX-07: the status line after Apply Performance Preset / Restore Previous Settings says what
-/// happened to the restore point, the per-row button says Restore Previous, and Edit Game lists
+/// UX-07: the status line after Apply Performance Preset / Put Back Preset says what
+/// happened to the restore point, the per-row button says Put Back, and Edit Game lists
 /// what the chosen profile tier will change for the game.
 /// </summary>
 public class RestorePointAndProfileSummaryTests : IDisposable

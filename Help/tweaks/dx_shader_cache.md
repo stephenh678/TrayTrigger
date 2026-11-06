@@ -20,5 +20,5 @@ Takes the DirectX Shader Cache out of Windows' automatic cleanups, such as Stora
 ## Details
 
 - Sets Autorun=0 under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\D3D Shader Cache. Windows ships it as 1, which lets automatic cleanups empty the cache.
-- TrayTrigger records the value it found first and puts exactly that back on Restore Previous.
+- TrayTrigger records the value it found first and puts exactly that back when you click Put Back.
 - Shown as N/A on a copy of Windows that has no DirectX Shader Cache cleanup handler, since then nothing deletes the cache automatically.

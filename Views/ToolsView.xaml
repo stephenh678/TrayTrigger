@@ -74,7 +74,7 @@
             </Style.Triggers>
         </Style>
 
-        <!-- A tool's game icon: the controller in the accent blue for one that starts with games, the power symbol in the Exit App red for one closed for them. -->
+        <!-- A tool's game icon: the controller in the accent blue for one that starts with games, the power symbol in soft grey for one closed for them (not the Exit red: closing a tool for a game is not a warning). -->
         <Style x:Key="ToolGameGlyph" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
             <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}"/>
@@ -85,26 +85,7 @@
             <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding ClosesForGames}" Value="True">
-                    <Setter Property="Foreground" Value="{DynamicResource BrushDanger}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- The same colours on the Start with Games and Close with Games tabs, except on the selected tab, where its white text wins. -->
-        <Style x:Key="TabGameGlyph" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
-            <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Text" Value="{Binding Glyph}"/>
-            <Setter Property="Visibility" Value="{Binding HasGlyph, Converter={StaticResource BoolToVis}}"/>
-            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Glyph}" Value="&#xE7E8;">
-                    <Setter Property="Foreground" Value="{DynamicResource BrushDanger}"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                    <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BrushTextSoft}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -177,7 +158,7 @@
                                    Foreground="{DynamicResource BrushTextPrimary}" TextAlignment="Center"
                                    TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Center" Margin="0,3,0,0">
-                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="MISSING" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
                         </Border>
                     </StackPanel>
                 </Grid>
@@ -206,7 +187,7 @@
                         <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontFamily="{DynamicResource AppFont}"
                                    Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Left" Margin="0,2,0,0">
-                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="MISSING" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
                         </Border>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -249,14 +230,13 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,6,0"
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
-                        <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" FontFamily="{DynamicResource AppFont}"
-                                   Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         <TextBlock Style="{StaticResource ToolGameGlyph}" Margin="8,0,0,0"/>
                         <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="8,0,0,0"
                                    Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                         <Border Style="{StaticResource ToolMissingBadge}" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
+                            <TextBlock Style="{StaticResource BadgeText}" Text="MISSING" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
                         </Border>
                     </StackPanel>
 
@@ -300,17 +280,17 @@
         <!-- 2. Category Tabs & Add Tool -->
         <DockPanel Grid.Row="1" Margin="0,0,0,16">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
-                        ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
+                <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Add Tool" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button AutomationProperties.Name="Browse Start Menu" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}"
+                        ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Browse Start Menu" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -334,7 +314,6 @@
                                         <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}"
                                                    FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushGold}" Margin="0,0,5,0" VerticalAlignment="Center"
                                                    Visibility="{Binding IsFavoritesTab, Converter={StaticResource BoolToVis}}"/>
-                                        <TextBlock Style="{StaticResource TabGameGlyph}"/>
                                         <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
@@ -351,18 +330,23 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="190"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- The library's search box, clear x and all. -->
+            <!-- The library's filter box, clear x and all. -->
             <views:SearchBox x:Name="ToolsSearchBox" Grid.Column="0" Width="Auto" Margin="0,0,10,0"
-                             Text="{Binding SearchText}" Placeholder="Search tools by name, category, or path..."/>
+                             Text="{Binding SearchText}" Placeholder="Filter tools by name, category, or path..." ClearText="Clear filter"/>
 
             <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
                       ItemsSource="{Binding SortOptions}"
                       SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                       Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
 
-            <Border Grid.Column="2" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+            <!-- The library's filter flyout (Views/FilterFlyout), with the options that are true of a tool. -->
+            <views:FilterFlyout x:Name="FilterFlyoutControl" Grid.Column="2" Margin="0,0,10,0"
+                                DataContext="{Binding Filter}" HelpTopic="tools/filtering"/>
+
+            <Border Grid.Column="3" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
                 <StackPanel Orientation="Horizontal">
                     <Button Command="{Binding SetViewModeCommand}" CommandParameter="Large Icons"
@@ -409,14 +393,10 @@
                         <ColumnDefinition Width="3*"/>
                         <ColumnDefinition Width="120"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
-                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="1" Text="TOOL" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="2" Text="CATEGORY" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="3" Text="PROGRAM" FontFamily="{DynamicResource AppFont}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="4" Text="HOTKEY" FontFamily="{DynamicResource AppFont}"/>
                 </Grid>
             </Border>
 
@@ -516,21 +496,21 @@
                                Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" Margin="0,0,0,14"/>
                     <TextBlock Text="No tools yet" FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Drop a program (.exe), a script (.bat, .cmd, .ps1) or a shortcut anywhere on this page, or use Add Tool. For a Microsoft Store app, use Browse Apps and drag the app here. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
+                    <TextBlock Text="Drop a program (.exe), a script (.bat, .cmd, .ps1) or a shortcut anywhere on this page, or use Add Tool. For a Microsoft Store app, use Browse Start Menu and drag the app here. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
-                                ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
+                        <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Tool" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button AutomationProperties.Name="Browse Start Menu" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}"
+                                ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Browse Start Menu" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -556,9 +536,17 @@
                            Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                 <TextBlock Text="No tools match" FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                            FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
-                <TextBlock Text="Nothing in this tab matches your search. Press Esc to clear the search, or pick another tab."
+                <TextBlock Text="Nothing in this tab matches your filter. Press Esc to clear the filter box, or pick another tab."
                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                            FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                <!-- A filter kept from an earlier run can empty the list on its own: say so, and offer the way out. -->
+                <StackPanel Visibility="{Binding IsEmptyBecauseOfFilters, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center">
+                    <TextBlock Text="The filters you have set hide your tools. Filters stay put between sessions; the filter button shows how many are on."
+                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                               FontFamily="{DynamicResource AppFont}" Margin="0,6,0,10"/>
+                    <Button Content="Clear Filters" Command="{Binding Filter.ClearCommand}" HorizontalAlignment="Center"
+                            Style="{StaticResource ModernAccentButton}" Padding="14,6"/>
+                </StackPanel>
             </StackPanel>
         </Grid>
 

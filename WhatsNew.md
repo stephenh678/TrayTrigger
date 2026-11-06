@@ -4,6 +4,14 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.7.7
+
+- **Search everything (Ctrl+K)** - One search for games, tools and settings from any page; pick a result and TrayTrigger takes you there.
+- **Find any setting** - The search on Settings, About and System lists matches from every tab and outlines the one you pick.
+- **A filter button on Tools** - The same filter as the Library, with saved filters, now on Tools too.
+- **Every hotkey in one place** - About > Shortcuts lists each game's and tool's hotkey and opens it to change.
+- **Polished all over** - Buttons and menus use the same words everywhere (Put Back for anything TrayTrigger changed), Edit Game only offers Discard Changes when there's something to discard, and pages are tidier and line up the same way.
+
 ## 1.7.6
 
 - **Hero banners** - Click a game and its page opens on a big hero banner with the game's name, a Play button, and your playtime, last played and profile. Banners and fresh game info load in as you open each game, so the first visit may take a sec. Overview is the game; Settings is Edit Game right there in the same window. Save keeps you on the page, and Cancel puts everything back how it was.

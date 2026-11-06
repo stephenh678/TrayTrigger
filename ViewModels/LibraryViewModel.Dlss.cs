@@ -209,7 +209,7 @@ public partial class LibraryViewModel
         string games = result.Games == 1 ? "1 game" : $"{result.Games} games";
         int putBack = result.Games - result.Failed;
         if (putBack > 0)
-            ActivityService.Add(ActivityLevel.Change, $"Restore All turned DLSS Override off for {(putBack == 1 ? "1 game" : $"{putBack} games")}",
+            ActivityService.Add(ActivityLevel.Change, $"Put Back All turned DLSS Override off for {(putBack == 1 ? "1 game" : $"{putBack} games")}",
                 detail: "NVIDIA's settings are back as they were.", groupKey: $"dlss.restoreall|{DateTime.UtcNow.Ticks}");
         return result.Failed == 0
             ? $"DLSS Override put back for {games}."

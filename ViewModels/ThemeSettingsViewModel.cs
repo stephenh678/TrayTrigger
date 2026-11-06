@@ -248,7 +248,7 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         var source = _themes.SelectedId == ThemeService.AutoId ? _themes.Active : ThemeCatalog.Find(_themes.SelectedId);
         if (source == null)
         {
-            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "This theme cannot be opened",
+            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "This Theme Cannot Be Opened",
                 _themes.FallbackReason ?? "Its theme file could not be read. Open the themes folder to fix it or remove it.");
             return;
         }
@@ -278,7 +278,7 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         var outcome = _themes.ImportThemeFiles(dialog.FileNames);
         if (!outcome.Ok)
         {
-            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "The theme was not imported", outcome.Message);
+            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "The Theme Was Not Imported", outcome.Message);
             return;
         }
 
@@ -306,12 +306,12 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         string name = ThemeCatalog.Find(id)?.Name ?? ThemeFileReader.FileBaseName(file);
         int files = ThemeService.FilesOfTheme(file).Count;
         string detail = DeleteDetail(files, ThemeService.RecycleBinIsOn(file));
-        if (!ModernDialog.ConfirmDelete(WindowHelper.ActiveOwner(), "Delete theme", $"Delete the theme \"{name}\"?", detail, "Delete")) return;
+        if (!ModernDialog.ConfirmDelete(WindowHelper.ActiveOwner(), "Delete Theme", $"Delete the theme \"{name}\"?", detail, "Delete")) return;
 
         var outcome = _themes.DeleteTheme(id);
         if (!outcome.Ok)
         {
-            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "Could not delete the theme", outcome.Message);
+            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "Could Not Delete the Theme", outcome.Message);
             return;
         }
 
@@ -338,7 +338,7 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
             Directory.CreateDirectory(ThemeCatalog.UserThemesDirectory);
             // The folder may be new: from here on, a file dropped into it shows up in the picker.
             _themes.WatchUserThemes();
-            Process.Start(new ProcessStartInfo(ThemeCatalog.UserThemesDirectory) { UseShellExecute = true });
+            ShellOpen.OpenFolder(ThemeCatalog.UserThemesDirectory, "Theme", "the Themes folder");
         }
         catch (Exception ex) { LoggingService.Warn("Theme", $"Could not open the Themes folder: {ex.Message}"); }
     }

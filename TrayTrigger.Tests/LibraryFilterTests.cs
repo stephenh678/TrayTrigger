@@ -48,7 +48,7 @@ public class LibraryFilterTests : IDisposable
     private static GameEntry Epic(string name) => new() { Name = name, IsEpicGame = true, ImportedFrom = LauncherPlatform.Epic, ExecutablePath = "com.epicgames.launcher://apps/x?action=launch" };
     private static GameEntry Local(string name) => new() { Name = name, ExecutablePath = @"C:\Games\" + name + @"\game.exe" };
 
-    private static LibraryFilterOption Option(LibraryFilterViewModel filter, string key) =>
+    private static FilterOption Option(LibraryFilterViewModel filter, string key) =>
         filter.Groups.SelectMany(g => g.Options).Single(o => o.Key == key);
 
     private static List<string> Visible(LibraryViewModel library) =>
@@ -791,7 +791,7 @@ public class LibraryFilterTests : IDisposable
             GameDetailsWidth = 940,
             GameDetailsHeight = 710,
             WindowSizes = new() { ["ThemeEdit"] = new WindowSize { Width = 940, Height = 700 } },
-            SavedLibraryFilters = [new SavedLibraryFilter { Name = "No DLSS", Keys = ["!setting:dlss", "launcher:steam"] }],
+            SavedLibraryFilters = [new SavedFilter { Name = "No DLSS", Keys = ["!setting:dlss", "launcher:steam"] }],
         });
 
         var loaded = new StorageService(Path.Combine(_root, "roundtrip"), Path.Combine(_root, "roundtrip-local")).LoadSettings();

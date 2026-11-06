@@ -123,6 +123,7 @@ public class HelpContentServiceTests
     [InlineData("library/launch")]
     [InlineData("tools/overview")]
     [InlineData("tools/start_with_games")]
+    [InlineData("tools/filtering")]
     [InlineData("troubleshooting/logs")]
     [InlineData("troubleshooting/backup")]
     [InlineData("library/suspend")]
@@ -176,10 +177,10 @@ public class HelpContentServiceTests
         while (root != null && !File.Exists(Path.Combine(root, "TrayTrigger.csproj"))) root = Path.GetDirectoryName(root);
         Assert.True(root != null, "The repository root (TrayTrigger.csproj) was not found above the test output folder.");
 
-        string xaml = File.ReadAllText(Path.Combine(root!, "Views", "LibraryView.xaml"));
+        string xaml = File.ReadAllText(Path.Combine(root!, "Views", "LibraryView.Menus.xaml"));
         int start = xaml.IndexOf("<ContextMenu x:Key=\"GameItemContextMenu\"", StringComparison.Ordinal);
         int end = xaml.IndexOf("</ContextMenu>", start, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, "The game right-click menu was not found in LibraryView.xaml.");
+        Assert.True(start >= 0 && end > start, "The game right-click menu was not found in LibraryView.Menus.xaml.");
         string menu = xaml[start..end];
 
         string help = string.Join(Environment.NewLine, Directory.EnumerateFiles(Path.Combine(root!, "Help"), "*.md", SearchOption.AllDirectories).Select(File.ReadAllText));

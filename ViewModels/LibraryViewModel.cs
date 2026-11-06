@@ -22,33 +22,22 @@ public class CategoryTabItem : ViewModelBase
     public string DisplayName { get; }
     public bool IsFavoritesTab { get; }
     public bool IsHiddenTab { get; }
-    /// <summary>An icon before the name: the Tools page's Start with Games and Close with Games tabs. Blank on the Library's own tabs.</summary>
-    public string Glyph { get; }
-    public bool HasGlyph => Glyph.Length > 0;
 
     private bool _isSelected;
     public bool IsSelected
     {
         get => _isSelected;
-        set
-        {
-            if (_isSelected != value)
-            {
-                _isSelected = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref _isSelected, value);
     }
 
     public ICommand SelectCommand { get; }
 
-    public CategoryTabItem(string name, string displayName, bool isSelected, Action<string> onSelect, string glyph = "")
+    public CategoryTabItem(string name, string displayName, bool isSelected, Action<string> onSelect)
     {
         Name = name;
         DisplayName = displayName;
         IsFavoritesTab = string.Equals(name, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
         IsHiddenTab = string.Equals(name, LibraryConstants.HiddenCategory, StringComparison.OrdinalIgnoreCase);
-        Glyph = glyph ?? string.Empty;
         _isSelected = isSelected;
         SelectCommand = new RelayCommand(() => onSelect(Name));
     }
@@ -655,7 +644,7 @@ public partial class LibraryViewModel : ViewModelBase
         });
     }
 
-    /// <summary>"Restore Settings Now": puts Windows back as it was and stops tracking, but leaves the
+    /// <summary>"Put Back Settings Now": puts Windows back as it was and stops tracking, but leaves the
     /// game running. Off the UI thread, as above.</summary>
     private void RestoreSettingsNow(GameCardViewModel card)
     {
@@ -686,6 +675,10 @@ public partial class LibraryViewModel : ViewModelBase
         catch (InvalidOperationException) { /* the app is shutting down */ }
     }
 
+    /// <summary>Opens the game's Settings on its Launch tab, at the hotkey, outlined (About's list of hotkeys).</summary>
+    public void ShowGameHotkey(GameCardViewModel card) =>
+        OpenGameDetails(card, startOnSettings: true, showField: GameEditViewModel.EditField.LaunchHotkey);
+
     /// <summary>
     /// Opens the details dialog for <paramref name="card"/>. With
     /// <paramref name="openMatchPicker"/> it goes straight into the Steam/RAWG match picker on
@@ -694,7 +687,8 @@ public partial class LibraryViewModel : ViewModelBase
     /// and poster-replacement bookkeeping a rematch triggers, stay in GameDetailsViewModel; there
     /// is no second copy of that logic at the library level.
     /// </summary>
-    public void OpenGameDetails(GameCardViewModel card, bool openMatchPicker = false, bool startOnSettings = false)
+    public void OpenGameDetails(GameCardViewModel card, bool openMatchPicker = false, bool startOnSettings = false,
+        GameEditViewModel.EditField? showField = null)
     {
         bool requestedLaunch = false;
         bool requestedDelete = false;
@@ -726,7 +720,7 @@ public partial class LibraryViewModel : ViewModelBase
                 () => _settings.ScriptDefaults is { Enabled: true, HasAny: true }),
             heroArt: HeroArtService.Shared,
             openActivityAction: () => requestedActivity = true);
-        if (startOnSettings) vm.ShowSettings();
+        if (startOnSettings) vm.ShowSettings(field: showField);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();

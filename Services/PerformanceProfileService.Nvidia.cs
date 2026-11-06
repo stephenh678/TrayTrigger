@@ -256,7 +256,7 @@ public partial class PerformanceProfileService
     /// Puts back what the session wrote, in one session and one save. Whatever couldn't be put back
     /// stays in the snapshot, for the next session's end, TrayTrigger's exit or the next start to
     /// try again - a hidden setting like Resizable BAR can't be changed back by hand without
-    /// Profile Inspector - and is offered as Restore Previous in Activity &amp; History meanwhile.
+    /// Profile Inspector - and is offered as Put Back in Activity &amp; History meanwhile.
     /// </summary>
     private void RestoreNvidiaSettings(PerformanceProfileSessionSnapshot snapshot)
     {
@@ -360,7 +360,7 @@ public partial class PerformanceProfileService
     private const string SchedulerSettingsWhat = "Windows' multimedia scheduler settings";
 
     /// <summary>
-    /// Restore Previous for one NVIDIA setting. Once it's back its record goes too, from the
+    /// Put Back for one NVIDIA setting. Once it's back its record goes too, from the
     /// snapshot in memory and on disk: left there, the same value chosen by the user later would
     /// read as TrayTrigger's own, and be removed at the next game's end.
     /// </summary>

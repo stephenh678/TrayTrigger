@@ -32,6 +32,42 @@ public partial class GameEditPanel : UserControl
                 e.Handled = true;
             }
         };
+
+        // A field a link asked for is shown once the panel is on screen and laid out.
+        Loaded += (_, _) => ShowRequestedField();
+        IsVisibleChanged += (_, _) => ShowRequestedField();
+    }
+
+    private void OnFieldRequested() => ShowRequestedField();
+
+    private FrameworkElement? TargetOf(GameEditViewModel.EditField field) => field switch
+    {
+        GameEditViewModel.EditField.LaunchHotkey => LaunchHotkeyRow,
+        GameEditViewModel.EditField.RunOptionsCard => RunOptionsCard,
+        GameEditViewModel.EditField.ProfileCard => ProfileCard,
+        GameEditViewModel.EditField.DlssCard => DlssCard,
+        GameEditViewModel.EditField.DisplayCard => DisplayCard,
+        GameEditViewModel.EditField.ScriptsCard => ScriptsCard,
+        _ => null,
+    };
+
+    /// <summary>
+    /// The setting a link pointed at (About's hotkey list, Game Details' "Your setup"): scrolled to and outlined
+    /// once it is on screen. A tab that has only just changed may not have shown the card yet, so it looks again
+    /// after the next layout, a few times, before giving up on a card this PC doesn't show (DLSS without an NVIDIA card).
+    /// </summary>
+    private void ShowRequestedField(int attempt = 0)
+    {
+        if (_viewModel?.PendingField is not { } field || !IsVisible) return;
+        var target = TargetOf(field);
+        if (target is not { IsVisible: true })
+        {
+            if (attempt < 3) Dispatcher.BeginInvoke(() => ShowRequestedField(attempt + 1), DispatcherPriority.Loaded);
+            else _viewModel.TakeFieldToShow();
+            return;
+        }
+        _viewModel.TakeFieldToShow();
+        FieldHighlight.Show(target);
     }
 
     // --- A picture dropped on an Artwork card ---
@@ -71,12 +107,15 @@ public partial class GameEditPanel : UserControl
         {
             _viewModel.ValidationFailed -= OnValidationFailed;
             _viewModel.ScriptTestCompleted -= OnScriptTestCompleted;
+            _viewModel.FieldRequested -= OnFieldRequested;
         }
         _viewModel = viewModel;
         if (viewModel == null) return;
 
         viewModel.ValidationFailed += OnValidationFailed;
         viewModel.ScriptTestCompleted += OnScriptTestCompleted;
+        viewModel.FieldRequested += OnFieldRequested;
+        Dispatcher.BeginInvoke(() => ShowRequestedField(), DispatcherPriority.Loaded);
         // The DLSS probe reads the driver and the game folder, so it runs here rather than in the view
         // model's constructor: the page opens at once and the card appears when there is something
         // true to put in it.

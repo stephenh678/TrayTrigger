@@ -277,7 +277,7 @@ public class MainViewModel : ViewModelBase
         Library.IsLibraryVisible = () => CurrentSection == NavSection.Library;
 
         // The tweaks service records what it found on the machine before applying a tweak (prior
-        // power plan, prior visual-effects state) into settings so "Restore Previous" is exact.
+        // power plan, prior visual-effects state) into settings so "Put Back" is exact.
         _systemTweaksService = new SystemTweaksService(() => _settings, () => _storageService.SaveSettings(_settings, source: "SystemTweaksService.TweakApplied"));
         // The Settings DLSS card counts and restores games, which only the library knows.
         SettingsVM.Dlss = new DlssSettingsViewModel(_systemTweaksService,
@@ -316,47 +316,36 @@ public class MainViewModel : ViewModelBase
         {
             SettingsVM.SelectedTab = SettingsCategoryTab.Diagnostics;
             CurrentSection = NavSection.Settings;
+            ShowSettingsCardRequested?.Invoke(DiagnosticsCardTitle);
         });
         OpenLibrarySettingsCommand = new RelayCommand(() =>
         {
             SettingsVM.SelectedTab = SettingsCategoryTab.Library;
             CurrentSection = NavSection.Settings;
+            ShowSettingsCardRequested?.Invoke(ArtSourcesCardTitle);
         });
         SelectAboutCommand = new RelayCommand(() => CurrentSection = NavSection.About);
         SelectActivityCommand = new RelayCommand(() => CurrentSection = NavSection.Activity);
+        GoToAboutTabCommand = new RelayCommand(tab =>
+        {
+            if (tab is AboutSubSection target && CurrentAboutSection != AboutSubSection.All) CurrentAboutSection = target;
+        });
         SelectAboutAllTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.All);
         SelectAboutOverviewTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Overview);
         SelectAboutFeaturesTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Features);
         SelectAboutShortcutsTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Shortcuts);
         SelectAboutSupportTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Support);
-        NavigateToGeneralSettingsCommand = new RelayCommand(() =>
+        ShowHotkeySettingsCommand = new RelayCommand(() =>
         {
             SettingsVM.SelectedTab = SettingsCategoryTab.General;
             CurrentSection = NavSection.Settings;
+            ShowSettingsCardRequested?.Invoke(HotkeysCardTitle);
         });
         OpenGitHubCommand = new RelayCommand(() =>
-        {
-            try
-            {
-                Process.Start(new ProcessStartInfo($"https://github.com/{UpdateService.Repository}") { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Error("Main", "Failed to open GitHub repo link", ex);
-            }
-        });
+            ShellOpen.Open($"https://github.com/{UpdateService.Repository}", "Main", "the GitHub page"));
+        // The template chooser, not the issue list: it is where a report starts.
         OpenGitHubIssuesCommand = new RelayCommand(() =>
-        {
-            try
-            {
-                // The template chooser, not the issue list: it is where a report starts.
-                Process.Start(new ProcessStartInfo($"https://github.com/{UpdateService.Repository}/issues/new/choose") { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Error("Main", "Failed to open GitHub issues link", ex);
-            }
-        });
+            ShellOpen.Open($"https://github.com/{UpdateService.Repository}/issues/new/choose", "Main", "GitHub's new issue page"));
         CopySystemInfoCommand = new RelayCommand(() =>
         {
             try
@@ -502,8 +491,53 @@ public class MainViewModel : ViewModelBase
                 {
                     SettingsVM.ReconcileStartWithWindows();
                 }
+
+                if (_currentSection == NavSection.About) RefreshLaunchHotkeys();
+
+                ResetPageOnLeave(prev);
             }
         }
+    }
+
+    /// <summary>Raised after a searchable page has been left and reset, so the window can send it back to the top.</summary>
+    public event Action<NavSection>? PageLeft;
+
+    /// <summary>
+    /// A page with a search or filter is left as a clean one: no text in the box. Settings, About and System
+    /// (the pages with tabs) also go back on All and, the window's part, scroll to the top. A search or filter
+    /// is a quick lookup, so it doesn't wait for you; coming back by the sidebar opens the page afresh. A link
+    /// that sends you to a page sets its text after this, as it comes in. The category tab, sort and view
+    /// mode are settings you chose, not a lookup, and stay.
+    /// </summary>
+    private void ResetPageOnLeave(NavSection page)
+    {
+        switch (page)
+        {
+            case NavSection.Settings:
+                SettingsVM.SettingsSearchText = string.Empty;
+                SettingsVM.SelectedTab = SettingsCategoryTab.All;
+                break;
+            case NavSection.About:
+                AboutSearchText = string.Empty;
+                CurrentAboutSection = AboutSubSection.All;
+                break;
+            case NavSection.System:
+                SystemVM.SystemSearchText = string.Empty;
+                SystemVM.CurrentSubSection = SystemSubSection.All;
+                break;
+            case NavSection.Library:
+                if (SearchText.Length > 0) SearchText = string.Empty;
+                return;
+            case NavSection.Tools:
+                if (Tools.SearchText.Length > 0) Tools.SearchText = string.Empty;
+                return;
+            case NavSection.Activity:
+                if (ActivityVM.SearchText.Length > 0) ActivityVM.SearchText = string.Empty;
+                return;
+            default:
+                return;
+        }
+        PageLeft?.Invoke(page);
     }
 
     public bool IsLibraryView => CurrentSection == NavSection.Library;
@@ -590,12 +624,27 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Search results take About to a card's tab (see Views/CardSearch); on All the card is already on screen.</summary>
+    public ICommand GoToAboutTabCommand { get; }
     public ICommand SelectAboutAllTabCommand { get; }
     public ICommand SelectAboutOverviewTabCommand { get; }
     public ICommand SelectAboutFeaturesTabCommand { get; }
     public ICommand SelectAboutShortcutsTabCommand { get; }
     public ICommand SelectAboutSupportTabCommand { get; }
-    public ICommand NavigateToGeneralSettingsCommand { get; }
+    /// <summary>About > Shortcuts' "App Hotkeys...": Settings on the card that holds TrayTrigger's own hotkeys, not just its tab.</summary>
+    public ICommand ShowHotkeySettingsCommand { get; }
+
+    /// <summary>The heading of the Settings card with the window, tray menu and suspend hotkeys (Views/SettingsView.xaml).</summary>
+    public const string HotkeysCardTitle = "Hotkeys";
+
+    /// <summary>The heading of the first card on Settings > Diagnostics &amp; Storage, which About's "Open Diagnostics &amp; Storage" shows.</summary>
+    public const string DiagnosticsCardTitle = "Diagnostic Logging & Traces";
+
+    /// <summary>The heading of the Settings card with the SteamGridDB and RAWG keys, which the keys reminder's "Open Settings" shows.</summary>
+    public const string ArtSourcesCardTitle = "Art & Info Sources";
+
+    /// <summary>Asks the window to show the Settings card with this heading, outlined, as choosing it in Search everything does.</summary>
+    public event Action<string>? ShowSettingsCardRequested;
     public ICommand OpenGitHubCommand { get; }
     public ICommand OpenGitHubIssuesCommand { get; }
     public ICommand CopySystemInfoCommand { get; }
@@ -1046,6 +1095,34 @@ public class MainViewModel : ViewModelBase
             Tools.StatusMessage = string.Empty;
         }
         _toolHotkeyWarning = warning;
+
+        _inactiveHotkeyOwners = failed.Select(b => b.OwnerId).ToHashSet();
+        // Opening About rebuilds the list; only a change made from About's own links (an editor) needs it now.
+        if (CurrentSection == NavSection.About) RefreshLaunchHotkeys();
+    }
+
+    /// <summary>The owners whose launch hotkey Windows refused at the last registration, so About can say which don't work.</summary>
+    private HashSet<string> _inactiveHotkeyOwners = [];
+
+    /// <summary>About > Shortcuts: every game's and tool's hotkey, each opening its editor. Tool hotkeys are left out while Tools is off, as they aren't registered then.</summary>
+    public ObservableCollection<LaunchHotkeyRow> LaunchHotkeys { get; } = [];
+    public bool HasLaunchHotkeys => LaunchHotkeys.Count > 0;
+
+    private void RefreshLaunchHotkeys()
+    {
+        // Only those with a hotkey get a command: this runs on every library change, and most games have none.
+        var items = Library.Games
+            .Where(g => !string.IsNullOrWhiteSpace(g.Game.Hotkey))
+            .Select(g => (HotkeyBinding.ForGame(g.Game), (ICommand)new RelayCommand(() => Library.ShowGameHotkey(g))))
+            .Concat(_settings.EnableTools
+                ? Tools.Tools
+                    .Where(t => !string.IsNullOrWhiteSpace(t.Tool.Hotkey))
+                    .Select(t => (ToolCatalog.HotkeyBindingFor(t.Tool), (ICommand)new RelayCommand(() => Tools.Edit(t, showHotkey: true))))
+                : []);
+        var rows = LaunchHotkeyRow.Build(items, _inactiveHotkeyOwners);
+        LaunchHotkeys.Clear();
+        foreach (var row in rows) LaunchHotkeys.Add(row);
+        OnPropertyChanged(nameof(HasLaunchHotkeys));
     }
 
     /// <summary>The tool hotkey warning last put on the Tools status bar, so it can be cleared once it no longer applies.</summary>

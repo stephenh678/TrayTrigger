@@ -288,7 +288,7 @@ public partial class BattleNetScannerService
     /// The game's exe: DisplayIcon when it's an .exe inside the install folder (the game itself, or
     /// StarCraft II's switcher), else the same scored search Add Folder uses. A DisplayIcon that is
     /// an .ico is only an icon - returned in <paramref name="iconFile"/>, never as the exe, which
-    /// "Convert to Local game" would otherwise try to run.
+    /// "Convert to Local Game" would otherwise try to run.
     /// </summary>
     internal string? ResolveExe(InstallEntry install, out string? iconFile)
     {

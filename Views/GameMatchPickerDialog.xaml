@@ -83,11 +83,10 @@
                             <DockPanel LastChildFill="True">
                                 <Border DockPanel.Dock="Right" Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1.5" Margin="10,0,0,0"
                                         VerticalAlignment="Center" Visibility="{Binding CurrentVisibility}">
-                                    <TextBlock Text="CURRENT" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
+                                    <TextBlock Style="{StaticResource BadgeText}" Text="CURRENT" Foreground="{DynamicResource BrushAccentText}"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Hit.Name}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="{Binding Hit.Name}" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Hit.Subtitle}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                                TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                                 </StackPanel>

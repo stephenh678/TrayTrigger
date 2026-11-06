@@ -216,7 +216,7 @@ public partial class GameEditViewModel : ViewModelBase
         FetchBySteamIdCommand = new RelayCommand(FetchBySteamId, () => !IsRefreshingMetadata);
         RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
         SaveCommand = new RelayCommand(Save);
-        CancelCommand = new RelayCommand(Cancel);
+        CancelCommand = new RelayCommand(Cancel, () => HasUnsavedChanges);
         SelectSectionCommand = new RelayCommand(p =>
         {
             if (p is GameEditSection section) SelectedSection = section;
@@ -226,7 +226,6 @@ public partial class GameEditViewModel : ViewModelBase
         UpdateIconPreview();
         UpdateCoverPreview();
         InitArtworkTab(game);
-        _showScriptRunOptions = game.HasScripts;
         _initialEditState = EditState();
     }
 
@@ -237,6 +236,20 @@ public partial class GameEditViewModel : ViewModelBase
     /// before throwing such edits away; with nothing changed it closes at once.
     /// </summary>
     public bool HasUnsavedChanges => !string.Equals(EditState(), _initialEditState, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Any change to the form can change <see cref="HasUnsavedChanges"/>, which shows Discard Changes. WPF asks a
+    /// command again only after a click, a key or a focus change, so a change that lands later (an await finishing)
+    /// asks here too. The request is coalesced: a burst of changes asks once.
+    /// </summary>
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null) return;
+        if (dispatcher.CheckAccess()) CommandManager.InvalidateRequerySuggested();
+        else dispatcher.InvokeAsync(CommandManager.InvalidateRequerySuggested);
+    }
 
     /// <summary>Every value Save copies onto the game, joined into one comparable string.</summary>
     private string EditState() => string.Join("", new object?[]

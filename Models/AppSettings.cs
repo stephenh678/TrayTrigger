@@ -98,7 +98,13 @@ public class AppSettings
     /// </summary>
     public List<string> LibraryFilterKeys { get; set; } = new();
     /// <summary>Filter combinations the player named and saved from the library's filter flyout.</summary>
-    public List<SavedLibraryFilter> SavedLibraryFilters { get; set; } = new();
+    public List<SavedFilter> SavedLibraryFilters { get; set; } = new();
+
+    /// <summary>The Tools page's filter ticks, kept between runs as the library's are (<see cref="LibraryFilterKeys"/>).</summary>
+    public List<string> ToolFilterKeys { get; set; } = new();
+
+    /// <summary>Filters saved by name on the Tools page.</summary>
+    public List<SavedFilter> SavedToolFilters { get; set; } = new();
     public bool ShowRecentInTray { get; set; } = true;
     public int MaxRecentInTray { get; set; } = 5;
     public string RecentTraySortOption { get; set; } = "Most Recently Played";

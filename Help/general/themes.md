@@ -45,9 +45,9 @@ Press **New theme from this...** in Appearance while a built-in theme is chosen.
 - **Starts from.** Dark or Light is where the colors you leave alone come from. Changing it starts the colors again from Dark or Light.
 - **Fine-tuning.** About thirty more colors (hover shades, borders, badge colors) are not in the window. They are in the theme file: **Open file** shows it in Explorer. Open it in any text editor and change them there. The app follows each time you save the file: no restart, and no need to reselect it. If the file sets some of them itself, the window says so, because a color the file lists keeps its value when you change a main color.
 
-**Import theme...** adds a theme made elsewhere: choose its `.theme.json` (or a plain `.json`) and, if it has one, its picture, in the same window. The theme is copied into your Themes folder and chosen at once. Nothing is overwritten: a name already in use becomes "Name (2)". A picture the theme names is found next to the file if you do not choose it.
+**Import Theme...** adds a theme made elsewhere: choose its `.theme.json` (or a plain `.json`) and, if it has one, its picture, in the same window. The theme is copied into your Themes folder and chosen at once. Nothing is overwritten: a name already in use becomes "Name (2)". A picture the theme names is found next to the file if you do not choose it.
 
-**Open themes folder** goes to `%AppData%\TrayTrigger\Themes` any time. Theme files end in `.theme.json`; copy one to share it (and its pictures). A theme is known by its file name; the `name` inside it is only what the picker shows, so a copy of a file is a theme of its own.
+**Open Themes Folder** goes to `%AppData%\TrayTrigger\Themes` any time. Theme files end in `.theme.json`; copy one to share it (and its pictures). A theme is known by its file name; the `name` inside it is only what the picker shows, so a copy of a file is a theme of its own.
 
 To get rid of a theme of your own, select it and press the **trash button** beside the picker. TrayTrigger asks first. The theme file and the pictures made for it go to the Recycle Bin, so you can bring them back from there, and TrayTrigger returns to Dark. If the Recycle Bin is turned off for that drive, the question says the files will be deleted for good. Built-in themes cannot be deleted.
 

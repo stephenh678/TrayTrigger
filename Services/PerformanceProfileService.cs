@@ -86,7 +86,7 @@ public partial class PerformanceProfileService
     private readonly List<(string What, Func<bool> Retry, object? Key)> _unrestored = new();
 
     /// <summary>The Critical entries this run recorded for what's in <see cref="_unrestored"/>: the
-    /// ones Restore Previous marks FIXED when everything is back - never an earlier run's, which it
+    /// ones Put Back marks FIXED when everything is back - never an earlier run's, which it
     /// didn't retry.</summary>
     private readonly List<string> _unrestoredEntryIds = new();
 
@@ -114,7 +114,7 @@ public partial class PerformanceProfileService
 
     /// <summary>
     /// The snapshot adopted at start with what needs administrator rights still waiting on it, until a session applies an ADMIN tweak of
-    /// its own. While it is the current one, what it holds is the user's to put back (the prompt at start and exit, or Restore Previous):
+    /// its own. While it is the current one, what it holds is the user's to put back (the prompt at start and exit, or Put Back):
     /// a session that has no ADMIN tweaks of its own doesn't raise a prompt when it ends.
     /// </summary>
     private PerformanceProfileSessionSnapshot? _leftoverSnapshot;
@@ -241,7 +241,7 @@ public partial class PerformanceProfileService
 
         int before;
         lock (_lock) before = _unrestored.Count;
-        // What needs administrator rights waits for the user to say so (the prompt at start, or Restore Previous): a
+        // What needs administrator rights waits for the user to say so (the prompt at start, or Put Back): a
         // prompt nobody expects, over a window that isn't even showing yet, is the one thing here that's worse than
         // leaving a harmless setting changed a little longer. Already elevated, nothing is waited for.
         bool elevated = _backend.IsElevated;
@@ -291,7 +291,7 @@ public partial class PerformanceProfileService
 
     /// <summary>
     /// Tells Activity &amp; History what a restore couldn't put back: a Critical entry now, and the
-    /// NEEDS ATTENTION item, with Restore Previous to try again, until a retry succeeds.
+    /// NEEDS ATTENTION item, with Put Back to try again, until a retry succeeds.
     /// </summary>
     private void ReportUnrestored(IReadOnlyList<string> justFailed, string? gameName)
     {
@@ -302,8 +302,8 @@ public partial class PerformanceProfileService
             gameName == null ? $"Couldn't put back {what}" : $"{gameName}: couldn't put back {what}",
             subject: gameName,
             detail: nvidiaOnly
-                ? "Restore Previous on this page tries again. So does TrayTrigger, when the next game ends and the next time it starts."
-                : $"Restore Previous on this page tries again. Windows Settings can also change {ItOrThem(justFailed)} back by hand.",
+                ? "Put Back on this page tries again. So does TrayTrigger, when the next game ends and the next time it starts."
+                : $"Put Back on this page tries again. Windows Settings can also change {ItOrThem(justFailed)} back by hand.",
             groupKey: UnrestoredActivityKey);
         if (entry != null) lock (_lock) _unrestoredEntryIds.Add(entry.Id);
         PublishUnrestoredState();
@@ -311,7 +311,7 @@ public partial class PerformanceProfileService
 
     /// <summary>
     /// What a profile left changed because putting it back needs the user's permission, which TrayTrigger asks for
-    /// itself (the prompt at start and exit) and Restore Previous does at once. Critical like a failed restore: it is
+    /// itself (the prompt at start and exit) and Put Back does at once. Critical like a failed restore: it is
     /// still not back.
     /// </summary>
     private void ReportWaiting(IReadOnlyList<string> waiting)
@@ -319,7 +319,7 @@ public partial class PerformanceProfileService
         string what = JoinList(waiting);
         var entry = ActivityService.Add(ActivityLevel.Critical,
             $"{Capitalize(what)} {(ItOrThem(waiting) == "them" ? "are" : "is")} still changed from a game",
-            detail: $"Putting {ItOrThem(waiting)} back needs administrator rights, and TrayTrigger only asks when you say so. Restore Previous on this page does it.",
+            detail: $"Putting {ItOrThem(waiting)} back needs administrator rights, and TrayTrigger only asks when you say so. Put Back on this page does it.",
             groupKey: UnrestoredActivityKey);
         if (entry != null) lock (_lock) _unrestoredEntryIds.Add(entry.Id);
         PublishUnrestoredState();
@@ -340,13 +340,13 @@ public partial class PerformanceProfileService
             UnrestoredActivityKey,
             $"{Capitalize(JoinList(all))} {(plural ? "weren't" : "wasn't")} put back",
             $"A Performance Profile changed {it} for a game and couldn't change {it} back afterwards.",
-            "Restore Previous",
+            "Put Back",
             () => _ = System.Threading.Tasks.Task.Run(RetryUnrestored),
             IsCritical: true));
     }
 
     /// <summary>
-    /// Restore Previous on the NEEDS ATTENTION item: tries each thing that wasn't put back again.
+    /// Put Back on the NEEDS ATTENTION item: tries each thing that wasn't put back again.
     /// Off the UI thread - a Windows setting can need an administrator prompt. Returns true when
     /// everything is back.
     /// </summary>
@@ -374,7 +374,7 @@ public partial class PerformanceProfileService
 
     /// <summary>
     /// Tells Activity &amp; History that something a restore couldn't put back is back now, by
-    /// Restore Previous or by a later restore getting to it.
+    /// Put Back or by a later restore getting to it.
     /// </summary>
     private void ReportPutBack(IReadOnlyList<string> fixedNow)
     {
@@ -405,7 +405,7 @@ public partial class PerformanceProfileService
     /// <summary>
     /// Drops what was noted for something whose record is no longer pending (an NVIDIA setting, the
     /// scheduler values, a Defender exclusion): a later restore put it back, or found it changed by
-    /// someone else, so there is nothing left to offer Restore Previous for. Returns what was dropped.
+    /// someone else, so there is nothing left to offer Put Back for. Returns what was dropped.
     /// Call with the lock held, and only after the newly failed have been read off the end of the list.
     /// </summary>
     private List<string> TakeSettledEntries(PerformanceProfileSessionSnapshot snapshot)

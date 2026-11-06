@@ -46,7 +46,7 @@ public partial class App
     /// <summary>
     /// Adds the search row at the top of <paramref name="menu"/> (above Now Playing) and wires the
     /// filtering. <paramref name="navStart"/> is the index of the separator before the navigation
-    /// rows (Games Library, Settings, Exit), which stay put while a query is showing.
+    /// rows (Library, Settings, Exit), which stay put while a query is showing.
     /// </summary>
     private void AttachTraySearch(ContextMenu menu, int navStart, IReadOnlyList<GameCardViewModel> games)
     {

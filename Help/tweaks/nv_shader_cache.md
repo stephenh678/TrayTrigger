@@ -21,5 +21,5 @@ Sets the NVIDIA driver's shader cache size to Unlimited on the Global profile, t
 ## Details
 
 - Writes setting 0x00AC8497 ("Shader disk cache maximum size") on the driver's Global profile with NVIDIA's settings API, the same database the Control Panel and NVIDIA App use. A game whose own profile sets a different size keeps it.
-- TrayTrigger records what the Global profile had first: a size you chose, NVIDIA's own value, or nothing. Restore Previous puts that back.
-- Restore Previous changes nothing if the size has been changed since, for example in the NVIDIA App. That size is yours now, and TrayTrigger leaves it alone.
+- TrayTrigger records what the Global profile had first: a size you chose, NVIDIA's own value, or nothing. Put Back restores that value.
+- Put Back changes nothing if the size has been changed since, for example in the NVIDIA App. That size is yours now, and TrayTrigger leaves it alone.

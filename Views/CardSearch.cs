@@ -1,46 +1,56 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace TrayTrigger.Views;
 
+/// <summary>One card a search found: where it lives, what to call it, and the line that matched.</summary>
+internal sealed record CardHit(UIElement Card, Panel Host, object? Tab, string TabLabel, string Title, string Snippet);
+
 /// <summary>
 /// Card-level search for a sectioned page (Settings, About, System). <c>Query</c> goes on the panel
 /// inside the page's ScrollViewer: each Panel child of that host is a section, the section child
-/// marked <c>IsHeader</c> is its heading, and every other section child is a card. A card stays
-/// visible when every word of the query appears somewhere in its text - titles, descriptions, option
-/// labels, tooltips - and a heading that matches keeps its whole section. A section left with no cards
-/// hides, heading and all, and <c>NoMatches</c> on the host says the whole page came up empty. The
-/// words themselves are highlighted in what's left on screen, first match scrolled into view
-/// (<see cref="SearchHighlight"/>). Only the sections the page is showing take part, so on a single
-/// tab the search stays within that tab; <c>Scope</c> re-runs it when what's on screen changes.
+/// marked <c>IsHeader</c> is its heading, and every other section child is a card. A section names its
+/// tab with <c>Tab</c> and <c>TabLabel</c>.
 /// <para>
-/// Nothing's own visibility rules are overwritten: an element with no local Visibility is hidden with
-/// a local value and restored with ClearValue, so style triggers (the headings' "All tab only") take
-/// over again; a bound one (the sections' Show*Section) is hidden with SetCurrentValue and restored by
-/// re-reading its binding.
+/// The page never shrinks to the matches. <see cref="Find"/> reads every card on every tab - they are
+/// only collapsed, so their text is still there - and the page's <see cref="SearchBox"/> lists the hits
+/// in a dropdown. Choosing one runs the host's <c>GoTo</c> command with the card's tab, scrolls the card
+/// into view and outlines it (<see cref="GoTo"/>). The query's words are marked inside the chosen row
+/// (<see cref="SearchHighlight"/>); <c>Scope</c> re-runs that when the tab changes.
 /// </para>
+/// A card matches when every word of the query appears in its text - titles, descriptions, option
+/// labels, tooltips - or its tab's name. What's typed into a TextBox is never read, so an API key
+/// can't match.
 /// </summary>
 public static class CardSearch
 {
     public static readonly DependencyProperty QueryProperty = DependencyProperty.RegisterAttached(
         "Query", typeof(string), typeof(CardSearch),
-        new PropertyMetadata(null, (d, e) => { if (d is Panel host) Apply(host, e.NewValue as string); }));
+        new PropertyMetadata(null, (d, e) =>
+        {
+            if (d is not Panel host) return;
+            // A new query ends the outline and the marked words of the last result.
+            ClearOutline(host);
+            host.ClearValue(HighlightRootProperty);
+            Apply(host, e.NewValue as string);
+        }));
 
     public static string? GetQuery(DependencyObject d) => (string?)d.GetValue(QueryProperty);
     public static void SetQuery(DependencyObject d, string? value) => d.SetValue(QueryProperty, value);
 
     /// <summary>
-    /// What's on screen: the selected tab, plus anything else that adds, removes or rewrites cards
-    /// (System binds its specs loading and its tweak state too). A change re-runs the search against
-    /// what's there now, leaving the scroll position alone - deferred and coalesced, because this
-    /// binding can update before the page's own visibility bindings do.
+    /// What's on screen: the selected tab, plus anything else that adds, removes or rewrites cards. A
+    /// change re-runs the highlight against what's there now, leaving the scroll position alone -
+    /// deferred and coalesced, because this binding can update before the page's own visibility
+    /// bindings do.
     /// </summary>
     public static readonly DependencyProperty ScopeProperty = DependencyProperty.RegisterAttached(
         "Scope", typeof(object), typeof(CardSearch),
@@ -55,16 +65,27 @@ public static class CardSearch
     public static bool GetIsHeader(DependencyObject d) => (bool)d.GetValue(IsHeaderProperty);
     public static void SetIsHeader(DependencyObject d, bool value) => d.SetValue(IsHeaderProperty, value);
 
-    private static readonly DependencyPropertyKey NoMatchesKey = DependencyProperty.RegisterAttachedReadOnly(
-        "NoMatches", typeof(bool), typeof(CardSearch), new PropertyMetadata(false));
+    /// <summary>On a section: the page's own name for the tab it belongs to (what the tab command takes).</summary>
+    public static readonly DependencyProperty TabProperty = DependencyProperty.RegisterAttached(
+        "Tab", typeof(object), typeof(CardSearch), new PropertyMetadata(null));
 
-    public static readonly DependencyProperty NoMatchesProperty = NoMatchesKey.DependencyProperty;
+    public static object? GetTab(DependencyObject d) => d.GetValue(TabProperty);
+    public static void SetTab(DependencyObject d, object? value) => d.SetValue(TabProperty, value);
 
-    public static bool GetNoMatches(DependencyObject d) => (bool)d.GetValue(NoMatchesProperty);
+    /// <summary>On a section: the tab's name as the tab strip shows it, for a result's breadcrumb.</summary>
+    public static readonly DependencyProperty TabLabelProperty = DependencyProperty.RegisterAttached(
+        "TabLabel", typeof(string), typeof(CardSearch), new PropertyMetadata(string.Empty));
 
-    // Marks what this class collapsed, so a restore only ever undoes its own work.
-    private static readonly DependencyProperty HiddenBySearchProperty = DependencyProperty.RegisterAttached(
-        "HiddenBySearch", typeof(bool), typeof(CardSearch), new PropertyMetadata(false));
+    public static string GetTabLabel(DependencyObject d) => (string)d.GetValue(TabLabelProperty);
+    public static void SetTabLabel(DependencyObject d, string value) => d.SetValue(TabLabelProperty, value);
+
+    /// <summary>On the host: runs with a section's <c>Tab</c> to show that tab. A page already on its
+    /// "All" tab leaves it there, since the card is on screen.</summary>
+    public static readonly DependencyProperty GoToProperty = DependencyProperty.RegisterAttached(
+        "GoTo", typeof(ICommand), typeof(CardSearch), new PropertyMetadata(null));
+
+    public static ICommand? GetGoTo(DependencyObject d) => (ICommand?)d.GetValue(GoToProperty);
+    public static void SetGoTo(DependencyObject d, ICommand? value) => d.SetValue(GoToProperty, value);
 
     private static readonly DependencyProperty ReapplyPendingProperty = DependencyProperty.RegisterAttached(
         "ReapplyPending", typeof(bool), typeof(CardSearch), new PropertyMetadata(false));
@@ -76,71 +97,95 @@ public static class CardSearch
         host.Dispatcher.InvokeAsync(() =>
         {
             host.SetValue(ReapplyPendingProperty, false);
-            Apply(host, GetQuery(host), moveToResults: false);
+            Apply(host, GetQuery(host));
         }, DispatcherPriority.DataBind);
     }
 
-    /// <param name="moveToResults">True when the query itself changed: back to the top, and the first
-    /// match parked in view. A re-run because the page changed under the search leaves the view alone.</param>
-    internal static void Apply(Panel host, string? query, bool moveToResults = true)
-    {
-        string[] terms = SplitTerms(query);
-        bool searching = terms.Length > 0;
-        bool anyCardShown = false;
+    /// <summary>Marks the query's words in the chosen card or row. Nothing is hidden.</summary>
+    internal static void Apply(Panel host, string? query) =>
+        SearchHighlight.Refresh(host, SplitTerms(query));
 
-        foreach (var section in host.Children.OfType<Panel>())
-        {
-            // Sections the selected tab hides take no part; undo anything an earlier search hid inside
-            // them, so nothing is missing when that tab is picked.
-            if (!IsOwnRuleVisible(section))
-            {
-                foreach (UIElement child in section.Children) SetHidden(child, false);
-                continue;
-            }
-
-            UIElement? header = section.Children.OfType<UIElement>().FirstOrDefault(GetIsHeader);
-            bool headerMatches = searching && header != null && Matches(CollectText(header), terms);
-            bool sectionHasCards = false;
-
-            foreach (UIElement child in section.Children)
-            {
-                if (child == header) continue;
-                // A card its own rule hides (System's loading placeholder once specs are in) takes no part.
-                if (!IsOwnRuleVisible(child)) continue;
-                bool show = !searching || headerMatches || Matches(CollectText(child), terms);
-                SetHidden(child, !show);
-                // Handing a card back to its own rule is the only way to learn that rule has hidden it
-                // since an earlier search did.
-                if (show && child.Visibility != Visibility.Visible) continue;
-                sectionHasCards |= show;
-            }
-
-            bool hideSection = searching && !sectionHasCards;
-            if (header != null) SetHidden(header, hideSection);
-            SetHidden(section, hideSection);
-            // Likewise a section whose tab rule hid it while an earlier search was hiding it.
-            if (!hideSection && section.Visibility != Visibility.Visible) continue;
-            anyCardShown |= sectionHasCards;
-        }
-
-        host.SetValue(NoMatchesKey, searching && !anyCardShown);
-        if (moveToResults) (host.Parent as ScrollViewer)?.ScrollToTop();
-        SearchHighlight.Refresh(host, terms, moveToResults);
-    }
+    /// <summary>The most hits a dropdown lists; a longer list is a query that needs another word.</summary>
+    internal const int MaxHits = 12;
 
     /// <summary>
-    /// Whether the element's own rule (binding, style or default) shows it, read without touching it -
-    /// probing by un-hiding would ripple IsVisible through the whole card on every keystroke. One the
-    /// search is hiding was showing when it was hidden; if a binding has since pushed Visible over the
-    /// search's value, the search's hold is gone, so its marker is dropped. A binding that has since
-    /// pushed Collapsed looks the same as the search's own Collapsed; <see cref="Apply"/> finds that
-    /// out when it hands the element back.
+    /// Every card on every tab that matches, best first: a title with all the words, then a title with
+    /// some, then the rest in page order. A card its own rule has hidden (a setting for hardware this PC
+    /// lacks) isn't offered.
     /// </summary>
-    private static bool IsOwnRuleVisible(UIElement element)
+    internal static List<CardHit> Find(Panel host, string? query) => Find(host, query, out _);
+
+    /// <param name="total">How many cards matched, of which the first <see cref="MaxHits"/> are returned.</param>
+    internal static List<CardHit> Find(Panel host, string? query, out int total)
     {
-        if (!(bool)element.GetValue(HiddenBySearchProperty)) return element.Visibility == Visibility.Visible;
-        if (element.Visibility == Visibility.Visible) element.SetValue(HiddenBySearchProperty, false);
-        return true;
+        string[] terms = SplitTerms(query);
+        var scored = new List<(int Rank, CardHit Hit)>();
+        total = 0;
+        if (terms.Length == 0) return [];
+
+        Gather(host, terms, scored);
+
+        total = scored.Count;
+        return scored.OrderBy(s => s.Rank).Select(s => s.Hit).Take(MaxHits).ToList();
+    }
+
+    private static void Gather(Panel host, string[] terms, List<(int Rank, CardHit Hit)> scored)
+    {
+        foreach (Panel section in host.Children.OfType<Panel>())
+        {
+            object? tab = GetTab(section);
+            string tabLabel = GetTabLabel(section);
+            foreach (UIElement card in section.Children)
+            {
+                if (GetIsHeader(card) || card.Visibility != Visibility.Visible) continue;
+                Consider(host, card, tab, tabLabel, terms, scored);
+            }
+        }
+    }
+
+    private static void Consider(Panel host, UIElement card, object? tab, string tabLabel, string[] terms, List<(int Rank, CardHit Hit)> scored)
+    {
+        var pieces = new List<string>();
+        Collect(card, pieces.Add);
+        if (!Matches(string.Join(' ', pieces) + " " + tabLabel, terms)) return;
+
+        string title = TitleOf(card, pieces);
+        if (title.Length == 0) title = tabLabel;
+        int rank = Matches(title, terms) ? 0 : terms.Any(t => title.Contains(t, StringComparison.OrdinalIgnoreCase)) ? 1 : 2;
+        scored.Add((rank, new CardHit(card, host, tab, tabLabel, title, SnippetOf(pieces, title, terms))));
+    }
+
+    /// <summary>A card's name: the first readable label in it, which every card leads with.</summary>
+    private static string TitleOf(UIElement card, List<string> pieces)
+    {
+        // An icon-font glyph is one character; a title is a word. A card that opens with a sentence has no
+        // heading of its own, and the sentence is its snippet, so the tab names it instead.
+        foreach (string piece in pieces)
+        {
+            string text = piece.Trim();
+            if (text.Length > 2) return text.Length <= MaxTitle ? text : string.Empty;
+        }
+        return string.Empty;
+    }
+
+    private const int MaxTitle = 60;
+
+    /// <summary>The first line, other than the title, that holds one of the words - shortened around the match.</summary>
+    private static string SnippetOf(List<string> pieces, string title, string[] terms)
+    {
+        foreach (string piece in pieces)
+        {
+            string text = piece.Trim();
+            if (text.Length == 0 || text == title) continue;
+            int at = terms.Select(t => text.IndexOf(t, StringComparison.OrdinalIgnoreCase)).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+            if (at < 0) continue;
+            const int Max = 110;
+            if (text.Length <= Max) return text;
+            int start = Math.Max(0, at - 40);
+            int length = Math.Min(Max, text.Length - start);
+            return (start > 0 ? "\u2026" : "") + text.Substring(start, length).Trim() + (start + length < text.Length ? "\u2026" : "");
+        }
+        return string.Empty;
     }
 
     internal static string[] SplitTerms(string? query) =>
@@ -157,21 +202,28 @@ public static class CardSearch
     internal static string CollectText(DependencyObject root)
     {
         var text = new StringBuilder();
-        Collect(root, text);
+        Collect(root, piece => text.Append(piece).Append(' '));
         return text.ToString();
     }
 
-    private static void Collect(object node, StringBuilder text)
+    private static void Collect(object node, Action<string> add)
     {
         if (node is string s)
         {
-            text.Append(s).Append(' ');
+            add(s);
             return;
         }
-        if (node is TextBlock block) text.Append(block.Text).Append(' ');
-        if (node is HeaderedContentControl { Header: string header }) text.Append(header).Append(' ');
-        if (node is FrameworkElement { ToolTip: string tip }) text.Append(tip).Append(' ');
-        if (node is TextBox) return;
+        if (node is TextBlock block && block.Text.Length > 0) add(block.Text);
+        if (node is HeaderedContentControl { Header: string header }) add(header);
+
+        // A tooltip is read after what its element shows, so a card's title and the line that matched are
+        // visible text and never a tooltip that happens to sit on the first control.
+        string? tip = (node as FrameworkElement)?.ToolTip as string;
+        if (node is TextBox)
+        {
+            if (tip != null) add(tip);
+            return;
+        }
 
         // Rows generated from an ItemsSource (About's help topics) aren't logical children, so read
         // what those rows show instead. A list that hasn't generated a row - a dropdown never opened,
@@ -181,44 +233,156 @@ public static class CardSearch
             foreach (object item in list.Items)
             {
                 if (list.ItemContainerGenerator.ContainerFromItem(item) is DependencyObject row)
-                    CollectShown(row, text);
+                    CollectShown(row, add);
                 else if (item is string itemText)
-                    text.Append(itemText).Append(' ');
+                    add(itemText);
             }
+            if (tip != null) add(tip);
             return;
         }
 
         if (node is DependencyObject d)
         {
             foreach (object child in LogicalTreeHelper.GetChildren(d))
-                Collect(child, text);
+                Collect(child, add);
         }
+        if (tip != null) add(tip);
     }
 
-    private static void CollectShown(DependencyObject node, StringBuilder text)
+    private static void CollectShown(DependencyObject node, Action<string> add)
     {
         if (node is TextBox) return;
-        if (node is TextBlock block) text.Append(block.Text).Append(' ');
+        if (node is TextBlock block && block.Text.Length > 0) add(block.Text);
         int count = VisualTreeHelper.GetChildrenCount(node);
         for (int i = 0; i < count; i++)
-            CollectShown(VisualTreeHelper.GetChild(node, i), text);
+            CollectShown(VisualTreeHelper.GetChild(node, i), add);
     }
 
-    private static void SetHidden(UIElement element, bool hide)
+    /// <summary>
+    /// Shows a hit: the host's tab command, then - once the new tab has a layout - the matched row (or
+    /// the card, when it has no rows) scrolled to about a sixth of the way down and outlined. The outline
+    /// stays while the search does: a new query, or the next result, replaces it.
+    /// </summary>
+    internal static void GoTo(CardHit hit)
     {
-        if ((bool)element.GetValue(HiddenBySearchProperty) == hide) return;
-        element.SetValue(HiddenBySearchProperty, hide);
+        Panel host = hit.Host;
+        if (GetGoTo(host) is { } command && command.CanExecute(hit.Tab)) command.Execute(hit.Tab);
 
-        var binding = BindingOperations.GetBindingExpressionBase(element, UIElement.VisibilityProperty);
-        if (hide)
+        host.Dispatcher.InvokeAsync(() =>
         {
-            if (binding != null) element.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed);
-            else element.SetValue(UIElement.VisibilityProperty, Visibility.Collapsed);
+            host.UpdateLayout();
+            if (RowOf(hit.Card, SplitTerms(GetQuery(host))) is not { } target) return;
+            if (host.Parent is ScrollViewer viewer && viewer.ViewportHeight > 0 && target.IsVisible)
+            {
+                double y = target.TranslatePoint(new Point(0, 0), viewer).Y;
+                viewer.ScrollToVerticalOffset(Math.Max(0, viewer.VerticalOffset + y - viewer.ViewportHeight * 0.15));
+            }
+            Outline(host, target);
+            host.SetValue(HighlightRootProperty, target);
+            Apply(host, GetQuery(host));
+        }, DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// What to outline for a card: the list row holding the first match (a tweak among six), else the card
+    /// itself. A big card outlined whole doesn't say where to look.
+    /// </summary>
+    internal static FrameworkElement? RowOf(UIElement card, string[] terms)
+    {
+        if (card is not FrameworkElement fallback) return null;
+        foreach (TextBlock block in SearchHighlight.VisibleTextBlocks(card))
+        {
+            if (SearchHighlight.FindRanges(block.Text, terms).Count == 0) continue;
+            for (DependencyObject? up = block; up != null && up != card; up = VisualTreeHelper.GetParent(up))
+            {
+                if (up is FrameworkElement row && ItemsControl.ItemsControlFromItemContainer(row) != null) return row;
+            }
+            break;
         }
-        else
+        return fallback;
+    }
+
+    /// <summary>On the host: the card or row whose words are marked. Null (no result chosen) marks nothing.</summary>
+    internal static readonly DependencyProperty HighlightRootProperty = DependencyProperty.RegisterAttached(
+        "HighlightRoot", typeof(FrameworkElement), typeof(CardSearch), new PropertyMetadata(null));
+
+    internal static FrameworkElement? GetHighlightRoot(DependencyObject d) => (FrameworkElement?)d.GetValue(HighlightRootProperty);
+
+    private static readonly DependencyProperty OutlineProperty = DependencyProperty.RegisterAttached(
+        "Outline", typeof(Adorner), typeof(CardSearch), new PropertyMetadata(null));
+
+    internal static void ClearOutline(DependencyObject host)
+    {
+        if (host.GetValue(OutlineProperty) is not Adorner old) return;
+        (old as OutlineAdorner)?.Detach();
+        (VisualTreeHelper.GetParent(old) as AdornerLayer)?.Remove(old);
+        host.ClearValue(OutlineProperty);
+    }
+
+    internal static void Outline(DependencyObject host, FrameworkElement target)
+    {
+        ClearOutline(host);
+        if (AdornerLayer.GetAdornerLayer(target) is not { } layer) return;
+        var adorner = new OutlineAdorner(target);
+        layer.Add(adorner);
+        host.SetValue(OutlineProperty, adorner);
+    }
+
+    private sealed class OutlineAdorner : Adorner
+    {
+        private const double SideRoom = 8, EdgeRoom = 5;
+        private readonly ScrollViewer? _viewer;
+        private readonly FrameworkElement? _port;
+
+        public OutlineAdorner(FrameworkElement target) : base(target)
         {
-            if (binding != null) binding.UpdateTarget();
-            else element.ClearValue(UIElement.VisibilityProperty);
+            IsHitTestVisible = false;
+            for (DependencyObject? up = VisualTreeHelper.GetParent(target); up != null; up = VisualTreeHelper.GetParent(up))
+            {
+                if (up is not ScrollViewer viewer) continue;
+                _viewer = viewer;
+                _port = viewer.Template?.FindName("PART_ScrollContentPresenter", viewer) as FrameworkElement ?? viewer;
+                viewer.ScrollChanged += OnScrolled;
+                break;
+            }
+            // A row rebuilt under the search (System's Refresh) takes its outline with it, rather than
+            // leaving a box drawn where it was.
+            target.Unloaded += OnTargetUnloaded;
+        }
+
+        public void Detach()
+        {
+            if (_viewer != null) _viewer.ScrollChanged -= OnScrolled;
+            if (AdornedElement is FrameworkElement target) target.Unloaded -= OnTargetUnloaded;
+        }
+
+        private void OnTargetUnloaded(object sender, RoutedEventArgs e)
+        {
+            Detach();
+            (VisualTreeHelper.GetParent(this) as AdornerLayer)?.Remove(this);
+        }
+
+        private void OnScrolled(object sender, ScrollChangedEventArgs e) => InvalidateVisual();
+
+        protected override void OnRender(DrawingContext drawingContext)
+        {
+            // The theme's accent, drawn a little outside the row so it clears the text - but never past
+            // the scroll area's edge, where the page would cut it off: a card against the left or top
+            // gets the room it has, not the room it would like.
+            var pen = new Pen(TrayTrigger.Services.AppPalette.Brush("BrushAccent"), 1.5);
+            Size size = AdornedElement.RenderSize;
+            double left = SideRoom, right = SideRoom, top = EdgeRoom, bottom = EdgeRoom;
+            if (_port != null && AdornedElement.IsDescendantOf(_port))
+            {
+                Point at = AdornedElement.TranslatePoint(new Point(0, 0), _port);
+                left = Math.Clamp(at.X, 0, SideRoom);
+                top = Math.Clamp(at.Y, 0, EdgeRoom);
+                right = Math.Clamp(_port.ActualWidth - (at.X + size.Width), 0, SideRoom);
+                bottom = Math.Clamp(_port.ActualHeight - (at.Y + size.Height), 0, EdgeRoom);
+            }
+            // Half the pen's width stays inside the clip too.
+            drawingContext.DrawRoundedRectangle(null, pen,
+                new Rect(-left + 1, -top + 1, size.Width + left + right - 2, size.Height + top + bottom - 2), 8, 8);
         }
     }
 }

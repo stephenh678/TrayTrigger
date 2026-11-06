@@ -9,7 +9,7 @@ using Xunit;
 
 namespace TrayTrigger.Tests;
 
-/// <summary>Edit Game's "Convert to Local game": what it changes, the way back before Save, and what Save keeps.</summary>
+/// <summary>Edit Game's "Convert to Local Game": what it changes, the way back before Save, and what Save keeps.</summary>
 public sealed class GameEditConvertToLocalTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N"));

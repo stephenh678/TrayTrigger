@@ -193,18 +193,7 @@ public class TrayPromotionService
     public static void OpenWindowsTaskbarSettings()
     {
         CleanStaleRegistrations();
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "ms-settings:taskbar",
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("TrayPromotion", $"Error opening taskbar settings: {ex.Message}");
-        }
+        ShellOpen.Open("ms-settings:taskbar", "TrayPromotion", "taskbar settings");
     }
 
 }

@@ -191,7 +191,7 @@ public class PerformanceProfileServiceTests : IDisposable
 
     /// <summary>
     /// A power plan Windows won't switch back to is noticed, not assumed restored: it's what the
-    /// Critical NEEDS ATTENTION item in Activity &amp; History reports, and Restore Previous retries it.
+    /// Critical NEEDS ATTENTION item in Activity &amp; History reports, and Put Back retries it.
     /// </summary>
     [Fact]
     public void Restore_ThatDoesNotTakeEffect_IsRemembered_UntilARetrySucceeds()
@@ -705,7 +705,7 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.True(_store.OnDisk.PerGameSnapshots[0].DefenderExclusionCaptured);
         Assert.Empty(_service.ActiveSessionGameIds);
 
-        // Next start: it waits to be asked (no prompt at start), and "Put back now" finishes the job. It was absent before,
+        // Next start: it waits to be asked (no prompt at start), and "Put Back Now" finishes the job. It was absent before,
         // so Windows' default goes back.
         var next = new PerformanceProfileService(_store, () => _settings, _backend);
         next.RecoverFromCrashIfNeeded();
@@ -1460,7 +1460,7 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.True(driver.Global.Settings.ContainsKey(Rebar));
         Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == Rebar);
 
-        // The next start leaves it waiting, with no prompt; "Put back now" does it.
+        // The next start leaves it waiting, with no prompt; "Put Back Now" does it.
         var nextStart = WithDriver(driver);
         int prompts = _backend.AdminSteps.Count;
         nextStart.RecoverFromCrashIfNeeded();
@@ -1492,7 +1492,7 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.True(_store.OnDisk.SchedulingCategoryCaptured);
         Assert.Contains(_store.OnDisk.NvidiaSettings, r => r.SettingId == Rebar);
 
-        // The next start asks nothing; "Put back now" puts both back in one prompt.
+        // The next start asks nothing; "Put Back Now" puts both back in one prompt.
         _backend.DeclineAdmin = false;
         int prompts = _backend.AdminSteps.Count;
         var next = WithDriver(driver);
@@ -1529,7 +1529,7 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.DoesNotContain(_backend.AdminSteps.Skip(prompts), step => step.Registry > 0);
     }
 
-    /// <summary>Restore Previous after a declined prompt puts the scheduler values back and drops their record.</summary>
+    /// <summary>Put Back after a declined prompt puts the scheduler values back and drops their record.</summary>
     [Fact]
     public void DeclinedPutBack_RestorePrevious_PutsTheSchedulerValuesBack_AndClearsTheRecord()
     {
@@ -1829,7 +1829,7 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Null(_store.OnDisk);
     }
 
-    /// <summary>Put back by a later session's end: there is nothing left to offer Restore Previous for.</summary>
+    /// <summary>Put back by a later session's end: there is nothing left to offer Put Back for.</summary>
     [Fact]
     public void NvidiaSetting_PutBackAtTheNextSessionsEnd_IsNoLongerUnrestored()
     {
@@ -1849,7 +1849,7 @@ public class PerformanceProfileServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Once Restore Previous has put a setting back, its record goes too. Kept, the same value
+    /// Once Put Back has put a setting back, its record goes too. Kept, the same value
     /// chosen by the user later would be taken for TrayTrigger's own and removed.
     /// </summary>
     [Fact]

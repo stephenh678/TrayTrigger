@@ -172,7 +172,7 @@ public class NvidiaShaderCacheServiceTests
 
     /// <summary>
     /// The driver saved the write but the check afterwards didn't see it: the size may be Unlimited
-    /// all the same, so what it was is still recorded for Restore Previous.
+    /// all the same, so what it was is still recorded for Put Back.
     /// </summary>
     [Fact]
     public void TweakRow_RecordsWhatWasThere_EvenWhenTheCheckFails()

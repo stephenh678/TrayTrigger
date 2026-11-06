@@ -1,0 +1,248 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
+                    xmlns:views="clr-namespace:TrayTrigger.Views"
+                    xmlns:services="clr-namespace:TrayTrigger.Services"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:models="clr-namespace:TrayTrigger.Models">
+    <!-- The Library's right-click menus, kept out of LibraryView.xaml so the page reads as layout.
+         LibraryView merges this file into its resources; nothing here has a handler of its own. -->
+    <!-- Batch context menu: shown instead of the game menu when the right-clicked card is one
+         of two or more selected cards (Ctrl/Shift+click, Ctrl+A). Its DataContext is set to
+         the MainViewModel by LibraryView.OnCardContextMenuOpening; every item applies to the
+         whole selection through LibraryViewModel's batch commands. -->
+    <ContextMenu x:Key="GameBatchContextMenu">
+        <!-- Shared items keep the same order, check marks, and grouping as the single-game
+             menu below, minus everything that only makes sense for one game. Performance
+             Profile is the one addition: a single game reaches it through Edit Game
+             Properties, and there is no batch equivalent of that dialog.
+
+             DLSS Override goes through each selected game in turn, with the status bar saying
+             which one it is on, as the metadata refresh does: turning it on searches each
+             game's folder first, so it is not instant. -->
+
+        <!-- Scope, first: the items below read the same as the single-game menu's, and only
+             Remove asks before it acts. Without this the other four (category, profile,
+             refresh) fire on the whole selection with nothing on screen saying how big it
+             is. -->
+        <MenuItem Header="{Binding SelectionSummary}" Style="{StaticResource MenuSectionHeaderStyle}"/>
+        <Separator/>
+
+        <MenuItem Header="{Binding BatchFavoriteLabel}" Command="{Binding BatchFavoriteCommand}"/>
+        <MenuItem Header="{Binding BatchHideLabel}" Command="{Binding BatchHideCommand}"/>
+        <Separator/>
+        <MenuItem Header="Change Category..." Command="{Binding BatchChangeCategoryCommand}"/>
+        <!-- All-or-nothing like the toggles below: checked only when every selected game has it,
+             and a click on a mixed selection turns it on for all of them. First in this group, as
+             in the single-game menu. Hidden on a PC with no NVIDIA driver. -->
+        <MenuItem Header="DLSS Override" IsCheckable="True" IsChecked="{Binding BatchAllDlssOverrideOn, Mode=OneWay}"
+                  Command="{Binding BatchDlssOverrideCommand}"
+                  Visibility="{Binding HasNvidiaDriver, Converter={StaticResource BoolToVis}}"
+                  ToolTip="Runs each selected game on your GeForce driver's newer DLSS files, one game at a time. Games without DLSS are skipped and named when it's done."/>
+        <!-- Same three tiers as Edit Game; the check shows the tier when every selected game
+             shares it, nothing when they differ. -->
+        <MenuItem Header="Performance Profile">
+            <MenuItem Header="Off" IsCheckable="True" IsChecked="{Binding BatchProfileIsOff, Mode=OneWay}"
+                      Command="{Binding BatchSetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Off}"/>
+            <MenuItem Header="Optimized" IsCheckable="True" IsChecked="{Binding BatchProfileIsOptimized, Mode=OneWay}"
+                      Command="{Binding BatchSetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Optimized}"/>
+            <MenuItem Header="Aggressive" IsCheckable="True" IsChecked="{Binding BatchProfileIsAggressive, Mode=OneWay}"
+                      Command="{Binding BatchSetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Aggressive}"/>
+        </MenuItem>
+        <!-- The items are this PC's CPU Cores choices (CpuCoreMenu): P-cores on a hybrid Intel,
+             the V-Cache and frequency CCDs on a dual-CCD X3D, one CCD on another multi-CCD Ryzen.
+             Hidden on a CPU with nothing to choose, where every item would be a no-op. -->
+        <MenuItem Header="CPU Cores" Visibility="{Binding CpuCores.IsVisible, Converter={StaticResource BoolToVis}}">
+            <MenuItem Header="Auto (Recommended)" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsAuto, Mode=OneWay}"
+                      Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Auto}"
+                      Visibility="{Binding CpuCores.ShowAuto, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="All Cores (Windows default)" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsDefault, Mode=OneWay}"
+                      Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Default}"/>
+            <MenuItem Header="Performance Cores Only" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsPerformanceCores, Mode=OneWay}"
+                      Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"
+                      Visibility="{Binding CpuCores.ShowPerformanceCores, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="3D V-Cache Cores" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsVCache, Mode=OneWay}"
+                      Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.VCacheCores}"
+                      Visibility="{Binding CpuCores.ShowVCache, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="Frequency Cores" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsFrequency, Mode=OneWay}"
+                      Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.FrequencyCores}"
+                      Visibility="{Binding CpuCores.ShowFrequency, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="First CCD Only" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsOneCcd, Mode=OneWay}"
+                      Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.OneCcd}"
+                      Visibility="{Binding CpuCores.ShowOneCcd, Converter={StaticResource BoolToVis}}"/>
+        </MenuItem>
+        <!-- Both are all-or-nothing: the check is on only when every selected game already has
+             it (a mixed selection shows none), and a click turns it on for the whole selection. -->
+        <MenuItem Header="Launch Options">
+            <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding BatchAllRunAsAdmin, Mode=OneWay}"
+                      Command="{Binding BatchRunAsAdminCommand}"/>
+            <MenuItem Header="Close Launcher After Game Exits" IsCheckable="True" IsChecked="{Binding BatchAllCloseLauncher, Mode=OneWay}"
+                      Command="{Binding BatchCloseLauncherCommand}"/>
+        </MenuItem>
+        <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding BatchRefreshMetadataCommand}"/>
+        <Separator/>
+        <MenuItem Header="Remove from Library" Command="{Binding BatchRemoveCommand}" Foreground="{DynamicResource BrushDanger}"/>
+    </ContextMenu>
+
+    <!-- Reusable Game Context Menu shared across Grid, Icons, and List views -->
+    <ContextMenu x:Key="GameItemContextMenu"
+                 DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+        <!-- Play first and bold: it is the most frequent action on a game. Details second
+             (it is also the card's left-click), and named for every platform, not just Steam. -->
+        <!-- Icons on the first group only, Windows 11 style: the actions a player reaches for
+             most, and the same glyphs the tray menu's Now Playing submenu uses. -->
+        <MenuItem Header="Play" Command="{Binding LaunchCommand}" FontWeight="SemiBold">
+            <MenuItem.Icon><TextBlock Text="&#xE768;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushAccentText}"/></MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
+            <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+        </MenuItem>
+        <!-- Now Playing: one flyout to the right, as the tray menu's Now Playing row has. Only
+             shown while the game has a session; Suspend's wording follows the game's state. -->
+        <MenuItem Header="Now Playing">
+            <MenuItem.Icon><TextBlock Text="&#xE768;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushAccentText}"/></MenuItem.Icon>
+            <MenuItem.Style>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </MenuItem.Style>
+            <MenuItem Header="{Binding SuspendMenuLabel}" Command="{Binding ToggleSuspendCommand}"
+                      ToolTip="Suspend minimizes the game, freezes it where it is and mutes it, and stops its playtime clock until you resume it. Online games disconnect while suspended; games with anti-cheat are never suspended.">
+                <MenuItem.Icon><TextBlock Text="&#xE769;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Close Game" Command="{Binding CloseGameCommand}"
+                      ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
+                <MenuItem.Icon><TextBlock Text="&#xE7E8;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Put Back Settings Now" Command="{Binding RestoreSettingsCommand}"
+                      ToolTip="Leaves the game running and puts Windows back the way it was: the Performance Profile is restored, the post-exit script runs and tools set to close after the game close. The game is no longer tracked, so its playtime stops counting.">
+                <MenuItem.Icon><TextBlock Text="&#xE72C;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}"
+                      ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
+                <MenuItem.Icon><TextBlock Text="&#xE711;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushDanger}"/></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
+        <MenuItem Header="{Binding FavoriteMenuLabel}" Command="{Binding ToggleFavoriteCommand}"/>
+        <MenuItem Header="{Binding HideMenuLabel}" Command="{Binding ToggleHiddenCommand}"/>
+        <MenuItem Header="Open File Location" Command="{Binding OpenFolderCommand}"/>
+
+        <!-- Broken Game Relocate Option -->
+        <MenuItem Header="Locate Executable..." Command="{Binding RelocateCommand}">
+            <MenuItem.Style>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </MenuItem.Style>
+        </MenuItem>
+
+        <Separator/>
+
+        <!-- Quick settings: the same settings Edit Game Properties holds, in the order that
+             dialog lists them, so the two read alike - DLSS Override is its own card above the
+             Performance card there, and comes first here for the same reason. The point is to
+             flip one without opening the dialog, the way the batch menu already let you flip a
+             whole selection. All four are also in the batch menu, worded identically.
+
+             DLSS Override is the exception in this group: it writes to the NVIDIA driver
+             rather than a field on the game, so it can fail, it is not instant (switching it on
+             searches the game's folder first), and the status bar narrates it - game by game
+             in the batch menu.
+             Flat rather than cascading because it has two states; the tick reads the game's own
+             ownership records, so it always says what Edit Game > Performance says. Hidden on a
+             PC with no NVIDIA driver, the way CPU Cores is hidden on a uniform CPU. -->
+        <MenuItem Header="DLSS Override" IsCheckable="True" IsChecked="{Binding DlssOverrideOn, Mode=OneWay}"
+                  Command="{Binding ToggleDlssOverrideCommand}"
+                  Visibility="{Binding HasNvidiaDriver, Converter={StaticResource BoolToVis}}"
+                  ToolTip="Runs this game on your GeForce driver's newer DLSS files. Nothing in the game folder is touched; unticking puts NVIDIA's settings back."/>
+        <MenuItem Header="Performance Profile">
+            <MenuItem Header="Off" IsCheckable="True" IsChecked="{Binding ProfileIsOff, Mode=OneWay}"
+                      Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Off}"/>
+            <MenuItem Header="Optimized" IsCheckable="True" IsChecked="{Binding ProfileIsOptimized, Mode=OneWay}"
+                      Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Optimized}"/>
+            <MenuItem Header="Aggressive" IsCheckable="True" IsChecked="{Binding ProfileIsAggressive, Mode=OneWay}"
+                      Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Aggressive}"/>
+        </MenuItem>
+        <MenuItem Header="CPU Cores" Visibility="{Binding CpuCores.IsVisible, Converter={StaticResource BoolToVis}}">
+            <MenuItem Header="Auto (Recommended)" IsCheckable="True" IsChecked="{Binding CpuAffinityIsAuto, Mode=OneWay}"
+                      Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Auto}"
+                      Visibility="{Binding CpuCores.ShowAuto, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="All Cores (Windows default)" IsCheckable="True" IsChecked="{Binding CpuAffinityIsDefault, Mode=OneWay}"
+                      Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Default}"/>
+            <MenuItem Header="Performance Cores Only" IsCheckable="True" IsChecked="{Binding CpuAffinityIsPerformanceCores, Mode=OneWay}"
+                      Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"
+                      Visibility="{Binding CpuCores.ShowPerformanceCores, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="3D V-Cache Cores" IsCheckable="True" IsChecked="{Binding CpuAffinityIsVCache, Mode=OneWay}"
+                      Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.VCacheCores}"
+                      Visibility="{Binding CpuCores.ShowVCache, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="Frequency Cores" IsCheckable="True" IsChecked="{Binding CpuAffinityIsFrequency, Mode=OneWay}"
+                      Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.FrequencyCores}"
+                      Visibility="{Binding CpuCores.ShowFrequency, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="First CCD Only" IsCheckable="True" IsChecked="{Binding CpuAffinityIsOneCcd, Mode=OneWay}"
+                      Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.OneCcd}"
+                      Visibility="{Binding CpuCores.ShowOneCcd, Converter={StaticResource BoolToVis}}"/>
+        </MenuItem>
+        <MenuItem Header="Launch Options">
+            <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding RunAsAdmin, Mode=OneWay}"
+                      Command="{Binding ToggleRunAsAdminCommand}"/>
+            <!-- Nothing to close for a plain local exe, so the item is not offered there. -->
+            <MenuItem Header="Close Launcher After Game Exits" IsCheckable="True" IsChecked="{Binding CloseLauncherOnExit, Mode=OneWay}"
+                      Command="{Binding ToggleCloseLauncherCommand}"
+                      Visibility="{Binding HasLauncherToClose, Converter={StaticResource BoolToVis}}"/>
+        </MenuItem>
+
+        <Separator/>
+
+        <!-- Quick Actions: the umbrella (Edit Game Properties) first, then the shortcuts into it. -->
+        <MenuItem Header="Edit Game Properties..." Command="{Binding EditCommand}"/>
+        <MenuItem Header="Rename..." Command="{Binding RenameCommand}"/>
+        <!-- The five "Change ..." items were a flat run in the middle of an already long menu.
+             Cascaded, the menu reads as actions first and corrections second, and Rename stays
+             at the top level because it is the one used far more often than the rest. -->
+        <MenuItem Header="Change">
+            <!-- Replaces the old "Fetch Official Name", which renamed silently from a heuristic
+                 search with no confirmation and no undo. This opens the same picker Game Details
+                 uses, so a wrong match is corrected in one step instead of three. -->
+            <MenuItem Header="Match..." Command="{Binding ChangeMatchCommand}"/>
+            <MenuItem Header="Category..." Command="{Binding ChangeCategoryCommand}"/>
+            <MenuItem Header="Icon..." Command="{Binding ChangeIconCommand}"/>
+            <MenuItem Header="Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
+            <Separator/>
+            <!-- The manual escape hatch, below the picker that supersedes it for most users. -->
+            <MenuItem Header="Steam App ID..." Command="{Binding EditSteamAppIdCommand}"/>
+        </MenuItem>
+        <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding RefreshMetadataCommand}"/>
+        <MenuItem Header="PCGamingWiki" Command="{Binding OpenPcGamingWikiCommand}"/>
+
+        <!-- Steam-specific actions. One cascading item rather than three top-level ones and a
+             separator, all four of which carried the same HasSteamOverlay visibility style. -->
+        <MenuItem Header="Steam">
+            <MenuItem.Style>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </MenuItem.Style>
+            <MenuItem Header="Store Page" Command="{Binding OpenStoreCommand}"/>
+            <MenuItem Header="Open in Steam Library" Command="{Binding OpenInSteamLibraryCommand}"/>
+            <MenuItem Header="Verify Game Files" Command="{Binding VerifyFilesCommand}"/>
+        </MenuItem>
+
+        <Separator/>
+        <MenuItem Header="Remove from Library" Command="{Binding DeleteCommand}" Foreground="{DynamicResource BrushDanger}"/>
+    </ContextMenu>
+</ResourceDictionary>

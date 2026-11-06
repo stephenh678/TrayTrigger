@@ -1,0 +1,46 @@
+<UserControl x:Class="TrayTrigger.Views.GlobalSearchOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed" Focusable="False">
+    <UserControl.Resources>
+        <!-- One result: no chrome of its own, a wash behind it while it is the one Enter would choose
+             (set from code as its Background) or the pointer is over it. -->
+        <ControlTemplate x:Key="ResultRowTemplate" TargetType="Button">
+            <Border x:Name="Row" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource RadiusControl}" Padding="10,7">
+                <ContentPresenter/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+    </UserControl.Resources>
+    <Grid>
+        <!-- The window dimmed behind the box, in the theme's own background; a click on it closes the search. -->
+        <Border Background="{DynamicResource BrushBackground}" Opacity="0.7" MouseLeftButtonDown="OnScrimClick"/>
+
+        <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="24,48,24,24" MaxWidth="560" Width="560"
+                Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorderStrong}"
+                BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="10">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.5" Color="{DynamicResource ColorFloatingShadow}"/>
+            </Border.Effect>
+            <StackPanel>
+                <Grid>
+                    <TextBox x:Name="Box" Style="{StaticResource ModernTextBox}" VerticalContentAlignment="Center" Padding="9,7,64,7"
+                             Tag="Search games, tools, settings and help..." AutomationProperties.Name="Search everything"
+                             TextChanged="OnTextChanged" PreviewKeyDown="OnBoxKeyDown"/>
+                    <TextBlock Text="Esc to close" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" IsHitTestVisible="False"
+                               FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextMuted}"/>
+                </Grid>
+                <TextBlock x:Name="Message" Margin="6,10,6,4" TextWrapping="Wrap"
+                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                <ScrollViewer x:Name="ResultsScroll" Margin="0,6,0,0" VerticalScrollBarVisibility="Auto"
+                              AutomationProperties.Name="Search results">
+                    <StackPanel x:Name="ResultsList"/>
+                </ScrollViewer>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

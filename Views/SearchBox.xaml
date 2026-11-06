@@ -10,7 +10,8 @@
                  VerticalContentAlignment="Center" Padding="9,5,28,5"/>
         <!-- The same clear x as the hotkey box: shown once there's text. -->
         <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
-                Click="OnClearClick" ToolTip="Clear search" AutomationProperties.Name="Clear search"
+                Click="OnClearClick" ToolTip="{Binding ClearText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                AutomationProperties.Name="{Binding ClearText, RelativeSource={RelativeSource AncestorType=UserControl}}"
                 Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}"
                 Background="Transparent" BorderThickness="0" Padding="6,4" Cursor="Hand" Focusable="False">
             <Button.Template>
@@ -36,5 +37,70 @@
                 </Style>
             </Button.Style>
         </Button>
+
+        <!-- The results list of a page's search (ResultsHost): under the box, over the page, and never
+             taking the cursor from it - Up, Down, Enter and Escape are handled in the box. -->
+        <Popup x:Name="Results" PlacementTarget="{Binding ElementName=Box}" Placement="Bottom" VerticalOffset="4"
+               StaysOpen="True" AllowsTransparency="True" Focusable="False">
+            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorderStrong}"
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Width="440" Padding="4" Margin="0,0,12,12">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.4"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock x:Name="NoResults" Text="No matches" Margin="10,8" TextWrapping="Wrap"
+                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                    <ScrollViewer x:Name="ResultsScroll" MaxHeight="420" VerticalScrollBarVisibility="Auto"
+                                  AutomationProperties.Name="Search results">
+                        <ItemsControl x:Name="ResultsList" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Click="OnResultClick" Tag="{Binding Hit}" Focusable="False" Cursor="Hand"
+                                            HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Hit.Title}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource RadiusControl}" Padding="10,7">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="True">
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Hit.TabLabel}" Margin="12,0,0,0"
+                                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
+                                                <TextBlock Style="{StaticResource StrongText}" Text="{Binding Hit.Title}" TextTrimming="CharacterEllipsis"/>
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding Hit.Snippet}" TextWrapping="Wrap" MaxHeight="48" Margin="0,2,0,0"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Hit.Snippet}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock x:Name="MoreNote" Margin="10,6,10,4" TextWrapping="Wrap" Visibility="Collapsed"
+                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
 </UserControl>

@@ -317,20 +317,20 @@ public class ArtworkTabTests : IDisposable
     });
 
     [Fact]
-    public void HowTheScriptsRun_StartsShut_ForAGameWithNoScript_AndOpensForOneWithAScriptOrARefusedValue() => Sta(() =>
+    public void ShowingTheLaunchHotkey_OpensItsTab_UnlessAllIsOn_AndIsHandedOverOnce() => Sta(() =>
     {
-        Assert.False(Create().ShowScriptRunOptions);
+        var onTab = Create();
+        onTab.SelectedSection = GameEditSection.Artwork;
+        onTab.ShowField(GameEditViewModel.EditField.LaunchHotkey);
+        Assert.Equal(GameEditSection.Launch, onTab.SelectedSection);
+        Assert.Equal(GameEditViewModel.EditField.LaunchHotkey, onTab.TakeFieldToShow());
+        Assert.Null(onTab.TakeFieldToShow());
 
-        var withScript = Create(new GameEntry { Name = "Hades", PreLaunchScriptPath = Path.Combine(_root, "pre.ps1") });
-        Assert.True(withScript.ShowScriptRunOptions);
-
-        Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "real.ps1"), "# a script");
-        var refused = Create();
-        refused.PreLaunchScriptPath = Path.Combine(_root, "real.ps1");
-        refused.PreLaunchScriptTimeoutSeconds = "0";
-        refused.SaveCommand.Execute(null);
-        Assert.True(refused.ShowScriptRunOptions);
+        var onAll = Create();
+        onAll.SelectedSection = GameEditSection.All;
+        onAll.ShowField(GameEditViewModel.EditField.LaunchHotkey);
+        Assert.Equal(GameEditSection.All, onAll.SelectedSection);
+        Assert.True(onAll.HasFieldToShow);
     });
 
     [Fact]
