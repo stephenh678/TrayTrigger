@@ -59,18 +59,28 @@ public partial class GameDetailsDialog : Window
     private bool _discardConfirmed;
 
     /// <summary>
-    /// True when nothing in Settings is open to lose, or when the player says to discard it. Asked once:
-    /// after a yes, the rest of the closing goes through without asking again.
+    /// True when nothing in Settings is open to lose, or once the player has saved it or said not to. Asked once:
+    /// after Don't Save, the rest of the closing goes through without asking again. A Save that a field refuses
+    /// keeps the page open on Settings, with the reason under the field, as the Save button does.
     /// </summary>
     private bool ConfirmLeave()
     {
         // While TrayTrigger is shutting down nobody can be asked, and the close goes ahead whatever the answer.
         if (_discardConfirmed || !_viewModel.HasUnsavedEdits || Dispatcher.HasShutdownStarted) return true;
-        if (!ModernDialog.Confirm(this, "Discard Changes", "Discard your changes?",
-                "Nothing you changed in Settings has been saved.", "Discard", "Keep Editing"))
-            return false;
-        _discardConfirmed = true;
-        return true;
+        switch (ModernDialog.PromptSaveChanges(this, _viewModel.Game.Name))
+        {
+            case DialogResultOption.Primary:
+                _viewModel.EditViewModel?.SaveCommand.Execute(null);
+                // A save replaces the editor with a clean one; a refused save leaves the edits where they were.
+                if (!_viewModel.HasUnsavedEdits) return true;
+                _viewModel.ShowSettings();
+                return false;
+            case DialogResultOption.Secondary:
+                _discardConfirmed = true;
+                return true;
+            default:
+                return false;
+        }
     }
 
     /// <summary>The game's banner has been found and is on show. Diagnostics wait for it before they capture.</summary>

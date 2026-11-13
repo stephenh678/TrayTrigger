@@ -94,6 +94,10 @@ public static partial class ProcessPathResolver
         if (KnownHelperProcessNames.Contains(name)) return true;
         // Generic patterns: anything self-describing as a crash tool, an installer, or an uninstaller.
         return IsCrashTool(name)
+            // Battle.net's Agent runs a game's update from a temporary "_bna_<number>_0.exe" inside
+            // the install folder. Mistaken for the game, the session ended when the update did
+            // (2026-11-12) and the game that started after it was never tracked.
+            || name.StartsWith("_bna_", StringComparison.OrdinalIgnoreCase)
             || name.StartsWith("unins", StringComparison.OrdinalIgnoreCase)
             || name.EndsWith("setup", StringComparison.OrdinalIgnoreCase)
             || name.EndsWith("installer", StringComparison.OrdinalIgnoreCase);
@@ -111,6 +115,34 @@ public static partial class ProcessPathResolver
             if (name.Contains(word, StringComparison.OrdinalIgnoreCase)) return true;
         }
         return false;
+    }
+
+    /// <summary>The file name of the executable a game is recorded with ("cod.exe"), or null when its
+    /// launch target is not a program on disk (a store link, a shortcut, a script).</summary>
+    public static string? RecordedExeName(string? executablePath)
+    {
+        if (string.IsNullOrWhiteSpace(executablePath) || executablePath.Contains("://", StringComparison.Ordinal)) return null;
+        string name = Path.GetFileName(executablePath.Trim());
+        return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name : null;
+    }
+
+    /// <summary>Whether the process image at <paramref name="processPath"/> is the game's recorded executable.</summary>
+    public static bool IsRecordedExe(string? processPath, string? recordedExeName) =>
+        !string.IsNullOrEmpty(recordedExeName)
+        && string.Equals(Path.GetFileName(processPath ?? string.Empty), recordedExeName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The process to take as the game out of <paramref name="candidates"/> (best first): the one that
+    /// is the game's recorded executable when it is among them, else the best candidate. An updater, patcher or
+    /// first-run tool that is not on the helper list can then never be chosen over the game itself.
+    /// </summary>
+    public static ProcessUnderDirectory PickGameProcess(IReadOnlyList<ProcessUnderDirectory> candidates, string? recordedExeName)
+    {
+        foreach (var candidate in candidates)
+        {
+            if (IsRecordedExe(candidate.Path, recordedExeName)) return candidate;
+        }
+        return candidates[0];
     }
 
     /// <summary>One running process whose image lives under a watched install folder.</summary>

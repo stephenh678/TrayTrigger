@@ -154,6 +154,7 @@ public partial class GameEditViewModel
             NotifyMatchChanged();
             OnPropertyChanged(nameof(CanOfferSteamLaunch));
             OnPropertyChanged(nameof(PlatformDescription));
+            OnPropertyChanged(nameof(ArgumentsHint));
         }
     }
 

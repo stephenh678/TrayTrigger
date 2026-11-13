@@ -543,6 +543,7 @@ public partial class App : Application
         _hotkeyManager.ManageHotkeyTriggered += OnManageHotkeyTriggered;
         _hotkeyManager.TrayMenuHotkeyTriggered += OnTrayMenuHotkeyTriggered;
         _hotkeyManager.SuspendHotkeyTriggered += OnSuspendHotkeyTriggered;
+        _hotkeyManager.LastPlayedHotkeyTriggered += OnLastPlayedHotkeyTriggered;
 
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;

@@ -216,6 +216,45 @@ public partial class ModernDialog : Window
         return dialog.ChoiceResult;
     }
 
+    /// <summary>
+    /// Leaving an editor with unsaved changes, the way Windows and every major app ask it: Save (the accent
+    /// button, Enter) → <see cref="DialogResultOption.Primary"/>, Don't Save → <see cref="DialogResultOption.Secondary"/>,
+    /// Cancel (Esc, the title-bar close) → <see cref="DialogResultOption.Cancel"/>. The likely wish, keeping the
+    /// change, is one press away; throwing it away takes a deliberate choice.
+    /// </summary>
+    public static DialogResultOption PromptSaveChanges(Window? owner, string subject)
+    {
+        var dialog = CreateSaveChangesPrompt(subject);
+        var activeOwner = owner ?? WindowHelper.ActiveOwner();
+        if (activeOwner != null)
+        {
+            dialog.Owner = activeOwner;
+        }
+
+        LoggingService.Shown("Dialog", $"\"{dialog.Title}\" - {dialog.PrimaryMessageText.Text}");
+        dialog.ShowDialog();
+        LoggingService.Verbose("UI", $"Dialog \"{dialog.Title}\" answered: {dialog.ChoiceResult switch
+        {
+            DialogResultOption.Primary => "Save",
+            DialogResultOption.Secondary => "Don't Save",
+            _ => "Cancel",
+        }}.");
+        return dialog.ChoiceResult;
+    }
+
+    /// <summary>Builds the unsaved-changes prompt without showing it - also used by tests and the dev screenshot mode.</summary>
+    internal static ModernDialog CreateSaveChangesPrompt(string subject)
+    {
+        string message = string.IsNullOrWhiteSpace(subject)
+            ? "Save your changes?"
+            : $"Save your changes to {subject.Trim()}?";
+        var dialog = new ModernDialog("Unsaved Changes", message,
+            "You changed settings that haven't been saved yet.", "Save", "Cancel", DialogIconType.Question);
+        dialog.SecondaryBtn.Content = "Don't Save";
+        dialog.SecondaryBtn.Visibility = Visibility.Visible;
+        return dialog;
+    }
+
     public static DialogResultOption PromptExitAction(Window? owner)
     {
         var activeOwner = owner ?? WindowHelper.ActiveOwner();

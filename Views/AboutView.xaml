@@ -521,6 +521,17 @@
                                                    Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
+                                    <!-- Row 1d: Launch last played hotkey - the configured value -->
+                                    <DockPanel Margin="0,0,0,9">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2">
+                                                <TextBlock Style="{StaticResource BadgeText}" Text="{Binding SettingsVM.LaunchLastPlayedHotkey}" Foreground="{DynamicResource BrushAccentText}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Play the game you played last, or bring it forward if it is running (change it in Settings > General)"
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </DockPanel>
+
                                     <!-- Row 2: Tray Left-Click -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">

@@ -15,6 +15,7 @@ public partial class HotkeyManager : IDisposable
     private const int PROBE_HOTKEY_ID = 2;
     private const int TRAY_MENU_HOTKEY_ID = 3;
     private const int SUSPEND_HOTKEY_ID = 4;
+    private const int LAST_PLAYED_HOTKEY_ID = 5;
     private const int GAME_HOTKEY_BASE_ID = 1000;
     private const int TOOL_HOTKEY_BASE_ID = 5000;
 
@@ -32,6 +33,8 @@ public partial class HotkeyManager : IDisposable
     public const string TrayMenuOwnerId = "__traymenu__";
     /// <summary>The owner id the suspend/resume-game hotkey is registered under.</summary>
     public const string SuspendOwnerId = "__suspend__";
+    /// <summary>The owner id the launch-last-played-game hotkey is registered under.</summary>
+    public const string LastPlayedOwnerId = "__lastplayed__";
 
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -49,8 +52,11 @@ public partial class HotkeyManager : IDisposable
     private bool _isManageHotkeyRegistered;
     private bool _isTrayMenuHotkeyRegistered;
     private bool _isSuspendHotkeyRegistered;
+    private bool _isLastPlayedHotkeyRegistered;
 
     public event Action? ManageHotkeyTriggered;
+    /// <summary>The launch-last-played-game hotkey was pressed.</summary>
+    public event Action? LastPlayedHotkeyTriggered;
     /// <summary>The open-tray-menu hotkey was pressed.</summary>
     public event Action? TrayMenuHotkeyTriggered;
     /// <summary>The suspend/resume-game hotkey was pressed.</summary>
@@ -100,6 +106,12 @@ public partial class HotkeyManager : IDisposable
                 SuspendHotkeyTriggered?.Invoke();
                 handled = true;
             }
+            else if (id == LAST_PLAYED_HOTKEY_ID)
+            {
+                LoggingService.Info("HotkeyManager", "Launch-last-played-game hotkey triggered.");
+                LastPlayedHotkeyTriggered?.Invoke();
+                handled = true;
+            }
             else if (_registeredHotkeys.TryGetValue(id, out HotkeyBinding? binding))
             {
                 LoggingService.Info("HotkeyManager", $"Hotkey triggered for {KindLabel(binding.Kind)} id '{binding.OwnerId}'.");
@@ -128,7 +140,7 @@ public partial class HotkeyManager : IDisposable
     /// Returns the launch bindings that could not be registered. The suspend hotkey (1.4.7, default
     /// Ctrl+Alt+P) goes after the tray-menu one and gives way the same way.
     /// </summary>
-    public IReadOnlyList<HotkeyBinding> RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, IEnumerable<HotkeyBinding>? reserved = null, string? trayMenuHotkeyStr = null, string? suspendHotkeyStr = null)
+    public IReadOnlyList<HotkeyBinding> RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, IEnumerable<HotkeyBinding>? reserved = null, string? trayMenuHotkeyStr = null, string? suspendHotkeyStr = null, string? lastPlayedHotkeyStr = null)
     {
         var failed = new List<HotkeyBinding>();
         try
@@ -149,6 +161,7 @@ public partial class HotkeyManager : IDisposable
             }
             _isTrayMenuHotkeyRegistered = RegisterGivingWay(TRAY_MENU_HOTKEY_ID, trayMenuHotkeyStr, TrayMenuOwnerId, "the open tray menu hotkey");
             _isSuspendHotkeyRegistered = RegisterGivingWay(SUSPEND_HOTKEY_ID, suspendHotkeyStr, SuspendOwnerId, "the suspend game hotkey");
+            _isLastPlayedHotkeyRegistered = RegisterGivingWay(LAST_PLAYED_HOTKEY_ID, lastPlayedHotkeyStr, LastPlayedOwnerId, "the launch last played game hotkey");
         }
         return failed;
     }
@@ -266,6 +279,11 @@ public partial class HotkeyManager : IDisposable
             UnregisterHotKey(_hwndSource.Handle, SUSPEND_HOTKEY_ID);
             _isSuspendHotkeyRegistered = false;
         }
+        if (_isLastPlayedHotkeyRegistered)
+        {
+            UnregisterHotKey(_hwndSource.Handle, LAST_PLAYED_HOTKEY_ID);
+            _isLastPlayedHotkeyRegistered = false;
+        }
 
         int unregisteredCount = _registeredHotkeys.Count;
         foreach (var id in _registeredHotkeys.Keys)
@@ -307,6 +325,7 @@ public partial class HotkeyManager : IDisposable
                 ManageOwnerId => "Already used to show and hide the TrayTrigger window.",
                 TrayMenuOwnerId => "Already used to open the tray menu.",
                 SuspendOwnerId => "Already used to suspend and resume the game.",
+                LastPlayedOwnerId => "Already used to launch the last game you played.",
                 _ => $"Already used to launch {owner.OwnerName}.",
             };
             return false;

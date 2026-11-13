@@ -1076,7 +1076,8 @@ public class MainViewModel : ViewModelBase
             toolsOn ? Library.HotkeyBindings.Concat(Tools.HotkeyBindings) : Library.HotkeyBindings,
             reserved: toolsOn ? null : Tools.HotkeyBindings,
             trayMenuHotkeyStr: _settings.TrayMenuHotkey,
-            suspendHotkeyStr: _settings.SuspendGameHotkey);
+            suspendHotkeyStr: _settings.SuspendGameHotkey,
+            lastPlayedHotkeyStr: _settings.LaunchLastPlayedHotkey);
 
         var failedTools = failed.Where(b => b.Kind == HotkeyOwnerKind.Tool).ToList();
         string? warning = failedTools.Count switch

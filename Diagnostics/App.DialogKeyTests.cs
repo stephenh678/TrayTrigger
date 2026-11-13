@@ -132,7 +132,7 @@ public partial class App
             var nested = Current.Windows.OfType<ModernDialog>().FirstOrDefault(w => !ReferenceEquals(w, dialog) && w.IsVisible);
             if (nested != null)
             {
-                notes += "asked \"Discard your changes?\"; Esc there kept the dialog open. ";
+                notes += "asked \"Save your changes?\"; Esc there (Cancel) kept the dialog open. ";
                 nested.Activate();
                 Keyboard.Focus(nested);
                 Current.Dispatcher.BeginInvoke(() => SendTestKey(Key.Escape));

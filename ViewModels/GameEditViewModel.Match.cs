@@ -14,9 +14,12 @@ namespace TrayTrigger.ViewModels;
 public partial class GameEditViewModel
 {
     /// <summary>What a match found in the picker or by App ID may replace. Ticked to begin with; the banner and icon follow the match only while Automatic.</summary>
-    public bool UpdateTitleFromMatch { get; set; } = true;
-    public bool UpdateGenreFromMatch { get; set; } = true;
-    public bool UpdatePosterFromMatch { get; set; } = true;
+    private bool _updateTitleFromMatch = true;
+    private bool _updateGenreFromMatch = true;
+    private bool _updatePosterFromMatch = true;
+    public bool UpdateTitleFromMatch { get => _updateTitleFromMatch; set => SetProperty(ref _updateTitleFromMatch, value); }
+    public bool UpdateGenreFromMatch { get => _updateGenreFromMatch; set => SetProperty(ref _updateGenreFromMatch, value); }
+    public bool UpdatePosterFromMatch { get => _updatePosterFromMatch; set => SetProperty(ref _updatePosterFromMatch, value); }
 
     public bool HasMatch => UrlProtocolHelper.IsValidSteamAppId(SteamAppId?.Trim());
 

@@ -83,11 +83,23 @@ public partial class ThemeEditDialog : Window
                 e.Cancel = true;
                 return;
             }
-            if (!ModernDialog.Confirm(this, "Discard Changes", "Discard your changes?",
-                    "Nothing you changed here has been saved.", "Discard", "Keep Editing"))
+            switch (ModernDialog.PromptSaveChanges(this, viewModel.Name))
             {
-                e.Cancel = true;
-                _keptEditingAt = Environment.TickCount64;
+                case DialogResultOption.Secondary:
+                    return;
+                case DialogResultOption.Primary:
+                    // Saved here, inside the close, so it isn't lost when the close is TrayTrigger shutting down. A save
+                    // that succeeds sets the result through RequestClose (WPF only stores a DialogResult set while the
+                    // window is closing) and the close goes ahead with it; one that is refused keeps the editor open.
+                    viewModel.SaveCommand.Execute(null);
+                    if (DialogResult == true) return;
+                    e.Cancel = true;
+                    _keptEditingAt = Environment.TickCount64;
+                    return;
+                default:
+                    e.Cancel = true;
+                    _keptEditingAt = Environment.TickCount64;
+                    return;
             }
         };
 

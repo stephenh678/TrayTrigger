@@ -211,6 +211,7 @@ public partial class GameEditViewModel
             OnPropertyChanged();
             OnPropertyChanged(nameof(ArgumentsHint));
             OnPropertyChanged(nameof(HasPlatform));
+            OnPropertyChanged(nameof(CanOfferLaunchDirectly));
             OnPropertyChanged(nameof(PlatformDescription));
             OnPropertyChanged(nameof(LaunchDirectlyLabel));
             OnPropertyChanged(nameof(LaunchDirectlyHint));

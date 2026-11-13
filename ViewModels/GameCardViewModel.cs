@@ -618,6 +618,9 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowPosterArt));
     }
 
+    /// <summary>Re-reads the last-played text, which depends on today's date as well as the game.</summary>
+    public void RefreshLastPlayedDisplay() => OnPropertyChanged(nameof(LastPlayedDisplay));
+
     public void RefreshProperties()
     {
         CheckAvailability();

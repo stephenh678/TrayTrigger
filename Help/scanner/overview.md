@@ -4,7 +4,7 @@
 
 ## Launcher Integrations
 
-Each "Enable X library integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Epic/Ubisoft's registry entries, EA's install manifests, Windows' Gaming Services records for Xbox / PC Game Pass, Blizzard's install records for Battle.net), so no folder setup is needed.
+Each "Enable X library integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Ubisoft's registry entries, EA's install manifests, Epic's install records from both the classic Epic Games Launcher and the new one, Windows' Gaming Services records for Xbox / PC Game Pass, Blizzard's install records for Battle.net), so no folder setup is needed.
 
 Battle.net games launch through Battle.net, which signs the game in; if Battle.net is closed, TrayTrigger starts it first. If a game's launch code can't be read (just after Battle.net's cache was cleared, say), TrayTrigger opens Battle.net's Play tab and tells you to click Play; performance profiles and scripts still apply.
 

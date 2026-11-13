@@ -396,4 +396,19 @@ public partial class SettingsViewModel
             }
         }
     }
+
+    public string LaunchLastPlayedHotkey
+    {
+        get => _settings.LaunchLastPlayedHotkey;
+        set
+        {
+            if (_settings.LaunchLastPlayedHotkey != value)
+            {
+                _settings.LaunchLastPlayedHotkey = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onHotkeySettingChanged?.Invoke();
+            }
+        }
+    }
 }

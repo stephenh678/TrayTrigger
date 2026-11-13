@@ -64,6 +64,7 @@ Each works from anywhere in Windows, with the window open or hidden.
 - **Show / Hide Window**, Ctrl+Alt+G unless you change it.
 - **Open Tray Menu**, Ctrl+Alt+T: the tray menu by the tray icon, ready to type a search.
 - **Suspend / Resume Game**, Ctrl+Alt+P: freezes the game you're playing, and resumes it. See Suspend and resume a game.
+- **Launch Last Played Game**, Ctrl+Alt+L: plays the game you played most recently, the same as its Play button, or brings it forward if it's already running.
 
 Games and tools can each have a launch hotkey of their own, set in Edit Game and Edit Tool.
 
@@ -74,4 +75,4 @@ Click the box and press the keys. The combination is recorded from what you pres
 - Ctrl, Alt or Shift plus a key, or a function key on its own. Win+ anything is reserved by Windows.
 - A combination already in use, by a game, a tool, another TrayTrigger hotkey or another program, is refused with the reason.
 - Escape keeps the old value; Backspace, Delete or the x clears it. A cleared hotkey is simply off.
-- If a game or tool already has the combination, it keeps it and the tray menu or suspend hotkey gives way until you choose another.
+- If a game or tool already has the combination, it keeps it and the tray menu, suspend or launch last played hotkey gives way until you choose another.

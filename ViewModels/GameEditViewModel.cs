@@ -242,7 +242,7 @@ public partial class GameEditViewModel : ViewModelBase
     /// command again only after a click, a key or a focus change, so a change that lands later (an await finishing)
     /// asks here too. The request is coalesced: a burst of changes asks once.
     /// </summary>
-    protected override void OnPropertyChanged(string? propertyName = null)
+    protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         base.OnPropertyChanged(propertyName);
         var dispatcher = Application.Current?.Dispatcher;

@@ -4,6 +4,14 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.7.8
+
+- **Launch your last game (Ctrl+Alt+L)** - One shortcut plays the game you played most recently, or brings it forward if it's already running. Change it in Settings > General.
+- **Game updates don't confuse it** - If a launcher updates a game as it starts, TrayTrigger now waits for the game itself instead of treating the update as the game and ending early.
+- **Epic's new launcher** - Scan for Games now finds games installed by the new Epic Games Launcher as well as the classic one.
+- **Rockstar games on Epic** - Games like Red Dead Redemption 2 that start through another launcher now get their settings on the game itself.
+- **Last played stays right** - A game's "Today" or "Yesterday" now updates when the day changes, even if TrayTrigger has been left running in the tray overnight.
+
 ## 1.7.7
 
 - **Search everything (Ctrl+K)** - One search for games, tools and settings from any page; pick a result and TrayTrigger takes you there.

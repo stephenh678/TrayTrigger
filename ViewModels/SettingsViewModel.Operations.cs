@@ -225,6 +225,7 @@ public partial class SettingsViewModel
         OnPropertyChanged(nameof(GlobalManageHotkey));
         OnPropertyChanged(nameof(TrayMenuHotkey));
         OnPropertyChanged(nameof(SuspendGameHotkey));
+        OnPropertyChanged(nameof(LaunchLastPlayedHotkey));
         OnPropertyChanged(nameof(EnableGameScripts));
         OnPropertyChanged(nameof(EnableTools));
         OnPropertyChanged(nameof(ShowToolsInTray));

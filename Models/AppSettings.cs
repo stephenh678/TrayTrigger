@@ -86,6 +86,10 @@ public class AppSettings
     /// again. Blank means none. A settings file from before 1.4.7 gets the default; a game or tool
     /// already on the combo keeps it (see HotkeyManager.RegisterHotkeys).</summary>
     public string SuspendGameHotkey { get; set; } = "Ctrl+Alt+P";
+    /// <summary>Launches the game played most recently (or brings it forward if it is running). Blank
+    /// means none. A settings file from before 1.7.8 gets the default; a game or tool already on the
+    /// combo keeps it (see HotkeyManager.RegisterHotkeys).</summary>
+    public string LaunchLastPlayedHotkey { get; set; } = "Ctrl+Alt+L";
     public string LastCategoryFilter { get; set; } = LibraryConstants.AllCategory;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
 

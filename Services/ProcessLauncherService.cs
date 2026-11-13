@@ -1348,6 +1348,10 @@ public partial class ProcessLauncherService
     private static readonly TimeSpan InstallDirLaunchPollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan InstallDirLaunchTimeout = TimeSpan.FromMinutes(3);
 
+    /// <summary>A process that is not the game's recorded executable but has a window: the search for the game
+    /// starts again only if it exits within this long. One without a window (an updater) always does.</summary>
+    private static readonly TimeSpan StandInHandoffWindow = TimeSpan.FromMinutes(10);
+
     // How many consecutive polls the same PID must be seen under the install directory before
     // it's trusted as the real game. 3 was chosen over the original 2 after a real Ubisoft title
     // (R6-Extraction_Plus.exe) turned out to itself be a handoff stub that outlived a 2-poll
@@ -1474,9 +1478,13 @@ public partial class ProcessLauncherService
     /// <paramref name="ownsProcessAlready"/> (a stub handoff), where the game did run and the
     /// session ends normally instead.
     /// </summary>
-    private void TrackInstallDirSession(ActiveGameSession session, string installDir, string platformLabel, TimeSpan timeout, bool ownsProcessAlready = false)
+    private void TrackInstallDirSession(ActiveGameSession session, string installDir, string platformLabel, TimeSpan timeout, bool ownsProcessAlready = false, bool preferRecordedExe = true)
     {
         var game = session.Game;
+        // The game's own executable, when it is recorded as one. A process that is not it is only a stand-in
+        // (an updater, a patcher, a first-run tool): the session follows it, but if it exits soon the search
+        // for the game starts again instead of the session ending with it.
+        string? recordedExe = preferRecordedExe ? ProcessPathResolver.RecordedExeName(game.ExecutablePath) : null;
         if (string.IsNullOrWhiteSpace(installDir))
         {
             LoggingService.Verbose("Launcher", $"'{game.Name}' has no resolvable install directory; cannot track its {platformLabel} session.");
@@ -1528,7 +1536,7 @@ public partial class ProcessLauncherService
             var candidates = ProcessPathResolver.FindProcessesUnderDirectory(normalizedInstallDir);
             if (candidates.Count > 0)
             {
-                var best = candidates[0];
+                var best = ProcessPathResolver.PickGameProcess(candidates, recordedExe);
                 GiveEarlyFocus(best.Pid, best.HasMainWindow);
                 if (pendingCandidatePid == best.Pid)
                 {
@@ -1553,7 +1561,12 @@ public partial class ProcessLauncherService
                     if (proc != null)
                     {
                         LoggingService.Verbose("Launcher", $"Found running process for '{game.Name}' (PID {proc.Id}, {Path.GetFileName(best.Path)}) after launching via {platformLabel}.");
-                        AttachExitTracking(session, proc, allowStubHandoff: false);
+                        // Not the recorded executable: a stand-in. One with no window (an updater has none)
+                        // is followed past any length of run; one with a window only if it ends soon.
+                        TimeSpan? standInWithin = recordedExe != null && !ProcessPathResolver.IsRecordedExe(best.Path, recordedExe)
+                            ? (best.HasMainWindow ? StandInHandoffWindow : TimeSpan.MaxValue)
+                            : null;
+                        AttachExitTracking(session, proc, allowStubHandoff: false, standInWithin);
                         return false;
                     }
 
