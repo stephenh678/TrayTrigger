@@ -851,7 +851,25 @@ public partial class LibraryViewModel : ViewModelBase
             RefreshHotkeys();
             return;
         }
-        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings, trayMenuHotkeyStr: _settings.TrayMenuHotkey);
+        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings, trayMenuHotkeyStr: _settings.TrayMenuHotkey, lastPlayedHotkeyStr: _settings.LaunchLastPlayedHotkey);
+    }
+
+    /// <summary>The game launched most recently, or null when nothing has been played. A hidden game counts: it is still the last one played.</summary>
+    public GameCardViewModel? LastPlayedGame() =>
+        Games.Where(g => g.Game.LastPlayed.HasValue).OrderByDescending(g => g.Game.LastPlayed!.Value).FirstOrDefault();
+
+    /// <summary>The launch-last-played hotkey: plays the most recent game, or brings it forward if it is already running.
+    /// Returns false when nothing has been played yet.</summary>
+    public bool LaunchLastPlayed()
+    {
+        var card = LastPlayedGame();
+        if (card == null) return false;
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            LoggingService.Info("Library", $"Last-played hotkey launch for '{card.Name}'.");
+            LaunchGame(card);
+        });
+        return true;
     }
 
     public void OnGameUpdatedFromLauncher(GameEntry game)

@@ -30,6 +30,8 @@ public class BackupCoverageTests
         ["display-session.json"] = "the display mode a game set on this PC, so it can be put back after a crash",
         ["audio-input-session.json"] = "the microphone a game set on this PC, so it can be put back after a crash",
         ["audio-session.json"] = "the sound output a game set on this PC, so it can be put back after a crash",
+        ["catalog-cache.json"] = "the new Epic launcher's own cache, read for game titles; not TrayTrigger's",
+        ["library-cache.json"] = "the new Epic launcher's own cache, read for game titles; not TrayTrigger's",
         ["installerdata.xml"] = "Ubisoft Connect's own file, which TrayTrigger only reads",
     };
 

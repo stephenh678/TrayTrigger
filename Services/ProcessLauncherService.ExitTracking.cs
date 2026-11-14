@@ -20,7 +20,7 @@ public partial class ProcessLauncherService
     /// <see cref="StubHandoffWindow"/> is treated as a bootstrap stub and the session moves to the
     /// real game found under the install folder instead of ending.
     /// </summary>
-    private void AttachExitTracking(ActiveGameSession session, Process process, bool allowStubHandoff)
+    private void AttachExitTracking(ActiveGameSession session, Process process, bool allowStubHandoff, TimeSpan? standInWithin = null)
     {
         var game = session.Game;
         session.Process = process;
@@ -35,9 +35,13 @@ public partial class ProcessLauncherService
         if (!followRealGame) StartDlssObservation(session, process);
 
         int exitHandled = 0;
+        // Read now: an exited process can no longer be asked its name.
+        string standInName = string.Empty;
+        if (standInWithin != null) { try { standInName = process.ProcessName; } catch (Exception) { /* already gone */ } }
 
         void OnExited(object? s, EventArgs e)
         {
+            // Taken already when the session moved on to the game's own program (WatchForRecordedGame).
             if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
 
             TimeSpan ranFor = DateTime.UtcNow - session.StartedAtUtc;
@@ -49,7 +53,22 @@ public partial class ProcessLauncherService
                     LoggingService.Info("Launcher", $"'{game.Name}' exited {ranFor.TotalSeconds:0.0}s after starting - treating it as a launcher stub and looking for the real game under '{installDir}'.");
                     try { process.Dispose(); } catch { /* already disposed */ }
                     if (ReferenceEquals(session.Process, process)) session.Process = null;
-                    TrackInstallDirSession(session, installDir, "direct launch", StubHandoffSearchTimeout, ownsProcessAlready: true);
+                    TrackInstallDirSession(session, installDir, "direct launch", StubHandoffSearchTimeout, ownsProcessAlready: true, preferRecordedExe: false);
+                    return;
+                }
+            }
+
+            // The process followed was not the game's recorded executable (an updater, a patcher): the game
+            // is still to come, so look for it again rather than ending the session with the stand-in.
+            if (standInWithin is { } within && ranFor < within && !session.CloseRequested)
+            {
+                string installDir = ResolveInstallDir(game);
+                if (!string.IsNullOrWhiteSpace(installDir))
+                {
+                    LoggingService.Info("Launcher", $"'{game.Name}': the process followed ({standInName}) was not the game's own program and has exited after {ranFor.TotalSeconds:0}s - looking for '{ProcessPathResolver.RecordedExeName(game.ExecutablePath)}' under '{installDir}'.");
+                    try { process.Dispose(); } catch { /* already disposed */ }
+                    if (ReferenceEquals(session.Process, process)) session.Process = null;
+                    TrackInstallDirSession(session, installDir, "its install folder", InstallDirLaunchTimeout, ownsProcessAlready: true);
                     return;
                 }
             }
@@ -82,6 +101,8 @@ public partial class ProcessLauncherService
 
             if (!followRealGame) WaitForWindowAndActivate(session, process);
 
+            if (standInWithin != null) WatchForRecordedGame(session, process, () => Interlocked.Exchange(ref exitHandled, 1) == 0);
+
             // Handle it inline too in case the process had already exited before the line
             // above and the async callback hasn't run yet - exitHandled guards against
             // double-processing if it fires anyway.
@@ -108,13 +129,116 @@ public partial class ProcessLauncherService
                 // No Exited handler means nothing would ever end the session. A game running as
                 // administrator refuses the handle the event needs, but it can still be seen by
                 // its process id, so watch for that instead; ending the session here would put
-                // the Performance Profile back while the game is still running.
-                if (!TryWatchByPolling(session, process))
+                // the Performance Profile back while the game is still running. Its end goes through
+                // OnExited, as the event's would: a stand-in that runs as administrator (an updater)
+                // still has the game looked for again, and is still swapped for the game's own program.
+                if (!TryWatchByPolling(session, process, () => OnExited(process, EventArgs.Empty)))
                 {
-                    FinishSession(session, gameRan: true, "could not watch the process");
+                    OnExited(process, EventArgs.Empty);
+                }
+                else if (standInWithin != null)
+                {
+                    WatchForRecordedGame(session, process, () => Interlocked.Exchange(ref exitHandled, 1) == 0);
                 }
             }
         }
+    }
+
+    /// <summary>The game's own program usually follows its stand-in within seconds. After this long the watch for it
+    /// scans only every <see cref="SlowRecordedGameWatchTicks"/> polls: a full process scan every 2 s for a whole
+    /// session is time taken from the game.</summary>
+    private static readonly TimeSpan FastRecordedGameWatch = TimeSpan.FromMinutes(2);
+    private const int SlowRecordedGameWatchTicks = 15;
+
+    /// <summary>Whether the watch for the game's own program scans on this poll: every poll at first and while a
+    /// sighting is being confirmed, then one in <see cref="SlowRecordedGameWatchTicks"/>.</summary>
+    internal static bool ScanForRecordedGameThisTick(TimeSpan watchedFor, int tick, bool sightingPending) =>
+        sightingPending || watchedFor <= FastRecordedGameWatch || tick % SlowRecordedGameWatchTicks == 0;
+
+    /// <summary>
+    /// The session is following a stand-in (a process under the install folder that is not the game's recorded
+    /// executable, such as Red Dead Redemption 2's PlayRDR2.exe). Watches the install folder for the recorded
+    /// executable and, once it is seen on several polls in a row, follows that instead, so the session ends
+    /// when the game does. Without this, a stand-in that stays open as long as the game (PlayRDR2.exe does)
+    /// closed with it, and the session then spent minutes looking for a game that had already quit.
+    /// <paramref name="claimStandIn"/> takes the stand-in's exit handling for the switch; false means the
+    /// stand-in has already exited and its own handling has run.
+    /// </summary>
+    private void WatchForRecordedGame(ActiveGameSession session, Process standIn, Func<bool> claimStandIn)
+    {
+        var game = session.Game;
+        string? recordedExe = ProcessPathResolver.RecordedExeName(game.ExecutablePath);
+        string installDir = ResolveInstallDir(game);
+        if (recordedExe == null || string.IsNullOrWhiteSpace(installDir)) return;
+
+        int standInPid;
+        try { standInPid = standIn.Id; } catch (InvalidOperationException) { return; /* already gone */ }
+        string normalizedInstallDir = ProcessPathResolver.NormalizeDirectory(installDir);
+        DateTime playtimeFrom = session.StartedAt;
+        DateTime watchStartedUtc = DateTime.UtcNow;
+
+        int? pendingPid = null;
+        int sightings = 0;
+        int ticks = 0;
+        Poller? poller = null;
+        poller = new Poller(InstallDirLaunchPollInterval, () =>
+        {
+            if (Volatile.Read(ref session.Finished) != 0 || !ReferenceEquals(session.Process, standIn)) return false;
+            if (!ScanForRecordedGameThisTick(DateTime.UtcNow - watchStartedUtc, ++ticks, pendingPid != null)) return true;
+
+            if (FindRecordedGame(ProcessPathResolver.FindProcessesUnderDirectory(normalizedInstallDir), recordedExe, standInPid) is not { } found)
+            {
+                pendingPid = null;
+                sightings = 0;
+                return true;
+            }
+
+            sightings = pendingPid == found.Pid ? sightings + 1 : 1;
+            pendingPid = found.Pid;
+            if (sightings < RequiredStableSightings) return true;
+
+            Process? real = null;
+            try
+            {
+                real = Process.GetProcessById(found.Pid);
+                if (real.HasExited) { real.Dispose(); real = null; }
+            }
+            catch { real = null; /* gone again */ }
+            if (real == null)
+            {
+                pendingPid = null;
+                sightings = 0;
+                return true;
+            }
+
+            if (!claimStandIn())
+            {
+                // The stand-in exited in the same moment; its exit handling is already looking for the game.
+                real.Dispose();
+                return false;
+            }
+
+            string standInName = string.Empty;
+            try { standInName = standIn.ProcessName; } catch (Exception) { /* exited */ }
+            LoggingService.Info("Launcher", $"'{game.Name}': its own program is running (PID {found.Pid}, {Path.GetFileName(found.Path)}); following it instead of {standInName} (PID {standInPid}).");
+            AttachExitTracking(session, real, allowStubHandoff: false);
+            session.StartedAt = playtimeFrom; // playtime still counts from the first process
+            try { standIn.Dispose(); } catch (Exception) { /* already disposed */ }
+            return false;
+        });
+        var previousCancel = session.CancelTracking;
+        session.CancelTracking = () => { previousCancel?.Invoke(); poller?.Stop(); };
+    }
+
+    /// <summary>The game's recorded executable among <paramref name="candidates"/>, other than the stand-in itself.</summary>
+    internal static ProcessPathResolver.ProcessUnderDirectory? FindRecordedGame(
+        IReadOnlyList<ProcessPathResolver.ProcessUnderDirectory> candidates, string recordedExeName, int standInPid)
+    {
+        foreach (var candidate in candidates)
+        {
+            if (candidate.Pid != standInPid && ProcessPathResolver.IsRecordedExe(candidate.Path, recordedExeName)) return candidate;
+        }
+        return null;
     }
 
     private static readonly TimeSpan ExitPollInterval = TimeSpan.FromSeconds(2);
@@ -242,10 +366,10 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
-    /// Ends the session when the process is gone, for a process whose exit can't be subscribed to.
-    /// False when it isn't running to begin with, so the caller ends the session at once.
+    /// Calls <paramref name="onGone"/> when the process is gone, for a process whose exit can't be subscribed to.
+    /// False when it isn't running to begin with, so the caller handles its end at once.
     /// </summary>
-    private bool TryWatchByPolling(ActiveGameSession session, Process process)
+    private bool TryWatchByPolling(ActiveGameSession session, Process process, Action onGone)
     {
         int pid;
         try { pid = process.Id; }
@@ -259,8 +383,10 @@ public partial class ProcessLauncherService
         poller = new Poller(ExitPollInterval, () =>
         {
             if (Volatile.Read(ref session.Finished) != 0) return false;
+            // The session has moved on to the game's own program: this process ending ends nothing.
+            if (session.Process != null && !ReferenceEquals(session.Process, process)) return false;
             if (IsStillRunning(pid, exePath)) return true;
-            FinishSession(session, gameRan: true, "process exited");
+            onGone();
             return false;
         });
         session.CancelTracking = () => poller?.Stop();

@@ -244,6 +244,7 @@ public static class DiagnosticReportService
         sb.AppendLine($"- Restore point before presets: {OnOff(s.CreateRestorePointBeforeTweaks)}; verbose logging: {OnOff(s.VerboseLoggingEnabled)}; beta updates: {OnOff(s.IncludePrereleaseUpdates)}");
         sb.AppendLine($"- Show/hide hotkey: {(string.IsNullOrWhiteSpace(s.GlobalManageHotkey) ? "none" : s.GlobalManageHotkey)}");
         sb.AppendLine($"- Tray menu hotkey: {(string.IsNullOrWhiteSpace(s.TrayMenuHotkey) ? "none" : s.TrayMenuHotkey)}");
+        sb.AppendLine($"- Launch last played hotkey: {(string.IsNullOrWhiteSpace(s.LaunchLastPlayedHotkey) ? "none" : s.LaunchLastPlayedHotkey)}");
         // What a layout or "looks wrong" report needs.
         sb.AppendLine($"- Appearance: theme {s.ThemeId}, text size {s.TextSizePercent}%, font {(string.IsNullOrWhiteSpace(s.FontName) ? "default" : s.FontName)}, theme background {OnOff(s.ShowThemeBackground)}");
         sb.AppendLine($"- Library: view {s.LibraryViewMode}, details on hover {OnOff(s.PosterDetailsOnHover)}, metadata refresh {s.MetadataRefreshInterval}, check for updates {OnOff(s.AutoCheckForUpdates)}");

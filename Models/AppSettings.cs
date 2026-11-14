@@ -42,10 +42,11 @@ public class AppSettings
     public bool UbisoftIntegrationEnabled { get; set; } = true;
     public bool XboxIntegrationEnabled { get; set; } = true;
     public bool BattleNetIntegrationEnabled { get; set; } = true;
+    public bool RockstarIntegrationEnabled { get; set; } = true;
     /// <summary>
     /// "Keep game launchers minimized when launching a game": each launcher's own start-quietly switch.
     /// Steam cold-starts with -silent, Epic gets its silent launch link, and GOG Galaxy starts with
-    /// /launchViaAutostart. The EA app and Ubisoft Connect have no such switch, so their windows are
+    /// /launchViaAutostart. The EA app, Ubisoft Connect and the Rockstar Games Launcher have no such switch, so their windows are
     /// left as they are. Xbox launches never open the Xbox app, and Battle.net is left alone because
     /// its launch retries and Play-tab fallback need its window.
     /// </summary>
@@ -86,6 +87,10 @@ public class AppSettings
     /// again. Blank means none. A settings file from before 1.4.7 gets the default; a game or tool
     /// already on the combo keeps it (see HotkeyManager.RegisterHotkeys).</summary>
     public string SuspendGameHotkey { get; set; } = "Ctrl+Alt+P";
+    /// <summary>Launches the game played most recently (or brings it forward if it is running). Blank
+    /// means none. A settings file from before 1.7.8 gets the default; a game or tool already on the
+    /// combo keeps it (see HotkeyManager.RegisterHotkeys).</summary>
+    public string LaunchLastPlayedHotkey { get; set; } = "Ctrl+Alt+L";
     public string LastCategoryFilter { get; set; } = LibraryConstants.AllCategory;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
 

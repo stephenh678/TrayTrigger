@@ -563,7 +563,7 @@ public sealed class BackupService
         return roots;
     }
 
-    /// <summary>Where GOG Galaxy, the EA app, Epic and Ubisoft Connect say each game is installed now.</summary>
+    /// <summary>Where GOG Galaxy, the EA app, Epic, Ubisoft Connect and the Rockstar Games Launcher say each game is installed now.</summary>
     private static IReadOnlyDictionary<(LauncherPlatform, string), (string, string?)> ReadLauncherInstalls()
     {
         var installs = new Dictionary<(LauncherPlatform, string), (string, string?)>();
@@ -585,6 +585,7 @@ public sealed class BackupService
         Read(LauncherPlatform.Ea, () => new EaScannerService().ScanInstalledGames([]).Select(g => (g.ContentId, g.InstallDir, g.ExePath)));
         Read(LauncherPlatform.Epic, () => new EpicScannerService().ScanInstalledGames([]).Select(g => (g.AppName, g.InstallDir, g.ExePath)));
         Read(LauncherPlatform.Ubisoft, () => new UbisoftScannerService().ScanInstalledGames([]).Select(g => (g.GameId, g.InstallDir, g.ExePath)));
+        Read(LauncherPlatform.Rockstar, () => new RockstarScannerService().ScanInstalledGames([]).Select(g => (g.GameId, g.InstallDir, g.ExePath)));
         return installs;
     }
 }

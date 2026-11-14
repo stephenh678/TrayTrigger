@@ -265,6 +265,7 @@ public class GameCardViewModel : ViewModelBase
     public bool IsUbisoftGame => Game.IsUbisoftGame;
     public bool IsXboxGame => Game.IsXboxGame;
     public bool IsBattleNetGame => Game.IsBattleNetGame;
+    public bool IsRockstarGame => Game.IsRockstarGame;
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
@@ -618,6 +619,9 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowPosterArt));
     }
 
+    /// <summary>Re-reads the last-played text, which depends on today's date as well as the game.</summary>
+    public void RefreshLastPlayedDisplay() => OnPropertyChanged(nameof(LastPlayedDisplay));
+
     public void RefreshProperties()
     {
         CheckAvailability();
@@ -635,6 +639,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsUbisoftGame));
         OnPropertyChanged(nameof(IsXboxGame));
         OnPropertyChanged(nameof(IsBattleNetGame));
+        OnPropertyChanged(nameof(IsRockstarGame));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));

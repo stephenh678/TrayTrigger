@@ -120,7 +120,7 @@ public partial class App
             var previewDialog = new ThemeEditDialog(themeEditorWithPreview);
             themeEditorWithPreview.IsPreviewOpen = true;
             Dialog("Edit Theme (preview open)", previewDialog);
-            Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()));
+            Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new(), new()));
             Dialog("Welcome", new WelcomeDialog());
             Dialog("Confirm", new ModernDialog("Remove game", "Remove this game from your library?", "This only removes it from TrayTrigger. The game's files are not touched.", "Remove", "Cancel", DialogIconType.Warning));
             Dialog("Quick input", new QuickInputDialog("Rename", "Rename the category", "Name", "Favorites", null));

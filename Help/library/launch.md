@@ -10,7 +10,7 @@ Pressing Play (or the game's hotkey) on a game that is already running, starting
 
 TrayTrigger decides how to start a game from what the entry is, not from the path alone:
 
-- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, Battle.net** - imported by Scan for Games, or linked to a platform record when you dropped its exe. These start through their own client (or, for Game Pass, through Windows), so the client can sign you in, sync saves, and run its overlay. The executable path is kept for the icon and "Open File Location", but the client is what runs the game.
+- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, Battle.net, Rockstar Games Launcher** - imported by Scan for Games, or linked to a platform record when you dropped its exe. These start through their own client (or, for Game Pass, through Windows), so the client can sign you in, sync saves, and run its overlay. The executable path is kept for the icon and "Open File Location", but the client is what runs the game. For an Epic game that starts through another launcher (Red Dead Redemption 2 starts PlayRDR2.exe, which hands over to the Rockstar Games Launcher), the path is the game's own program as Epic names it (RDR2.exe). TrayTrigger follows the hand-over program until the game's own program starts, then follows the game, so the session ends when you quit. Launch this executable directly runs that program without either launcher, which such a game may not allow.
 - **Local** - anything else: an exe, a `.lnk` shortcut, or a `.url` file. Runs directly.
 - **Launcher links** - a `.url` whose target is a launcher scheme such as `steam://` or `com.epicgames.launcher://` is opened as a link. Only the schemes TrayTrigger knows are allowed; anything else is refused rather than handed to Windows. A bare link has no exit signal, so it supports a pre-launch script only.
 
@@ -19,8 +19,8 @@ TrayTrigger decides how to start a game from what the entry is, not from the pat
 Shown at the top of the card for a platform game; a Local game has none.
 
 - **Imported from / Linked to** - which platform record the entry is tied to and the id the launcher knows it by. Convert to Local Game drops the link and turns the entry into a plain exe launch (not offered for Xbox / Game Pass, whose exe can't run outside its package). Until you press Save Changes, Undo beside it puts the link back. Once saved, the game stays Local: a scan sees its executable is already in your library and does not offer the platform's record again.
-- **Launch this executable directly** - for GOG, EA, Epic, Ubisoft and Steam entries: bypass the client and run the executable below, with the arguments and Run as Administrator from the fields below applied. You lose whatever the client provides (sign-in, cloud saves, overlay). Not offered for Xbox (a GDK exe can't run outside its package) or Battle.net (the game needs the sign-in token only the client passes).
-- **Close the launcher after this game exits** - when the session ends, the client (Steam, GOG Galaxy, EA app, Epic, Ubisoft Connect, the Xbox app, or Battle.net) is closed, so it doesn't stay resident with its overlay and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows. "Keep game launchers minimized when launching a game" in Settings > Launch & Performance > Launching Games does this for every game.
+- **Launch this executable directly** - for GOG, EA, Epic, Ubisoft, Rockstar and Steam entries: bypass the client and run the executable below, with the arguments and Run as Administrator from the fields below applied. You lose whatever the client provides (sign-in, cloud saves, overlay). Not offered for Xbox (a GDK exe can't run outside its package) or Battle.net (the game needs the sign-in token only the client passes).
+- **Close the launcher after this game exits** - when the session ends, the client (Steam, GOG Galaxy, EA app, Epic, Ubisoft Connect, the Xbox app, Battle.net, or the Rockstar Games Launcher) is closed, so it doesn't stay resident with its overlay and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows. "Keep game launchers minimized when launching a game" in Settings > Launch & Performance > Launching Games does this for every game.
 - **Launch through the Steam client** - offered for a Local game that has a Steam App ID. Ticking it makes the entry a Steam game, launched with `steam://rungameid/`, and the options above take over. Leave it off for a standalone game that merely shares a Steam listing. It is also offered right after Convert to Local Game, and ticking it there is kept when you save.
 
 ## Keeping the launcher minimized
@@ -30,7 +30,7 @@ Shown at the top of the card for a platform game; a Local game has none.
 - Steam: when Steam isn't running, it starts minimized to the tray and launches the game in the same step. An open Steam is left as it is.
 - Epic Games Launcher: the launch asks Epic for a silent start.
 - GOG Galaxy: when Galaxy isn't running, it's started in the background with the game. When Galaxy is already open, the game's own exe is started instead.
-- The EA app and Ubisoft Connect have no way to start quietly, so their windows are left as they are.
+- The EA app, Ubisoft Connect and the Rockstar Games Launcher have no way to start quietly, so their windows are left as they are.
 - Xbox games start through Windows without opening the Xbox app. Battle.net is left alone, because it has to sign in before the game can start.
 
 ## Executable / Shortcut Target
@@ -42,7 +42,7 @@ The file or link to run for a Local game, and the file the icon comes from for e
 Two jobs:
 
 1. The folder the game is started in, for a direct launch. Blank means the executable's own folder, which is right for almost every game.
-2. **The folder TrayTrigger watches** to know the game is running. Client launches (GOG, EA, Epic, Ubisoft, Battle.net), prelauncher stubs and scripts hand off to a process TrayTrigger never started, so it finds the game by looking for a process running from inside this folder. Close Game and Force Close use the same folder to know what to close or kill when TrayTrigger holds no handle to the game itself; a folder where Windows' own programs run (the Windows folder, a drive root, the top of Program Files) is never used. If a game "never appears" after launching and its profile rolls back after three minutes, this folder is usually the wrong one.
+2. **The folder TrayTrigger watches** to know the game is running. Client launches (GOG, EA, Epic, Ubisoft, Battle.net, Rockstar), prelauncher stubs and scripts hand off to a process TrayTrigger never started, so it finds the game by looking for a process running from inside this folder. Close Game and Force Close use the same folder to know what to close or kill when TrayTrigger holds no handle to the game itself; a folder where Windows' own programs run (the Windows folder, a drive root, the top of Program Files) is never used. If a game "never appears" after launching and its profile rolls back after three minutes, this folder is usually the wrong one.
 
 Steam games are tracked through Steam's own running flag instead, and Battle.net games through the folder Battle.net currently records for them, so a game moved with Battle.net's "Move install" is still found.
 
@@ -53,7 +53,7 @@ Passed exactly as typed. Where they go depends on the route:
 - **Direct launches** - appended to the command line.
 - **Steam** - sent through Steam's launch URL, the same as Steam's own Launch Options.
 - **Xbox / PC Game Pass** - passed to the app on activation. Most GDK titles ignore them.
-- **GOG Galaxy, EA, Epic, Ubisoft Connect** - the client's launch command can't carry them. Set them in the client, or turn on "launch this executable directly".
+- **GOG Galaxy, EA, Epic, Ubisoft Connect, Rockstar Games Launcher** - the client's launch command can't carry them. Set them in the client, or turn on "launch this executable directly".
 - **Battle.net** - can't carry them either, and there is no direct option. Set them in Battle.net's game settings.
 
 ## Run as Administrator

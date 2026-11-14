@@ -28,10 +28,11 @@ public partial class ToolEditDialog : Window
         {
             if (e.Key != Key.Escape || e.Handled || !viewModel.HasUnsavedChanges) return;
             e.Handled = true;
-            if (ModernDialog.Confirm(this, "Discard Changes", "Discard your changes?",
-                    "Nothing you changed here has been saved.", "Discard", "Keep Editing"))
+            switch (ModernDialog.PromptSaveChanges(this, viewModel.Name))
             {
-                viewModel.CancelCommand.Execute(null);
+                // A save that closes goes through RequestClose; one a field refuses leaves the dialog open, saying why.
+                case DialogResultOption.Primary: viewModel.SaveCommand.Execute(null); break;
+                case DialogResultOption.Secondary: viewModel.CancelCommand.Execute(null); break;
             }
         };
 

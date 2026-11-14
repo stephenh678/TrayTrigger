@@ -18,6 +18,16 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
     private bool _isExplicitExit = false;
+    private DateTime _lastPlayedLabelsDay = DateTime.MinValue;
+
+    /// <summary>Re-reads each card's "Today, 6:47 PM" / "Yesterday" label once the calendar day has changed since it was last read.</summary>
+    private void RefreshLastPlayedLabels()
+    {
+        var today = DateTime.Today;
+        if (today == _lastPlayedLabelsDay) return;
+        _lastPlayedLabelsDay = today;
+        foreach (var card in _viewModel.Games) card.RefreshLastPlayedDisplay();
+    }
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -44,6 +54,17 @@ public partial class MainWindow : Window
         ContentRendered += (_, _) => Dispatcher.BeginInvoke(RealizeSearchPages, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         // A search left open when the window goes to the tray isn't there when it comes back.
         IsVisibleChanged += (_, _) => { if (!IsVisible) SearchOverlay.Close(restoreFocus: false); };
+
+        // "Today" and "Yesterday" under a card are worked out when the card is built, so a window left
+        // in the tray overnight would still say "Today". Re-read them when the window comes back or is
+        // activated, and when the day changes while it is open.
+        IsVisibleChanged += (_, _) => { if (IsVisible) RefreshLastPlayedLabels(); };
+        Activated += (_, _) => RefreshLastPlayedLabels();
+        var dayWatch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        dayWatch.Tick += (_, _) => RefreshLastPlayedLabels();
+        dayWatch.Start();
+        // A running timer is held by the dispatcher, and it holds this window: a window replaced after a failure must let go.
+        Closed += (_, _) => dayWatch.Stop();
 
         // The theme's picture is held only while the window is on screen: loaded when it first shows, let go when it hides to the tray.
         IsVisibleChanged += (_, _) => ThemeService.Instance.WindowShown = IsVisible;
@@ -748,9 +769,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<GameCandidate> folderCandidates)
+    private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<GameCandidate> folderCandidates)
     {
-        var dialog = new ScanForGamesDialog(_viewModel, steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, folderCandidates);
+        var dialog = new ScanForGamesDialog(_viewModel, steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, folderCandidates);
         dialog.Owner = this;
         dialog.ShowDialog();
     }

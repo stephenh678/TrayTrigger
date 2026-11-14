@@ -117,6 +117,23 @@ public class FolderScannerServiceTests : IDisposable
         Assert.Equal("Fatekeeper", Assert.Single(results).Name);
     }
 
+    [Fact]
+    public void RockstarLauncherFolders_AreNotGames()
+    {
+        // Program Files\Rockstar Games holds the launcher and Social Club beside the games it installs.
+        CreateGameFolder("Max Payne 3", "MaxPayne3.exe");
+        string launcher = CreateGameFolder("Launcher", "Launcher.exe");
+        File.WriteAllBytes(Path.Combine(launcher, "LauncherPatcher.exe"), new byte[1024]);
+        CreateGameFolder("Social Club", "SocialClubHelper.exe");
+
+        var known = new FolderScannerService().ScanKnownLibraryLocation(_tempDir);
+        Assert.Equal("Max Payne 3", Assert.Single(known).Name);
+
+        var dropped = new FolderScannerService().ScanFolderOrLibrary(launcher);
+        Assert.Empty(dropped.SingleGameCandidates);
+        Assert.Empty(dropped.DiscoveredGames);
+    }
+
     /// <summary>
     /// The client folder itself dropped on the window (or added as a scan location): the subfolder
     /// filter above doesn't see it, so the single-game fallback used to scan its root and offer

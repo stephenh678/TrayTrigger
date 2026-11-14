@@ -10,7 +10,8 @@ namespace TrayTrigger.Models;
 /// SteamAppId), <see cref="EaContentId"/> (EA candidates, same reasoning),
 /// <see cref="EpicAppName"/> (Epic candidates, same reasoning), <see cref="UbisoftGameId"/>
 /// (Ubisoft candidates, same reasoning), <see cref="XboxAumid"/> (Xbox candidates, same
-/// reasoning), <see cref="BattleNetUid"/> (Battle.net candidates, same reasoning), or
+/// reasoning), <see cref="BattleNetUid"/> (Battle.net candidates, same reasoning),
+/// <see cref="RockstarGameId"/> (Rockstar candidates, same reasoning), or
 /// <see cref="FolderPath"/> (a whole folder the scanner must not look inside - added by hand in
 /// Settings for a Utilities or Mods folder under a scan location) is set, depending on where the
 /// candidate came from.
@@ -29,4 +30,5 @@ public class IgnoredGamePath
     public string? UbisoftGameId { get; set; }
     public string? XboxAumid { get; set; }
     public string? BattleNetUid { get; set; }
+    public string? RockstarGameId { get; set; }
 }

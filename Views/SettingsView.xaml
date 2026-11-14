@@ -436,6 +436,15 @@
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Suspend works" Margin="0,4,0,0" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/suspend"/>
+
+                            <TextBlock Style="{StaticResource StrongText}" Text="Launch Last Played Game Hotkey" Margin="0,14,0,6"/>
+                            <views:HotkeyRecorderBox AutomationProperties.Name="Launch Last Played Game Hotkey" x:Name="LastPlayedHotkeyBox" Hotkey="{Binding LaunchLastPlayedHotkey}" OwnerId="{x:Static services:HotkeyManager.LastPlayedOwnerId}"
+                                                     ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding Message, ElementName=LastPlayedHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=LastPlayedHotkeyBox}"
+                                       Visibility="{Binding HasMessage, ElementName=LastPlayedHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                       FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <TextBlock Text="Press this key combination anywhere in Windows to play the game you played most recently, with its profile, tools and scripts, the same as its Play button. If it is already running, it comes to the front (default: Ctrl+Alt+L)."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
@@ -632,6 +641,17 @@
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via Blizzard's install records, on any drive. Games launch through Battle.net - no direct-exe option, because Battle.net signs the game in. If Battle.net is closed it's started for you. Limitation: right after Battle.net's own cache is cleared, a newly installed game's launch code can't be read until Battle.net has been opened once."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable Rockstar Games Launcher library integration" IsChecked="{Binding RockstarIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable Rockstar Games Launcher library integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via Rockstar's install records, on any drive. Games launch through the Rockstar Games Launcher. A Rockstar game bought on Epic or Steam is found by that launcher's integration instead, so it isn't listed twice."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                         </StackPanel>

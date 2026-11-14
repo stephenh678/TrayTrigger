@@ -162,7 +162,7 @@ public partial class GameEditViewModel : ViewModelBase
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
         _launchDirectly = game.LaunchDirectly;
-        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
+        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || game.IsRockstarGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
         _cpuAffinity = game.CpuAffinity;
         _initialCpuAffinity = game.CpuAffinity;
@@ -242,7 +242,7 @@ public partial class GameEditViewModel : ViewModelBase
     /// command again only after a click, a key or a focus change, so a change that lands later (an await finishing)
     /// asks here too. The request is coalesced: a burst of changes asks once.
     /// </summary>
-    protected override void OnPropertyChanged(string? propertyName = null)
+    protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         base.OnPropertyChanged(propertyName);
         var dispatcher = Application.Current?.Dispatcher;
@@ -573,6 +573,8 @@ public partial class GameEditViewModel : ViewModelBase
             SourceGame.IsBattleNetGame = false;
             SourceGame.BattleNetUid = null;
             SourceGame.BattleNetProgramId = null;
+            SourceGame.IsRockstarGame = false;
+            SourceGame.RockstarGameId = null;
             SourceGame.ImportedFrom = null;
             SourceGame.LaunchDirectly = false;
         }

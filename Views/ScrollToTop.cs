@@ -14,7 +14,18 @@ public static class ScrollToTop
 {
     public static readonly DependencyProperty ResetOnProperty = DependencyProperty.RegisterAttached(
         "ResetOn", typeof(object), typeof(ScrollToTop),
-        new PropertyMetadata(null, (d, _) => (d as ScrollViewer)?.ScrollToTop()));
+        new PropertyMetadata(null, OnResetOnChanged));
+
+    /// <summary>
+    /// Only a real change of tab scrolls. The binding hands over a freshly boxed value whenever the view
+    /// model refreshes (All, then All again), and a property of type object counts that as a change, so
+    /// ticking a box on Edit Game's All tab used to throw the page back to the top.
+    /// </summary>
+    private static void OnResetOnChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (Equals(e.OldValue, e.NewValue)) return;
+        (d as ScrollViewer)?.ScrollToTop();
+    }
 
     public static object? GetResetOn(DependencyObject d) => d.GetValue(ResetOnProperty);
     public static void SetResetOn(DependencyObject d, object? value) => d.SetValue(ResetOnProperty, value);

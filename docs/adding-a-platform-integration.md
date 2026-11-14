@@ -1,7 +1,7 @@
 # Adding a game-platform integration
 
 How TrayTrigger integrates a launcher platform (Steam, GOG, EA App, Epic, Ubisoft Connect, Xbox /
-PC Game Pass and Battle.net so far) into Scan for Games, manual import, launching and session tracking.
+PC Game Pass, Battle.net and the Rockstar Games Launcher so far) into Scan for Games, manual import, launching and session tracking.
 
 This used to be a chronological build log - GOG, then EA, Epic, Ubisoft, Xbox - where each chapter
 added rules and later chapters renamed or overrode earlier ones. It is now organised as
@@ -100,10 +100,11 @@ Probing techniques that worked:
 | Steam | Library folders + app manifests | `SteamAppId` | `steam://rungameid/<id>`, or `steam://run/<id>//<args>/` when arguments are set | Edit Game "launch directly" | Tracked by Steam's per-app Running flag, then the game process via `FindInstallDirForAppId` |
 | GOG | `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games\<id>` (path + exe) | `GogGameId` | `GalaxyClient.exe [/launchViaAutostart] /command=runGame /gameId=<id> /path=<dir>` - one `/name=value` token each; `/launchViaAutostart` (as Playnite sends it) only with "Keep game launchers minimized" | Direct exe when Galaxy is **running** (warm launch is a silent no-op) or absent | DLC shares the key; filter by `dependsOn` |
 | EA | `Origin Games\<id>` registry (ID + name only) + `__Installer\installerdata.xml` under default roots | `EaContentId` | `origin2://game/launch/?offerIds=<id>` | Direct exe | **Gap:** custom install folders aren't found (EA's local cache is encrypted). Stated in the toggle |
-| Epic | `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` JSON | `EpicAppName` | `com.epicgames.launcher://apps/<AppName>?action=launch[&silent=true]` - `&silent=true` only with "Keep game launchers minimized" | Direct exe | Everything needed is in the manifest |
+| Epic | Classic launcher: `%ProgramData%\Epic\EpicGamesLauncher\Data\Manifests\*.item` JSON. New launcher (eglv2): `%LocalAppData%\com.epicgames.eglv2\installations.jsonl` (last record per `installationId`; `artifactId` is the AppName), titles from `cache\prod\catalog-cache.json` / `library-cache.json`. The recorded exe is `MainWindowProcessName` (manifest field / catalog custom attribute) when it is in the install, since the launch exe can be a redirector (PlayRDR2.exe → RDR2.exe) | `EpicAppName` | `com.epicgames.launcher://apps/<AppName>?action=launch[&silent=true]` - `&silent=true` only with "Keep game launchers minimized" | Direct exe | Everything needed is in the manifest |
 | Ubisoft | `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs\<id>` (`InstallDir` only, forward slashes) | `UbisoftGameId` | `uplay://launch/<id>/0` | Direct exe | No name or exe in the records: folder scan with `preferExe: false`. Registered exe can be a chained stub (R6 Extraction) |
 | Xbox | `HKLM\SOFTWARE\Microsoft\GamingServices\GameConfig\<PackageFullName>` + per-user AppModel repository | `XboxAumid` | `IApplicationActivationManager` on the AUMID (`explorer shell:AppsFolder\<AUMID>` fallback) | **None** - GDK exes need package identity | Track by the junction target, not the WindowsApps root. Full name and root change every update, so they're re-resolved at launch. **Gap:** legacy UWP Store games. Accepted: always-resident tray helpers (Roblox) block the profile |
 | Battle.net | *Built in 1.4.2-beta.2 (`BattleNetScannerService`, `BattleNetCatalog`, `BattleNetCodeStore`); research and tests in section 3.1.* Uninstall entries: `--uid=<uid>` in `UninstallString`, `InstallLocation`, `DisplayName`; `DisplayIcon` is usually the game exe but can be a switcher (StarCraft II) | `BattleNetUid` (e.g. `btlr`, `hs_beta`), plus the saved launch code `BattleNetProgramId` and a backup uid → code map in `%APPDATA%\TrayTrigger\battlenet-codes.json` | `Battle.net.exe --exec="launch <program id>"`, where the program ID comes from the client's local catalog cache, not from the uid | **None** - the client passes an SSO token the game needs (`-launcherlogin`, `-sso=1`). `--exec="focus play"` when no program ID is found | A cold client drops the command: resend every 3 s until a process appears under the install folder (duplicates are harmless). Close `Battle.net`, not `Agent`. Skip the client's own `battle.net` uid |
+| Rockstar | `HKLM\SOFTWARE\WOW6432Node\Rockstar Games\<Title>` (both registry views): `InstallFolder` only. `InstallFolderEpic` / `InstallFolderSteam` mark a copy bought on that store, left to its scanner (RDR2 from Epic, verified on the test machine). `titles.dat` is encrypted. Exe from `ScanFolder` | `RockstarGameId` = the key name, also the trusted title | `Launcher.exe -launchTitleInFolder <install folder>` (the switch is in Launcher.exe's strings; Launcher.exe from the `Launcher` key's `InstallFolder`) | Direct exe | **Not tested against a real Rockstar-launcher install** (none available, 2026-11-13); cold/warm untested. Skip the `Launcher` and `Rockstar Games Social Club` keys. Close `Launcher.exe` only from Rockstar's folder - the name is generic. The launcher's log (`Documents\Rockstar Games\Launcher\launcher.log`) records each launch's path and command line |
 
 ### 3.1 Battle.net research and launch tests (2026-09-12)
 
@@ -313,10 +314,10 @@ catches the rest.
 | ⚠ Dev diagnostics | `App.DevDiagnostics.cs` constructs `ScanForGamesDialog` directly |
 | ⚠ Folder scans | If the client can be installed under a Scan Location, skip its install folder in `FolderScannerService` |
 
-Seven platforms each have their own copy of the import, ignore, bucket, scan-dialog and badge rows,
+Eight platforms each have their own copy of the import, ignore, bucket, scan-dialog and badge rows,
 by the user's choice (principle 10). Merging them into one platform descriptor - ID, label, logo,
 category, route, scanner - is a possible future option the user decides on; it is not part of adding
-a platform. When one platform's copy changes, check the other six.
+a platform. When one platform's copy changes, check the other seven.
 
 ## 5. Pitfalls
 

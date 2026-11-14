@@ -22,6 +22,7 @@ public static class LibraryConstants
     public const string UbisoftCategory = "Ubisoft";
     public const string XboxCategory = "Xbox";
     public const string BattleNetCategory = "Battle.net";
+    public const string RockstarCategory = "Rockstar";
 
     /// <summary>
     /// Every platform's default category name. The single source of truth for "is this category
@@ -32,7 +33,7 @@ public static class LibraryConstants
     /// </summary>
     public static readonly IReadOnlySet<string> PlatformCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        SteamCategory, GogCategory, EaCategory, EpicCategory, UbisoftCategory, XboxCategory, BattleNetCategory
+        SteamCategory, GogCategory, EaCategory, EpicCategory, UbisoftCategory, XboxCategory, BattleNetCategory, RockstarCategory
     };
 
     /// <summary>True when Steam metadata enrichment may overwrite <paramref name="category"/> with
@@ -68,6 +69,7 @@ public static class LibraryConstants
          : game.IsUbisoftGame ? UbisoftCategory
          : game.IsXboxGame ? XboxCategory
          : game.IsBattleNetGame ? BattleNetCategory
+         : game.IsRockstarGame ? RockstarCategory
          : game.HasSteamOverlay ? SteamCategory
          : null;
 }

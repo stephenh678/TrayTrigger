@@ -167,6 +167,7 @@ public partial class LibraryViewModel
             { Ubisoft: { } u } => string.Equals(g.Game.UbisoftGameId, u.GameId, StringComparison.OrdinalIgnoreCase),
             { Xbox: { } x } => string.Equals(g.Game.XboxAumid, x.Aumid, StringComparison.OrdinalIgnoreCase),
             { BattleNet: { } b } => string.Equals(g.Game.BattleNetUid, b.Uid, StringComparison.OrdinalIgnoreCase),
+            { Rockstar: { } r } => string.Equals(g.Game.RockstarGameId, r.GameId, StringComparison.OrdinalIgnoreCase),
             _ => false
         });
     }
@@ -239,6 +240,7 @@ public partial class LibraryViewModel
             DetectedLauncher.Ubisoft => game.IsUbisoftGame,
             DetectedLauncher.Xbox => game.IsXboxGame,
             DetectedLauncher.BattleNet => game.IsBattleNetGame,
+            DetectedLauncher.Rockstar => game.IsRockstarGame,
             _ => false
         };
     }
@@ -251,6 +253,7 @@ public partial class LibraryViewModel
         DetectedLauncher.Epic => LauncherPlatform.Epic,
         DetectedLauncher.Xbox => LauncherPlatform.Xbox,
         DetectedLauncher.BattleNet => LauncherPlatform.BattleNet,
+        DetectedLauncher.Rockstar => LauncherPlatform.Rockstar,
         _ => LauncherPlatform.Ubisoft
     };
 

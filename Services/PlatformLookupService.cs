@@ -19,6 +19,7 @@ public sealed class PlatformMatch
     public DiscoveredUbisoftGame? Ubisoft { get; init; }
     public DiscoveredXboxGame? Xbox { get; init; }
     public DiscoveredBattleNetGame? BattleNet { get; init; }
+    public DiscoveredRockstarGame? Rockstar { get; init; }
 
     private PlatformMatch(string platform) => Platform = platform;
 
@@ -29,8 +30,9 @@ public sealed class PlatformMatch
     public static PlatformMatch ForUbisoft(DiscoveredUbisoftGame g) => new("Ubisoft") { Ubisoft = g };
     public static PlatformMatch ForXbox(DiscoveredXboxGame g) => new("Xbox") { Xbox = g };
     public static PlatformMatch ForBattleNet(DiscoveredBattleNetGame g) => new("Battle.net") { BattleNet = g };
+    public static PlatformMatch ForRockstar(DiscoveredRockstarGame g) => new("Rockstar") { Rockstar = g };
 
-    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? Xbox?.Name ?? BattleNet?.Name ?? string.Empty;
+    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? Xbox?.Name ?? BattleNet?.Name ?? Rockstar?.Name ?? string.Empty;
 }
 
 /// <summary>
@@ -63,6 +65,7 @@ public class PlatformLookupService
     private readonly UbisoftScannerService _ubisoft;
     private readonly XboxScannerService _xbox;
     private readonly BattleNetScannerService _battleNet;
+    private readonly RockstarScannerService _rockstar;
 
     public PlatformLookupService(
         SteamScannerService steam,
@@ -71,8 +74,10 @@ public class PlatformLookupService
         EpicScannerService epic,
         UbisoftScannerService ubisoft,
         XboxScannerService xbox,
-        BattleNetScannerService battleNet)
+        BattleNetScannerService battleNet,
+        RockstarScannerService? rockstar = null)
     {
+        _rockstar = rockstar ?? new RockstarScannerService();
         _steam = steam;
         _gog = gog;
         _ea = ea;
@@ -140,6 +145,8 @@ public class PlatformLookupService
         private readonly Dictionary<string, DiscoveredSteamGame?> _steamResolved = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, DiscoveredUbisoftGame?> _ubisoftResolved = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, DiscoveredBattleNetGame?> _battleNetResolved = new(StringComparer.OrdinalIgnoreCase);
+        private List<(string GameId, string InstallDir)>? _rockstarInstalls;
+        private readonly Dictionary<string, DiscoveredRockstarGame?> _rockstarResolved = new(StringComparer.OrdinalIgnoreCase);
 
         internal Index(PlatformLookupService owner) => _owner = owner;
 
@@ -214,6 +221,19 @@ public class PlatformLookupService
                     _battleNetResolved[install.Uid] = battleNet;
                 }
                 if (battleNet != null) return PlatformMatch.ForBattleNet(battleNet);
+            }
+
+            // Only Rockstar-launcher installs: a Rockstar title bought on Epic or Steam matched above.
+            _rockstarInstalls ??= Try(() => _owner._rockstar.GetInstallDirs(), "Rockstar", path) ?? [];
+            foreach (var (gameId, installDir) in _rockstarInstalls)
+            {
+                if (!IsPathUnderDirectory(path, installDir)) continue;
+                if (!_rockstarResolved.TryGetValue(gameId, out var rockstar))
+                {
+                    rockstar = Try(() => _owner._rockstar.ResolveInstall(gameId, installDir), "Rockstar", path);
+                    _rockstarResolved[gameId] = rockstar;
+                }
+                if (rockstar != null) return PlatformMatch.ForRockstar(rockstar);
             }
 
             return null;

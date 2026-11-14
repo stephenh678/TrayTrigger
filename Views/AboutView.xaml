@@ -245,7 +245,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Top">
                                     <TextBlock Style="{StaticResource StrongText}" Text="One Library, Every Launcher"/>
-                                    <TextBlock Text="Scans Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass and Battle.net, plus any folder you drop on the window. Poster art, categories, filters and batch editing; uninstalled games stay, greyed out, with their playtime."
+                                    <TextBlock Text="Scans Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, Battle.net and the Rockstar Games Launcher, plus any folder you drop on the window. Poster art, categories, filters and batch editing; uninstalled games stay, greyed out, with their playtime."
                                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
@@ -518,6 +518,17 @@
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="Suspend the game you're playing, or resume it - games with anti-cheat excepted (change it in Settings > General)"
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </DockPanel>
+
+                                    <!-- Row 1d: Launch last played hotkey - the configured value -->
+                                    <DockPanel Margin="0,0,0,9">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2">
+                                                <TextBlock Style="{StaticResource BadgeText}" Text="{Binding SettingsVM.LaunchLastPlayedHotkey}" Foreground="{DynamicResource BrushAccentText}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Play the game you played last, or bring it forward if it is running (change it in Settings > General)"
                                                    Foreground="{DynamicResource BrushTextSecondary}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 

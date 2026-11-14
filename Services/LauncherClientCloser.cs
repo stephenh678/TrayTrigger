@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -27,6 +28,22 @@ public static class LauncherClientCloser
     // The client UI only. Agent.exe is Battle.net's updater service and restarts the client's
     // work on its own; the client relaunches it when needed.
     private static readonly string[] BattleNetProcesses = [BattleNetScannerService.ClientProcessName];
+    // Launcher.exe: a name other programs use too, so only the one in Rockstar's own folder counts.
+    // RockstarService (its background service) is left alone, like the other platforms' services.
+    private static readonly string[] RockstarProcesses = [RockstarScannerService.ClientProcessName];
+
+    /// <summary>For a platform whose client has a generic process name, which processes of that name
+    /// are the client; null when the name alone says so. The client's location is read once per call.</summary>
+    private static Func<Process, bool>? ClientFilter(LauncherPlatform platform)
+    {
+        if (platform != LauncherPlatform.Rockstar) return null;
+        string? launcher = new RockstarScannerService().GetLauncherPath();
+        return proc =>
+        {
+            string? path = launcher == null ? null : ProcessPathResolver.GetProcessPath(proc.Id);
+            return path != null && string.Equals(path, launcher, StringComparison.OrdinalIgnoreCase);
+        };
+    }
 
     /// <summary>True if any of the platform's client processes are currently running.</summary>
     public static bool IsClientRunning(LauncherPlatform platform)
@@ -40,12 +57,14 @@ public static class LauncherClientCloser
             LauncherPlatform.Ubisoft => UbisoftProcesses,
             LauncherPlatform.Xbox => XboxProcesses,
             LauncherPlatform.BattleNet => BattleNetProcesses,
+            LauncherPlatform.Rockstar => RockstarProcesses,
             _ => []
         };
+        var isClient = ClientFilter(platform);
         foreach (var name in names)
         {
             var procs = Process.GetProcessesByName(name);
-            try { if (procs.Length > 0) return true; }
+            try { if (isClient == null ? procs.Length > 0 : procs.Any(isClient)) return true; }
             finally { foreach (var p in procs) p.Dispose(); }
         }
         return false;
@@ -78,6 +97,9 @@ public static class LauncherClientCloser
                 case LauncherPlatform.BattleNet:
                     KillByName(BattleNetProcesses, "Battle.net");
                     break;
+                case LauncherPlatform.Rockstar:
+                    KillByName(RockstarProcesses, "Rockstar Games Launcher", ClientFilter(LauncherPlatform.Rockstar));
+                    break;
             }
         }
         catch (Exception ex)
@@ -106,7 +128,7 @@ public static class LauncherClientCloser
         KillByName(["steam"], "Steam");
     }
 
-    private static void KillByName(string[] names, string label)
+    private static void KillByName(string[] names, string label, Func<Process, bool>? belongs = null)
     {
         int killed = 0;
         foreach (var name in names)
@@ -116,6 +138,7 @@ public static class LauncherClientCloser
             {
                 try
                 {
+                    if (belongs != null && !belongs(proc)) continue;
                     // Give the client a chance to close its window normally first; most launchers
                     // only minimize to tray on WM_CLOSE, so follow up with a real Kill.
                     proc.CloseMainWindow();

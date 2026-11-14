@@ -43,6 +43,7 @@ public partial class App : Application
     private UbisoftScannerService _ubisoftScannerService = null!;
     private XboxScannerService _xboxScannerService = null!;
     private BattleNetScannerService _battleNetScannerService = null!;
+    private RockstarScannerService _rockstarScannerService = null!;
     private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
     private GameScriptService? _gameScriptService;
@@ -428,6 +429,7 @@ public partial class App : Application
         _ubisoftScannerService = new UbisoftScannerService();
         _xboxScannerService = new XboxScannerService();
         _battleNetScannerService = new BattleNetScannerService();
+        _rockstarScannerService = new RockstarScannerService();
         // Same live-settings provider as _gameScriptService below, rather than the convenience
         // constructor's () => storageService.LoadSettings(): that re-read and re-decrypted
         // settings.json from disk on every profile apply and restore - twice per game launch, on
@@ -458,7 +460,7 @@ public partial class App : Application
         _gameScriptService = new GameScriptService(
             () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
             () => (_mainViewModel?.Settings ?? startupSettings).ScriptDefaults);
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService);
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService, _rockstarScannerService);
         // A game left frozen by Suspend when TrayTrigger last stopped without exiting has nothing
         // else that will ever resume it. Same screenshot-run exception as the profile recovery.
         if (!isScreenshot)
@@ -498,7 +500,8 @@ public partial class App : Application
             _launcherService,
             _hotkeyManager,
             _startupManager,
-            _trayPromotionService);
+            _trayPromotionService,
+            rockstarScannerService: _rockstarScannerService);
 
         // The Run key is the truth for "Start with Windows" - the installer writes it when the
         // user ticks the task, Task Manager's Startup tab can disable it, and a fresh install
@@ -543,6 +546,7 @@ public partial class App : Application
         _hotkeyManager.ManageHotkeyTriggered += OnManageHotkeyTriggered;
         _hotkeyManager.TrayMenuHotkeyTriggered += OnTrayMenuHotkeyTriggered;
         _hotkeyManager.SuspendHotkeyTriggered += OnSuspendHotkeyTriggered;
+        _hotkeyManager.LastPlayedHotkeyTriggered += OnLastPlayedHotkeyTriggered;
 
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;

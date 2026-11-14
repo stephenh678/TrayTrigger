@@ -30,6 +30,9 @@ public enum LaunchRoute
     /// <summary>Battle.net.exe --exec="launch &lt;program id&gt;", re-sent until the game appears, tracked
     /// by install directory. No direct variant: the game needs a sign-in token only the client supplies.</summary>
     BattleNet,
+    /// <summary>Launcher.exe -launchTitleInFolder &lt;install folder&gt;, tracked by install directory.</summary>
+    RockstarClient,
+    RockstarDirect,
     /// <summary>A non-file URL whose scheme is on the allow-list: fire-and-forget, pre-launch script only.</summary>
     ProtocolUrl,
     /// <summary>A non-file URL whose scheme is NOT on the allow-list: refused.</summary>
@@ -44,7 +47,8 @@ public readonly record struct LaunchClientAvailability(
     bool GogGalaxyRunning,
     bool EaAppInstalled,
     bool EpicLauncherInstalled,
-    bool UbisoftConnectInstalled);
+    bool UbisoftConnectInstalled,
+    bool RockstarLauncherInstalled = false);
 
 /// <summary>
 /// The pure decision half of the launcher: given an entry and which clients exist, which route is
@@ -90,6 +94,11 @@ public static class LaunchRouter
         if (game.IsUbisoftGame && !string.IsNullOrWhiteSpace(game.UbisoftGameId))
         {
             return !game.LaunchDirectly && clients.UbisoftConnectInstalled ? LaunchRoute.UbisoftClient : LaunchRoute.UbisoftDirect;
+        }
+
+        if (game.IsRockstarGame && !string.IsNullOrWhiteSpace(game.RockstarGameId))
+        {
+            return !game.LaunchDirectly && clients.RockstarLauncherInstalled ? LaunchRoute.RockstarClient : LaunchRoute.RockstarDirect;
         }
 
         // LaunchDirectly is deliberately ignored: there is no way to run a GDK exe outside its
@@ -148,6 +157,7 @@ public static class LaunchRouter
         LaunchRoute.UbisoftClient or LaunchRoute.UbisoftDirect => LauncherPlatform.Ubisoft,
         LaunchRoute.Xbox => LauncherPlatform.Xbox,
         LaunchRoute.BattleNet => LauncherPlatform.BattleNet,
+        LaunchRoute.RockstarClient or LaunchRoute.RockstarDirect => LauncherPlatform.Rockstar,
         _ => null
     };
 
@@ -162,6 +172,7 @@ public static class LaunchRouter
         LaunchRoute.UbisoftClient or LaunchRoute.UbisoftDirect => "Ubisoft Connect",
         LaunchRoute.Xbox => "Xbox",
         LaunchRoute.BattleNet => "Battle.net",
+        LaunchRoute.RockstarClient or LaunchRoute.RockstarDirect => "Rockstar Games Launcher",
         LaunchRoute.ProtocolUrl => "link",
         _ => "Local"
     };

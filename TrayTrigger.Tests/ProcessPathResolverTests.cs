@@ -12,9 +12,71 @@ public class ProcessPathResolverTests
     [InlineData(@"C:\Games\Foo\unins000.exe")]
     [InlineData(@"C:\Games\Foo\Redist\vc_redist.x64.exe")]
     [InlineData(@"C:\Games\Foo\DXSetup.exe")]
+    [InlineData(@"C:\Program Files (x86)\Call of Duty\_bna_19264_0.exe")]
     public void IsKnownHelperProcess_FlagsCrashToolsInstallersAndUninstallers(string path)
     {
         Assert.True(ProcessPathResolver.IsKnownHelperProcess(path));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files (x86)\Call of Duty\_retail_\cod.exe", "cod.exe")]
+    [InlineData(@"D:\Games\Foo\FOO.EXE", "FOO.EXE")]
+    [InlineData("steam://rungameid/620", null)]
+    [InlineData("com.epicgames.launcher://apps/x?action=launch", null)]
+    [InlineData(@"C:\Games\Foo\start.bat", null)]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    public void RecordedExeName_IsTheProgramOrNull(string? path, string? expected)
+    {
+        Assert.Equal(expected, ProcessPathResolver.RecordedExeName(path));
+    }
+
+    [Fact]
+    public void PickGameProcess_PrefersTheRecordedExeOverABetterRankedStandIn()
+    {
+        var updater = new ProcessPathResolver.ProcessUnderDirectory(1, @"C:\Games\Foo\Patcher.exe", true, DateTime.UtcNow);
+        var game = new ProcessPathResolver.ProcessUnderDirectory(2, @"C:\Games\Foo\_retail_\foo.exe", false, DateTime.UtcNow.AddMinutes(-1));
+        Assert.Equal(2, ProcessPathResolver.PickGameProcess([updater, game], "Foo.exe").Pid);
+    }
+
+    [Fact]
+    public void PickGameProcess_TakesTheBestCandidateWhenTheRecordedExeIsNotRunning()
+    {
+        var a = new ProcessPathResolver.ProcessUnderDirectory(1, @"C:\Games\Foo\a.exe", true, DateTime.UtcNow);
+        var b = new ProcessPathResolver.ProcessUnderDirectory(2, @"C:\Games\Foo\b.exe", false, DateTime.UtcNow);
+        Assert.Equal(1, ProcessPathResolver.PickGameProcess([a, b], "foo.exe").Pid);
+        Assert.Equal(1, ProcessPathResolver.PickGameProcess([a, b], null).Pid);
+    }
+
+    // Red Dead Redemption 2 from Epic: PlayRDR2.exe (the stand-in) stays open as long as RDR2.exe does, so
+    // the session must move to RDR2.exe when it appears, or it spends minutes looking for it after a quit.
+    [Fact]
+    public void FindRecordedGame_FindsTheGamesOwnProgramBesideTheStandIn()
+    {
+        var standIn = new ProcessPathResolver.ProcessUnderDirectory(10, @"C:\Epic\RedDeadRedemption2\PlayRDR2.exe", false, DateTime.UtcNow.AddMinutes(-1));
+        var game = new ProcessPathResolver.ProcessUnderDirectory(11, @"C:\Epic\RedDeadRedemption2\RDR2.exe", true, DateTime.UtcNow);
+        Assert.Equal(11, ProcessLauncherService.FindRecordedGame([standIn, game], "rdr2.exe", standInPid: 10)?.Pid);
+    }
+
+    [Fact]
+    public void FindRecordedGame_IsNullUntilTheGameRuns_AndNeverReturnsTheStandIn()
+    {
+        var standIn = new ProcessPathResolver.ProcessUnderDirectory(10, @"C:\Epic\RedDeadRedemption2\PlayRDR2.exe", false, DateTime.UtcNow);
+        var other = new ProcessPathResolver.ProcessUnderDirectory(12, @"C:\Epic\RedDeadRedemption2\Helper.exe", true, DateTime.UtcNow);
+        Assert.Null(ProcessLauncherService.FindRecordedGame([standIn, other], "RDR2.exe", standInPid: 10));
+        // A stand-in that is itself named like the recorded exe (it was the process followed) is not a switch.
+        var sameName = new ProcessPathResolver.ProcessUnderDirectory(10, @"C:\Epic\RedDeadRedemption2\RDR2.exe", false, DateTime.UtcNow);
+        Assert.Null(ProcessLauncherService.FindRecordedGame([sameName], "RDR2.exe", standInPid: 10));
+    }
+
+    // The watch for the game's own program scans every process; for a whole session that is time taken from the game.
+    [Fact]
+    public void RecordedGameWatch_ScansEveryPollAtFirst_ThenOnceInFifteen_ButNeverSkipsAPendingSighting()
+    {
+        Assert.True(ProcessLauncherService.ScanForRecordedGameThisTick(TimeSpan.FromSeconds(30), tick: 7, sightingPending: false));
+        Assert.False(ProcessLauncherService.ScanForRecordedGameThisTick(TimeSpan.FromMinutes(5), tick: 7, sightingPending: false));
+        Assert.True(ProcessLauncherService.ScanForRecordedGameThisTick(TimeSpan.FromMinutes(5), tick: 15, sightingPending: false));
+        Assert.True(ProcessLauncherService.ScanForRecordedGameThisTick(TimeSpan.FromMinutes(5), tick: 7, sightingPending: true));
     }
 
     // "crash" alone used to be enough, which hid these games from every install-folder search.

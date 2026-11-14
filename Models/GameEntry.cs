@@ -91,6 +91,13 @@ public class GameEntry
     /// refreshed when a launch finds a different one. Saved so a cleared cache can't stop the
     /// game launching.</summary>
     public string? BattleNetProgramId { get; set; }
+    /// <summary>True for a game imported via Rockstar Games Launcher scanning. Same semantics as
+    /// IsGogGame/IsEaGame/IsEpicGame: launched through the launcher (<c>Launcher.exe
+    /// -launchTitleInFolder &lt;install folder&gt;</c>) when it is installed, otherwise from its exe.</summary>
+    public bool IsRockstarGame { get; set; }
+    /// <summary>The game's key under Rockstar's registry ("Grand Theft Auto V") - the name Rockstar
+    /// records the install under, and the game's identity for re-scans and ignores.</summary>
+    public string? RockstarGameId { get; set; }
     /// <summary>Which source the Game Details window shows text metadata from (a per-game view
     /// preference; never affects the library category, art, or sorting). Auto by default - Steam
     /// when there's a Steam App ID, otherwise RAWG. See <see cref="MetadataSource"/>.</summary>
@@ -265,6 +272,7 @@ public class GameEntry
         : IsUbisoftGame ? "Ubisoft"
         : IsXboxGame ? "Xbox"
         : IsBattleNetGame ? "Battle.net"
+        : IsRockstarGame ? "Rockstar"
         : "Local";
 
     /// <summary>A playtime as the library and Game Details write it: "45m" under an hour, then hours to one decimal ("2.5h").</summary>

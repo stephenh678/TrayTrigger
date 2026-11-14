@@ -144,6 +144,7 @@ public partial class ProcessLauncherService
     private readonly UbisoftScannerService _ubisoftScannerService;
     private readonly XboxScannerService _xboxScannerService;
     private readonly BattleNetScannerService _battleNetScannerService;
+    private readonly RockstarScannerService _rockstarScannerService;
 
     private readonly Lock _sessionsLock = new();
     private readonly Dictionary<string, ActiveGameSession> _sessions = new(StringComparer.Ordinal);
@@ -219,8 +220,10 @@ public partial class ProcessLauncherService
         EpicScannerService epicScannerService,
         UbisoftScannerService ubisoftScannerService,
         XboxScannerService xboxScannerService,
-        BattleNetScannerService battleNetScannerService)
+        BattleNetScannerService battleNetScannerService,
+        RockstarScannerService? rockstarScannerService = null)
     {
+        _rockstarScannerService = rockstarScannerService ?? new RockstarScannerService();
         _storageService = storageService;
         _performanceProfileService = performanceProfileService;
         _scriptService = scriptService;
@@ -1030,10 +1033,14 @@ public partial class ProcessLauncherService
                 case LaunchRoute.BattleNet:
                     return LaunchBattleNetGame(game, out errorMessage);
 
+                case LaunchRoute.RockstarClient:
+                    return LaunchRockstarGame(game, out errorMessage, out isMissing);
+
                 case LaunchRoute.GogDirect:
                 case LaunchRoute.EaDirect:
                 case LaunchRoute.EpicDirect:
                 case LaunchRoute.UbisoftDirect:
+                case LaunchRoute.RockstarDirect:
                     LogDirectFallback(game, route);
                     return LaunchPlatformExeDirectly(game, route, out errorMessage, out isMissing);
 
@@ -1067,7 +1074,8 @@ public partial class ProcessLauncherService
             GogGalaxyRunning: game.IsGogGame && IsGalaxyClientRunning(),
             EaAppInstalled: game.IsEaGame && _eaScannerService.IsEaAppInstalled(),
             EpicLauncherInstalled: game.IsEpicGame && _epicScannerService.IsEpicLauncherInstalled(),
-            UbisoftConnectInstalled: game.IsUbisoftGame && _ubisoftScannerService.IsUbisoftConnectInstalled());
+            UbisoftConnectInstalled: game.IsUbisoftGame && _ubisoftScannerService.IsUbisoftConnectInstalled(),
+            RockstarLauncherInstalled: game.IsRockstarGame && _rockstarScannerService.IsRockstarLauncherInstalled());
     }
 
     private static void LogDirectFallback(GameEntry game, LaunchRoute route)
@@ -1077,6 +1085,7 @@ public partial class ProcessLauncherService
             LaunchRoute.GogDirect => "GOG Galaxy",
             LaunchRoute.EaDirect => "EA App",
             LaunchRoute.EpicDirect => "Epic Games Launcher",
+            LaunchRoute.RockstarDirect => "Rockstar Games Launcher",
             _ => "Ubisoft Connect"
         };
         LoggingService.Verbose("Launcher", game.LaunchDirectly
@@ -1348,6 +1357,10 @@ public partial class ProcessLauncherService
     private static readonly TimeSpan InstallDirLaunchPollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan InstallDirLaunchTimeout = TimeSpan.FromMinutes(3);
 
+    /// <summary>A process that is not the game's recorded executable but has a window: the search for the game
+    /// starts again only if it exits within this long. One without a window (an updater) always does.</summary>
+    private static readonly TimeSpan StandInHandoffWindow = TimeSpan.FromMinutes(10);
+
     // How many consecutive polls the same PID must be seen under the install directory before
     // it's trusted as the real game. 3 was chosen over the original 2 after a real Ubisoft title
     // (R6-Extraction_Plus.exe) turned out to itself be a handoff stub that outlived a 2-poll
@@ -1364,12 +1377,17 @@ public partial class ProcessLauncherService
     /// <summary>
     /// The folder a session's processes are watched (and force-closed) under. For a Battle.net
     /// game that is the folder Blizzard's uninstall entry records now - a "Move install" leaves the
-    /// saved entry pointing at the old place - falling back to <see cref="ResolveInstallDir"/>.
+    /// saved entry pointing at the old place - falling back to <see cref="ResolveInstallDir"/>. The
+    /// same for a Rockstar game, from Rockstar's registry key.
     /// Launch and force-close must agree on this, or a kill by folder looks in the wrong one.
     /// </summary>
     private string ResolveTrackedInstallDir(GameEntry game) =>
         game.IsBattleNetGame
             ? _battleNetScannerService.FindInstallDir(game.BattleNetUid) ?? ResolveInstallDir(game)
+        // Rockstar's launcher is told which title to start by this folder, so it must be the one
+        // Rockstar records, not a Working Directory an entry linked from a Local game kept.
+        : game.IsRockstarGame
+            ? _rockstarScannerService.FindInstallDir(game.RockstarGameId) ?? ResolveInstallDir(game)
             : ResolveInstallDir(game);
 
     /// <summary>
@@ -1474,9 +1492,13 @@ public partial class ProcessLauncherService
     /// <paramref name="ownsProcessAlready"/> (a stub handoff), where the game did run and the
     /// session ends normally instead.
     /// </summary>
-    private void TrackInstallDirSession(ActiveGameSession session, string installDir, string platformLabel, TimeSpan timeout, bool ownsProcessAlready = false)
+    private void TrackInstallDirSession(ActiveGameSession session, string installDir, string platformLabel, TimeSpan timeout, bool ownsProcessAlready = false, bool preferRecordedExe = true)
     {
         var game = session.Game;
+        // The game's own executable, when it is recorded as one. A process that is not it is only a stand-in
+        // (an updater, a patcher, a first-run tool): the session follows it, but if it exits soon the search
+        // for the game starts again instead of the session ending with it.
+        string? recordedExe = preferRecordedExe ? ProcessPathResolver.RecordedExeName(game.ExecutablePath) : null;
         if (string.IsNullOrWhiteSpace(installDir))
         {
             LoggingService.Verbose("Launcher", $"'{game.Name}' has no resolvable install directory; cannot track its {platformLabel} session.");
@@ -1528,7 +1550,7 @@ public partial class ProcessLauncherService
             var candidates = ProcessPathResolver.FindProcessesUnderDirectory(normalizedInstallDir);
             if (candidates.Count > 0)
             {
-                var best = candidates[0];
+                var best = ProcessPathResolver.PickGameProcess(candidates, recordedExe);
                 GiveEarlyFocus(best.Pid, best.HasMainWindow);
                 if (pendingCandidatePid == best.Pid)
                 {
@@ -1553,7 +1575,12 @@ public partial class ProcessLauncherService
                     if (proc != null)
                     {
                         LoggingService.Verbose("Launcher", $"Found running process for '{game.Name}' (PID {proc.Id}, {Path.GetFileName(best.Path)}) after launching via {platformLabel}.");
-                        AttachExitTracking(session, proc, allowStubHandoff: false);
+                        // Not the recorded executable: a stand-in. One with no window (an updater has none)
+                        // is followed past any length of run; one with a window only if it ends soon.
+                        TimeSpan? standInWithin = recordedExe != null && !ProcessPathResolver.IsRecordedExe(best.Path, recordedExe)
+                            ? (best.HasMainWindow ? StandInHandoffWindow : TimeSpan.MaxValue)
+                            : null;
+                        AttachExitTracking(session, proc, allowStubHandoff: false, standInWithin);
                         return false;
                     }
 
