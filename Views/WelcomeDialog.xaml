@@ -152,7 +152,7 @@
                                    Margin="0,0,8,0" VerticalAlignment="Top"/>
                         <TextBlock Grid.Column="1" FontSize="{DynamicResource FontSizeBody}" LineHeight="18" TextWrapping="Wrap"
                                    Foreground="{DynamicResource BrushTextSecondary}"
-                                   Text="Scan for Games finds what Steam, GOG, EA, Epic, Ubisoft, Xbox and Battle.net have installed, or drag a game's exe, shortcut or folder onto this window."/>
+                                   Text="Scan for Games finds what Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net and Rockstar have installed, or drag a game's exe, shortcut or folder onto this window."/>
                     </Grid>
 
                     <Grid Margin="6,0,0,5">

@@ -132,6 +132,26 @@ public class LaunchRoutingTests
         Assert.Equal(LaunchRoute.DirectExe, LaunchRouter.Resolve(game, NoneInstalled, Exists));
     }
 
+    [Theory]
+    [InlineData(true, false, LaunchRoute.RockstarClient)]
+    [InlineData(false, false, LaunchRoute.RockstarDirect)]
+    [InlineData(true, true, LaunchRoute.RockstarDirect)]
+    public void Rockstar_RoutesByClientState(bool installed, bool launchDirectly, LaunchRoute expected)
+    {
+        var game = new GameEntry { IsRockstarGame = true, RockstarGameId = "Grand Theft Auto V", ExecutablePath = @"C:\R\GTAV\PlayGTAV.exe", LaunchDirectly = launchDirectly };
+        var clients = new LaunchClientAvailability(false, false, false, false, false, RockstarLauncherInstalled: installed);
+        Assert.Equal(expected, LaunchRouter.Resolve(game, clients, Exists));
+        Assert.Equal(LauncherPlatform.Rockstar, LaunchRouter.ClientPlatformFor(expected));
+        Assert.Equal("Rockstar Games Launcher", LaunchRouter.PlatformLabelFor(expected));
+    }
+
+    [Fact]
+    public void Rockstar_WithoutId_FallsThroughToPathRules()
+    {
+        var game = new GameEntry { IsRockstarGame = true, RockstarGameId = null, ExecutablePath = @"C:\x\x.exe" };
+        Assert.Equal(LaunchRoute.DirectExe, LaunchRouter.Resolve(game, AllInstalled, Exists));
+    }
+
     [Fact]
     public void BattleNet_LabelIsBattleNet()
     {

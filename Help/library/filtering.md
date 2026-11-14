@@ -12,7 +12,7 @@ The filter button sits beside the sort box in the library toolbar, under the sta
 
 The flyout is in groups, each under a small blue heading. The options under a heading are what you press. How ticks in a group combine is under "How the ticks combine" below.
 
-**Launcher** - Steam, Epic Games, GOG, EA, Ubisoft Connect, Xbox, Battle.net, and "Not from a launcher" for anything you added by hand. Only launchers you actually have games from are listed, so there is never a tick box that can only return nothing.
+**Launcher** - Steam, Epic Games, GOG, EA, Ubisoft Connect, Xbox, Battle.net, Rockstar, and "Not from a launcher" for anything you added by hand. Only launchers you actually have games from are listed, so there is never a tick box that can only return nothing.
 
 **Last played**
 - Never played - what is still in the backlog.

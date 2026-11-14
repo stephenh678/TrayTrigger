@@ -162,7 +162,7 @@ public partial class GameEditViewModel : ViewModelBase
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
         _launchDirectly = game.LaunchDirectly;
-        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
+        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || game.IsRockstarGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
         _cpuAffinity = game.CpuAffinity;
         _initialCpuAffinity = game.CpuAffinity;
@@ -573,6 +573,8 @@ public partial class GameEditViewModel : ViewModelBase
             SourceGame.IsBattleNetGame = false;
             SourceGame.BattleNetUid = null;
             SourceGame.BattleNetProgramId = null;
+            SourceGame.IsRockstarGame = false;
+            SourceGame.RockstarGameId = null;
             SourceGame.ImportedFrom = null;
             SourceGame.LaunchDirectly = false;
         }

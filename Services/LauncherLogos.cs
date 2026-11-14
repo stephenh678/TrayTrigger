@@ -21,6 +21,7 @@ public static class LauncherLogos
         if (game.IsUbisoftGame) return Folder + "ubisoft_connect.png";
         if (game.IsXboxGame) return Folder + "xbox.png";
         if (game.IsBattleNetGame) return Folder + "battlenet.png";
+        if (game.IsRockstarGame) return Folder + "rockstar_games.png";
         return null;
     }
 }

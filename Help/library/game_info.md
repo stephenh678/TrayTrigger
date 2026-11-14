@@ -19,7 +19,7 @@ The text on the Overview can come from one of two sources. Which one, and how fr
 
 ## Steam
 
-Used for any game linked to a Steam App ID. Steam is the richer source: it alone has the review summary, PC requirements and patch notes. Games from GOG, EA, Epic, Ubisoft and Battle.net are often on Steam too, so they get Steam info even though they launch through their own client.
+Used for any game linked to a Steam App ID. Steam is the richer source: it alone has the review summary, PC requirements and patch notes. Games from GOG, EA, Epic, Ubisoft, Battle.net and Rockstar are often on Steam too, so they get Steam info even though they launch through their own client.
 
 ## RAWG
 

@@ -93,7 +93,7 @@ public partial class App
         Dialog("Game Details Settings", NewEditGameWindow(game));
         Dialog("Edit Tool", new ToolEditDialog(new ToolEntry { Name = "Audit Tool", TargetPath = @"C:\Windows\notepad.exe" }, new[] { "Mods" }, _iconExtractorService));
         Dialog("Edit Theme", new ThemeEditDialog(new TrayTrigger.ViewModels.ThemeEditorViewModel(TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance)));
-        Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()));
+        Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new(), new()));
         Dialog("Welcome", new WelcomeDialog());
 
         File.WriteAllText(outPath, report.ToString());

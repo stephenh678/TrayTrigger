@@ -69,8 +69,8 @@ public partial class App
             new("ThemeEditDialog, no changes", "text box", "Esc", NewThemeEdit, w => Find<TextBox>(w), new[] { Key.Escape }),
             new("ThemeEditDialog, name edited", "text box", "Esc, then Esc on the prompt", NewThemeEdit, w => Find<TextBox>(w), new[] { Key.Escape },
                 w => Find<TextBox>(w).Text = "Edited theme"),
-            new("ScanForGamesDialog (empty)", "list", "Esc", () => new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()), w => Find<ListBox>(w), new[] { Key.Escape }),
-            new("ScanForGamesDialog (empty)", "text box", "Enter", () => new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()), w => Find<TextBox>(w), new[] { Key.Enter }),
+            new("ScanForGamesDialog (empty)", "list", "Esc", () => new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new(), new()), w => Find<ListBox>(w), new[] { Key.Escape }),
+            new("ScanForGamesDialog (empty)", "text box", "Enter", () => new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new(), new()), w => Find<TextBox>(w), new[] { Key.Enter }),
             new("WelcomeDialog", "button", "Esc", () => new WelcomeDialog(), w => Find<Button>(w), new[] { Key.Escape }),
         };
 

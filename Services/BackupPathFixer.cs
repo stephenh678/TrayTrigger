@@ -12,7 +12,7 @@ namespace TrayTrigger.Services;
 ///
 /// <para>In order, for each path that isn't on disk as it stands:</para>
 /// <list type="number">
-///   <item>A launcher game (GOG, EA, Epic, Ubisoft) is re-linked by its launcher ID, to where that
+///   <item>A launcher game (GOG, EA, Epic, Ubisoft, Rockstar) is re-linked by its launcher ID, to where that
 ///   launcher says it is installed now.</item>
 ///   <item>A path under the old TrayTrigger data or cache folder, or the old Windows user folder, is
 ///   moved to this PC's - a new PC, or a new Windows account.</item>
@@ -122,7 +122,7 @@ public static class BackupPathFixer
     private static bool WouldShowAsMissing(GameEntry game, Context context)
     {
         if (game.IsSteamGame || game.IsBattleNetGame) return false;
-        if (!(game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame)) return true;
+        if (!(game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsRockstarGame)) return true;
         string? root = Path.GetPathRoot(game.ExecutablePath);
         return !string.IsNullOrEmpty(root) && context.DirectoryExists(root);
     }
@@ -133,6 +133,7 @@ public static class BackupPathFixer
         if (game.IsEaGame && !string.IsNullOrWhiteSpace(game.EaContentId)) return (LauncherPlatform.Ea, game.EaContentId);
         if (game.IsEpicGame && !string.IsNullOrWhiteSpace(game.EpicAppName)) return (LauncherPlatform.Epic, game.EpicAppName);
         if (game.IsUbisoftGame && !string.IsNullOrWhiteSpace(game.UbisoftGameId)) return (LauncherPlatform.Ubisoft, game.UbisoftGameId);
+        if (game.IsRockstarGame && !string.IsNullOrWhiteSpace(game.RockstarGameId)) return (LauncherPlatform.Rockstar, game.RockstarGameId);
         return null;
     }
 

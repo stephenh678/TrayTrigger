@@ -170,11 +170,11 @@ public sealed class InstalledGameIndex
 
         if (!IsExecutableOffDisk(game)) return GameAvailability.Available;
 
-        // GOG, EA, Epic and Ubisoft install into a folder they own and the entry points at a real
+        // GOG, EA, Epic, Ubisoft and Rockstar install into a folder they own and the entry points at a real
         // exe inside it, so the exe going means the launcher removed the game - "not installed",
         // with the launcher to reinstall from, rather than the "locate it" a moved local game gets.
         // Unless the drive itself is away, in which case nothing was uninstalled.
-        bool fromLauncher = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame;
+        bool fromLauncher = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsRockstarGame;
         if (fromLauncher)
         {
             return DriveIsAttached(game.ExecutablePath) ? GameAvailability.NotInstalled : GameAvailability.Available;

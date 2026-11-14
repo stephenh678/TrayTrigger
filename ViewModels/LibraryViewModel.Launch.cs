@@ -163,6 +163,7 @@ public partial class LibraryViewModel
         : game.IsEaGame ? "the EA app"
         : game.IsEpicGame ? "the Epic Games Launcher"
         : game.IsUbisoftGame ? "Ubisoft Connect"
+        : game.IsRockstarGame ? "the Rockstar Games Launcher"
         : "its launcher";
 
     private void PromptLocateMissingExecutable(GameCardViewModel card, Window? owner)

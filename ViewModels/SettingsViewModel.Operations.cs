@@ -109,6 +109,7 @@ public partial class SettingsViewModel
             nameof(AppSettings.UbisoftIntegrationEnabled),
             nameof(AppSettings.XboxIntegrationEnabled),
             nameof(AppSettings.BattleNetIntegrationEnabled),
+            nameof(AppSettings.RockstarIntegrationEnabled),
             // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
             nameof(AppSettings.MainWindowLeft),

@@ -642,6 +642,17 @@
                             </CheckBox>
                             <TextBlock Text="Found via Blizzard's install records, on any drive. Games launch through Battle.net - no direct-exe option, because Battle.net signs the game in. If Battle.net is closed it's started for you. Limitation: right after Battle.net's own cache is cleared, a newly installed game's launch code can't be read until Battle.net has been opened once."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable Rockstar Games Launcher library integration" IsChecked="{Binding RockstarIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable Rockstar Games Launcher library integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via Rockstar's install records, on any drive. Games launch through the Rockstar Games Launcher. A Rockstar game bought on Epic or Steam is found by that launcher's integration instead, so it isn't listed twice."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>

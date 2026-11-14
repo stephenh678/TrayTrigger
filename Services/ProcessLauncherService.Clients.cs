@@ -72,6 +72,64 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
+    /// Launches a Rockstar Games Launcher title with <c>Launcher.exe -launchTitleInFolder &lt;install folder&gt;</c>,
+    /// the switch the launcher's own program carries for this. The launcher signs in, syncs cloud saves
+    /// and starts the game itself, so the game is found by install-directory polling like every client
+    /// launch. Not yet tested against a real Rockstar-launcher install; the direct exe (Rockstar's entry
+    /// programs, such as PlayGTAV.exe, go through the launcher anyway) is the fallback when the launcher
+    /// is missing.
+    /// </summary>
+    private bool LaunchRockstarGame(GameEntry game, out string? errorMessage, out bool isMissing)
+    {
+        errorMessage = null;
+        isMissing = false;
+        const string label = "Rockstar Games Launcher";
+        string? launcherPath = _rockstarScannerService.GetLauncherPath();
+        if (launcherPath == null)
+        {
+            return LaunchPlatformExeDirectly(game, LaunchRoute.RockstarDirect, out errorMessage, out isMissing);
+        }
+
+        string installDir = ResolveTrackedInstallDir(game);
+        if (TryActivateRunningProcessUnderDirectory(game, installDir, label))
+        {
+            return true;
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = launcherPath,
+            UseShellExecute = false,
+            WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? string.Empty
+        };
+        startInfo.ArgumentList.Add("-launchTitleInFolder");
+        startInfo.ArgumentList.Add(installDir);
+
+        var session = BeginSession(game, LaunchRoute.RockstarClient, out string? abortReason);
+        if (session == null)
+        {
+            errorMessage = abortReason;
+            return false;
+        }
+
+        try
+        {
+            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' via the Rockstar Games Launcher (-launchTitleInFolder \"{installDir}\").");
+            Process.Start(startInfo)?.Dispose();
+            MarkLaunched(game);
+            LoggingService.Info("Launcher", $"Dispatched {label} launch for '{game.Name}'.");
+
+            TrackInstallDirSession(session, installDir, label, InstallDirLaunchTimeout);
+            return true;
+        }
+        catch
+        {
+            RollbackSession(session);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// EA App ("origin2://"), Epic Games Launcher ("com.epicgames.launcher://") and Ubisoft
     /// Connect ("uplay://") all expose a real registered URL scheme. The dispatch is
     /// fire-and-forget with no Process handle, and the real game process (not necessarily the

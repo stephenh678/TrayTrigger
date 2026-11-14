@@ -245,7 +245,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Top">
                                     <TextBlock Style="{StaticResource StrongText}" Text="One Library, Every Launcher"/>
-                                    <TextBlock Text="Scans Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass and Battle.net, plus any folder you drop on the window. Poster art, categories, filters and batch editing; uninstalled games stay, greyed out, with their playtime."
+                                    <TextBlock Text="Scans Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, Battle.net and the Rockstar Games Launcher, plus any folder you drop on the window. Poster art, categories, filters and batch editing; uninstalled games stay, greyed out, with their playtime."
                                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>

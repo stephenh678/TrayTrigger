@@ -833,6 +833,23 @@
                                                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
                                                                        </Border>
 
+                                                                       <!-- Rockstar Indicator Badge Overlay -->
+                                                                       <Border VerticalAlignment="Center">
+                                                                           <Border.Style>
+                                                                               <Style TargetType="Border">
+                                                                                   <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                   <Style.Triggers>
+                                                                                       <DataTrigger Binding="{Binding IsRockstarGame}" Value="True">
+                                                                                           <Setter Property="Visibility" Value="Visible"/>
+                                                                                       </DataTrigger>
+                                                                                   </Style.Triggers>
+                                                                               </Style>
+                                                                           </Border.Style>
+                                                                           <Image Source="pack://application:,,,/Assets/LauncherLogos/rockstar_games.png"
+                                                                                  Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                                  RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                       </Border>
+
                                                                        <!-- Local Games Indicator Badge Overlay - shown for a game added via plain
                                                                             exe/shortcut/folder scan rather than any supported launcher. -->
                                                                        <Border VerticalAlignment="Center">
@@ -1279,6 +1296,23 @@
                                                                </StackPanel>
                                                            </Border>
 
+                                                           <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                               <Border.Style>
+                                                                   <Style TargetType="Border">
+                                                                       <Setter Property="Visibility" Value="Collapsed"/>
+                                                                       <Style.Triggers>
+                                                                           <DataTrigger Binding="{Binding IsRockstarGame}" Value="True">
+                                                                               <Setter Property="Visibility" Value="Visible"/>
+                                                                           </DataTrigger>
+                                                                       </Style.Triggers>
+                                                                   </Style>
+                                                               </Border.Style>
+                                                               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/rockstar_games.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   <TextBlock Style="{StaticResource BadgeText}" Text="ROCKSTAR" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                               </StackPanel>
+                                                           </Border>
+
                                                            <!-- Local games get a pill here too, so every platform is marked in every view. -->
                                                            <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
@@ -1646,6 +1680,23 @@
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                                <TextBlock Style="{StaticResource BadgeText}" Text="B.NET" Foreground="{DynamicResource BrushInfoText}"
+                                                                          FontFamily="{DynamicResource AppFont}"/>
+                                                           </StackPanel>
+                                                       </Border>
+                                                       <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                           <Border.Style>
+                                                               <Style TargetType="Border">
+                                                                   <Setter Property="Visibility" Value="Collapsed"/>
+                                                                   <Style.Triggers>
+                                                                       <DataTrigger Binding="{Binding IsRockstarGame}" Value="True">
+                                                                           <Setter Property="Visibility" Value="Visible"/>
+                                                                       </DataTrigger>
+                                                                   </Style.Triggers>
+                                                               </Style>
+                                                           </Border.Style>
+                                                           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                               <Image Source="pack://application:,,,/Assets/LauncherLogos/rockstar_games.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                               <TextBlock Style="{StaticResource BadgeText}" Text="ROCKSTAR" Foreground="{DynamicResource BrushTextPrimary}"
                                                                           FontFamily="{DynamicResource AppFont}"/>
                                                            </StackPanel>
                                                        </Border>

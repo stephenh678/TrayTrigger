@@ -171,6 +171,7 @@ public sealed class LibraryFilterViewModel : FilterFlyoutViewModel
         (LauncherPlatform.Ubisoft, "Ubisoft Connect"),
         (LauncherPlatform.Xbox, "Xbox"),
         (LauncherPlatform.BattleNet, "Battle.net"),
+        (LauncherPlatform.Rockstar, "Rockstar"),
     ];
 
     /// <summary>
@@ -188,6 +189,7 @@ public sealed class LibraryFilterViewModel : FilterFlyoutViewModel
         if (game.IsUbisoftGame) return LauncherPlatform.Ubisoft;
         if (game.IsXboxGame) return LauncherPlatform.Xbox;
         if (game.IsBattleNetGame) return LauncherPlatform.BattleNet;
+        if (game.IsRockstarGame) return LauncherPlatform.Rockstar;
         return null;
     }
 

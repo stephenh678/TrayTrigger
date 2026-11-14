@@ -232,7 +232,7 @@ public partial class FolderScannerService
         // library imported exactly one game. Any child that is itself named like a library
         // container is replaced by its own children (repeatedly, bounded), so the per-subfolder
         // game detection below runs against the real game folders.
-        subdirs = ExpandLibraryContainers(subdirs).Where(d => !IsIgnoredFolder(d) && !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d)).ToList();
+        subdirs = ExpandLibraryContainers(subdirs).Where(d => !IsIgnoredFolder(d) && !IsLauncherClientInstall(d)).ToList();
 
         var detectedSubGames = new List<GameCandidate>();
 
@@ -267,7 +267,7 @@ public partial class FolderScannerService
         // The client's own folder was dropped or added as a scan location. Its games, if any, were
         // handled as subfolders above; the folder itself is never a game, so don't fall through to
         // scanning its root and offering steam.exe or Battle.net.exe for import.
-        if (IsSteamClientInstall(folderPath) || IsBattleNetClientInstall(folderPath))
+        if (IsLauncherClientInstall(folderPath))
         {
             return new FolderScanResult();
         }
@@ -306,7 +306,7 @@ public partial class FolderScannerService
             subdirs = ExpandLibraryContainers(Directory.GetDirectories(folderPath)
                     .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
                     .ToList())
-                .Where(d => !IsIgnoredFolder(d) && !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d))
+                .Where(d => !IsIgnoredFolder(d) && !IsLauncherClientInstall(d))
                 .ToList();
         }
         catch (Exception ex)
@@ -676,6 +676,25 @@ public partial class FolderScannerService
         LoggingService.Verbose("FolderScanner", $"Skipped Battle.net client install folder: '{dir}'");
         return true;
     }
+
+    /// <summary>
+    /// The Rockstar Games Launcher's own folders, not games - same reasoning as <see cref="IsSteamClientInstall"/>.
+    /// Both sit beside Rockstar's games in its default folder (Program Files\Rockstar Games), so adding
+    /// that as a scan location offered Launcher.exe and SocialClubHelper.exe as games.
+    /// </summary>
+    internal static bool IsRockstarClientInstall(string dir)
+    {
+        bool launcher = File.Exists(Path.Combine(dir, "Launcher.exe")) && File.Exists(Path.Combine(dir, "LauncherPatcher.exe"));
+        bool socialClub = File.Exists(Path.Combine(dir, "SocialClubHelper.exe"));
+        if (!launcher && !socialClub) return false;
+
+        LoggingService.Verbose("FolderScanner", $"Skipped Rockstar Games Launcher folder: '{dir}'");
+        return true;
+    }
+
+    /// <summary>A launcher's own install folder, which a folder scan must never offer as a game.</summary>
+    internal static bool IsLauncherClientInstall(string dir) =>
+        IsSteamClientInstall(dir) || IsBattleNetClientInstall(dir) || IsRockstarClientInstall(dir);
 
     private static bool ShouldPruneDirectory(string dirName)
     {

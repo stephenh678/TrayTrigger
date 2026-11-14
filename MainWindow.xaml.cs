@@ -769,9 +769,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<GameCandidate> folderCandidates)
+    private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<GameCandidate> folderCandidates)
     {
-        var dialog = new ScanForGamesDialog(_viewModel, steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, folderCandidates);
+        var dialog = new ScanForGamesDialog(_viewModel, steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, folderCandidates);
         dialog.Owner = this;
         dialog.ShowDialog();
     }

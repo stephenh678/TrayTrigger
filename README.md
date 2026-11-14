@@ -52,9 +52,10 @@
   <img src="Assets/LauncherLogos/ubisoft_connect.png" height="40" alt="Ubisoft Connect" title="Ubisoft Connect">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/xbox.png" height="40" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/battlenet.png" height="40" alt="Battle.net" title="Battle.net">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/rockstar_games.png" height="40" alt="Rockstar Games Launcher" title="Rockstar Games Launcher">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/local_games.png" height="40" alt="Local games" title="Any executable or shortcut">
   <br>
-  <sub>Scans all seven, plus anything you drop on the window.</sub>
+  <sub>Scans all eight, plus anything you drop on the window.</sub>
 </p>
 
 ---

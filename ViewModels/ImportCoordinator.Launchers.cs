@@ -13,7 +13,7 @@ using TrayTrigger.Views;
 
 namespace TrayTrigger.ViewModels;
 
-/// <summary>Scan locations and the launcher imports: Steam, GOG, EA, Epic, Ubisoft, Xbox and Battle.net.</summary>
+/// <summary>Scan locations and the launcher imports: Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net and Rockstar.</summary>
 public partial class ImportCoordinator
 {
     public bool IsScanLocation(string path)
@@ -43,9 +43,9 @@ public partial class ImportCoordinator
     /// off back-to-back (fire-and-forget) makes the second one see the first still in flight and
     /// silently no-op instead of importing anything.
     /// </summary>
-    public async Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<GameCandidate> folderCandidates)
+    public async Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<GameCandidate> folderCandidates)
     {
-        int total = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + folderCandidates.Count;
+        int total = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + rockstarGames.Count + folderCandidates.Count;
         if (total == 0) return;
 
         // announceProgress: false on every leg - each one's own "Importing N..."/"Imported N!"
@@ -53,7 +53,7 @@ public partial class ImportCoordinator
         // "Importing 1..." followed by "Importing 2...") instead of one steady running total.
         _library.StatusMessage = $"Importing {total} game(s)...";
 
-        int steamAdded, gogAdded, eaAdded, epicAdded, ubisoftAdded, xboxAdded, battleNetAdded, folderAdded;
+        int steamAdded, gogAdded, eaAdded, epicAdded, ubisoftAdded, xboxAdded, battleNetAdded, rockstarAdded, folderAdded;
 
         // One save and one hotkey rebuild for the whole selection instead of one per platform.
         using (BeginCommitBatch())
@@ -65,22 +65,23 @@ public partial class ImportCoordinator
             ubisoftAdded = ubisoftGames.Count > 0 ? await ImportUbisoftGamesAsync(ubisoftGames, announceProgress: false) : 0;
             xboxAdded = xboxGames.Count > 0 ? await ImportXboxGamesAsync(xboxGames, announceProgress: false) : 0;
             battleNetAdded = battleNetGames.Count > 0 ? await ImportBattleNetGamesAsync(battleNetGames, announceProgress: false) : 0;
+            rockstarAdded = rockstarGames.Count > 0 ? await ImportRockstarGamesAsync(rockstarGames, announceProgress: false) : 0;
             folderAdded = folderCandidates.Count > 0 ? await ImportBatchGamesAsync(folderCandidates, announceProgress: false) : 0;
         }
 
         // -1 means that leg's import threw (already logged) rather than everything just being a
         // duplicate - don't let a real failure hide behind the same reassuring "already in your
         // library" text a legitimate all-duplicates result gets.
-        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0 || battleNetAdded < 0 || folderAdded < 0)
+        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0 || battleNetAdded < 0 || rockstarAdded < 0 || folderAdded < 0)
         {
-            int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(gogAdded, 0) + Math.Max(eaAdded, 0) + Math.Max(epicAdded, 0) + Math.Max(ubisoftAdded, 0) + Math.Max(xboxAdded, 0) + Math.Max(battleNetAdded, 0) + Math.Max(folderAdded, 0);
+            int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(gogAdded, 0) + Math.Max(eaAdded, 0) + Math.Max(epicAdded, 0) + Math.Max(ubisoftAdded, 0) + Math.Max(xboxAdded, 0) + Math.Max(battleNetAdded, 0) + Math.Max(rockstarAdded, 0) + Math.Max(folderAdded, 0);
             _library.AnnounceImportResult(addedSoFar > 0
                 ? $"Imported {addedSoFar} game(s), but part of the import failed - check the log for details."
                 : "Import failed - check the log for details.");
             return;
         }
 
-        int addedTotal = steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded + battleNetAdded + folderAdded;
+        int addedTotal = steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded + battleNetAdded + rockstarAdded + folderAdded;
         _library.AnnounceImportResult(addedTotal > 0
             ? $"Imported {addedTotal} game(s)!"
             : "All selected games are already in your library.");
@@ -357,6 +358,25 @@ public partial class ImportCoordinator
                 // May be null when Battle.net's catalog had no code yet - the launcher looks again.
                 BattleNetProgramId = d.ProgramId,
                 Category = LibraryConstants.BattleNetCategory,
+                WorkingDirectory = d.InstallDir
+            }, IconSourceOf(d.IconPath, d.ExePath)),
+            d => d.Name, announceProgress);
+
+    /// <param name="announceProgress">See the matching parameter on <see cref="ImportBatchGamesAsync"/>.</param>
+    /// <returns>The number of games actually added; 0 if none (e.g. all were duplicates); -1 if the import itself threw (logged separately - callers should not treat this the same as "0, all duplicates").</returns>
+    public async Task<int> ImportRockstarGamesAsync(List<DiscoveredRockstarGame> discoveredGames, bool announceProgress = true) =>
+        await ImportDiscoveredAsync(discoveredGames, "Rockstar", "ImportRockstarGames",
+            (g, d) => SameId(g.RockstarGameId, d.GameId),
+            d => (new GameEntry
+            {
+                Name = d.Name,
+                // The direct fallback, the icon, dedupe and "open install folder"; the launcher
+                // launch goes by install folder (WorkingDirectory).
+                ExecutablePath = d.ExePath ?? string.Empty,
+                IsRockstarGame = true,
+                ImportedFrom = LauncherPlatform.Rockstar,
+                RockstarGameId = d.GameId,
+                Category = LibraryConstants.RockstarCategory,
                 WorkingDirectory = d.InstallDir
             }, IconSourceOf(d.IconPath, d.ExePath)),
             d => d.Name, announceProgress);

@@ -144,6 +144,7 @@ public partial class ProcessLauncherService
     private readonly UbisoftScannerService _ubisoftScannerService;
     private readonly XboxScannerService _xboxScannerService;
     private readonly BattleNetScannerService _battleNetScannerService;
+    private readonly RockstarScannerService _rockstarScannerService;
 
     private readonly Lock _sessionsLock = new();
     private readonly Dictionary<string, ActiveGameSession> _sessions = new(StringComparer.Ordinal);
@@ -219,8 +220,10 @@ public partial class ProcessLauncherService
         EpicScannerService epicScannerService,
         UbisoftScannerService ubisoftScannerService,
         XboxScannerService xboxScannerService,
-        BattleNetScannerService battleNetScannerService)
+        BattleNetScannerService battleNetScannerService,
+        RockstarScannerService? rockstarScannerService = null)
     {
+        _rockstarScannerService = rockstarScannerService ?? new RockstarScannerService();
         _storageService = storageService;
         _performanceProfileService = performanceProfileService;
         _scriptService = scriptService;
@@ -1030,10 +1033,14 @@ public partial class ProcessLauncherService
                 case LaunchRoute.BattleNet:
                     return LaunchBattleNetGame(game, out errorMessage);
 
+                case LaunchRoute.RockstarClient:
+                    return LaunchRockstarGame(game, out errorMessage, out isMissing);
+
                 case LaunchRoute.GogDirect:
                 case LaunchRoute.EaDirect:
                 case LaunchRoute.EpicDirect:
                 case LaunchRoute.UbisoftDirect:
+                case LaunchRoute.RockstarDirect:
                     LogDirectFallback(game, route);
                     return LaunchPlatformExeDirectly(game, route, out errorMessage, out isMissing);
 
@@ -1067,7 +1074,8 @@ public partial class ProcessLauncherService
             GogGalaxyRunning: game.IsGogGame && IsGalaxyClientRunning(),
             EaAppInstalled: game.IsEaGame && _eaScannerService.IsEaAppInstalled(),
             EpicLauncherInstalled: game.IsEpicGame && _epicScannerService.IsEpicLauncherInstalled(),
-            UbisoftConnectInstalled: game.IsUbisoftGame && _ubisoftScannerService.IsUbisoftConnectInstalled());
+            UbisoftConnectInstalled: game.IsUbisoftGame && _ubisoftScannerService.IsUbisoftConnectInstalled(),
+            RockstarLauncherInstalled: game.IsRockstarGame && _rockstarScannerService.IsRockstarLauncherInstalled());
     }
 
     private static void LogDirectFallback(GameEntry game, LaunchRoute route)
@@ -1077,6 +1085,7 @@ public partial class ProcessLauncherService
             LaunchRoute.GogDirect => "GOG Galaxy",
             LaunchRoute.EaDirect => "EA App",
             LaunchRoute.EpicDirect => "Epic Games Launcher",
+            LaunchRoute.RockstarDirect => "Rockstar Games Launcher",
             _ => "Ubisoft Connect"
         };
         LoggingService.Verbose("Launcher", game.LaunchDirectly
@@ -1368,12 +1377,17 @@ public partial class ProcessLauncherService
     /// <summary>
     /// The folder a session's processes are watched (and force-closed) under. For a Battle.net
     /// game that is the folder Blizzard's uninstall entry records now - a "Move install" leaves the
-    /// saved entry pointing at the old place - falling back to <see cref="ResolveInstallDir"/>.
+    /// saved entry pointing at the old place - falling back to <see cref="ResolveInstallDir"/>. The
+    /// same for a Rockstar game, from Rockstar's registry key.
     /// Launch and force-close must agree on this, or a kill by folder looks in the wrong one.
     /// </summary>
     private string ResolveTrackedInstallDir(GameEntry game) =>
         game.IsBattleNetGame
             ? _battleNetScannerService.FindInstallDir(game.BattleNetUid) ?? ResolveInstallDir(game)
+        // Rockstar's launcher is told which title to start by this folder, so it must be the one
+        // Rockstar records, not a Working Directory an entry linked from a Local game kept.
+        : game.IsRockstarGame
+            ? _rockstarScannerService.FindInstallDir(game.RockstarGameId) ?? ResolveInstallDir(game)
             : ResolveInstallDir(game);
 
     /// <summary>
