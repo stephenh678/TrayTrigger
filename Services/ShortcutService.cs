@@ -367,6 +367,30 @@ public class ShortcutService
         }
     }
 
+    /// <summary>
+    /// Writes a shortcut that starts a library game through TrayTrigger: <c>TrayTrigger.exe --play &lt;game id&gt;</c>
+    /// (the id, not the name, so renaming the game does not break it). The icon is the game's own program when it has one.
+    /// </summary>
+    public static void CreateGameShortcut(string lnkPath, string trayTriggerExe, string gameId, string gameName, string? iconSource, bool withoutChanges = false)
+    {
+        IShellLinkW? link = null;
+        try
+        {
+            link = (IShellLinkW)new ShellLink();
+            link.SetPath(trayTriggerExe);
+            link.SetArguments(PlayRequest.ArgumentsFor(gameId, withoutChanges));
+            link.SetWorkingDirectory(Path.GetDirectoryName(trayTriggerExe) ?? string.Empty);
+            link.SetDescription($"Play {gameName} with TrayTrigger");
+            bool gameIcon = !string.IsNullOrWhiteSpace(iconSource) && iconSource.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(iconSource);
+            link.SetIconLocation(gameIcon ? iconSource! : trayTriggerExe, 0);
+            ((IPersistFile)link).Save(lnkPath, true);
+        }
+        finally
+        {
+            if (link != null) Marshal.ReleaseComObject(link);
+        }
+    }
+
     private static string CleanGameName(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return "Unnamed Game";

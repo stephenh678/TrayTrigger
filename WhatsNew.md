@@ -8,6 +8,8 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 - **Launch your last game (Ctrl+Alt+L)** - One shortcut plays the game you played most recently, or brings it forward if it's already running. Change it in Settings > General.
 - **Game updates don't confuse it** - If a launcher updates a game as it starts, TrayTrigger now waits for the game itself instead of treating the update as the game and ending early.
+- **Play from a shortcut or button** - Right-click a game and choose Create Shortcut, or run `TrayTrigger.exe --play "Game"` from a Stream Deck, Task Scheduler or a streaming host. The game starts through TrayTrigger with its profile.
+- **Play Without Changes** - Start a game once with none of TrayTrigger's settings, to see whether a problem is TrayTrigger's. It's in the game's right-click menu, or Shift+click the game in the tray menu.
 - **Epic's new launcher** - Scan for Games now finds games installed by the new Epic Games Launcher as well as the classic one.
 - **Rockstar Games Launcher** - Scan for Games now finds and launches games installed with the Rockstar Games Launcher.
 - **Rockstar games on Epic** - Games like Red Dead Redemption 2 that start through another launcher now get their settings on the game itself.

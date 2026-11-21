@@ -554,7 +554,9 @@ public partial class App
         {
             Header = card.TrayMenuLabel,
             Style = TrayItemStyle,
-            Command = new RelayCommand(() => _mainViewModel.LaunchGame(card))
+            // Shift+click plays the game once without its settings (Play Without Changes), as the library's menu does.
+            Command = new RelayCommand(() => _mainViewModel.LaunchGame(card,
+                withoutChanges: System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift)))
         };
 
         // Greyed out, never disabled: a disabled row says nothing about why, and the launcher that

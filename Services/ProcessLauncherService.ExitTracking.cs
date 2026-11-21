@@ -83,7 +83,7 @@ public partial class ProcessLauncherService
             {
                 StartRealGameDiscovery(session, process, scriptInstallDir);
             }
-            else
+            else if (!session.WithoutChanges)
             {
                 _performanceProfileService.OnGameProcessStarted(game, process);
                 TrackGameWindow(session, process.Id);
@@ -91,7 +91,7 @@ public partial class ProcessLauncherService
                 // found under the install folder was opened by id, and has no launch handle.
                 CpuTopologyService.ApplyCpuCores(process, game, startedByTrayTrigger: allowStubHandoff);
             }
-            _scriptService.TrackPostExit(game, session.PlaytimeStartUtc);
+            if (!session.WithoutChanges) _scriptService.TrackPostExit(game, session.PlaytimeStartUtc);
 
             // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited on a
             // thread-pool thread almost immediately for a process that already exited.
@@ -327,9 +327,12 @@ public partial class ProcessLauncherService
         };
         try
         {
-            _performanceProfileService.OnGameProcessStarted(game, real);
-            TrackGameWindow(session, real.Id);
-            CpuTopologyService.ApplyCpuCores(real, game, startedByTrayTrigger: false);
+            if (!session.WithoutChanges)
+            {
+                _performanceProfileService.OnGameProcessStarted(game, real);
+                TrackGameWindow(session, real.Id);
+                CpuTopologyService.ApplyCpuCores(real, game, startedByTrayTrigger: false);
+            }
             StartDlssObservation(session, real);
             WaitForWindowAndActivate(session, real);
         }

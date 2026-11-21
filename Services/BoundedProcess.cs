@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TrayTrigger.Services;
@@ -19,8 +20,10 @@ internal static class BoundedProcess
         using var proc = Process.Start(psi);
         if (proc == null) return null;
 
-        var output = proc.StandardOutput.ReadToEndAsync();
-        var error = proc.StandardError.ReadToEndAsync();
+        // Each stream gets a thread of its own: the pipe reads block, and on a busy thread pool (a full test run,
+        // a startup scan) queued pool reads could miss the drain limit below and come back empty.
+        var output = Task.Factory.StartNew(() => proc.StandardOutput.ReadToEnd(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        var error = Task.Factory.StartNew(() => proc.StandardError.ReadToEnd(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         if (!proc.WaitForExit(timeoutMs))
         {
             try { proc.Kill(entireProcessTree: true); } catch (Exception) { /* already gone */ }

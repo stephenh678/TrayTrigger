@@ -542,7 +542,9 @@ public partial class LibraryViewModel : ViewModelBase
             // The quick settings change the game entry and nothing else, so this is the narrow
             // save - no settings.json rewrite for a menu tick.
             onQuickSettingChanged: _ => SaveGamesOnly(),
-            onToggleDlssOverride: card => _ = ToggleDlssOverrideAsync(card)
+            onToggleDlssOverride: card => _ = ToggleDlssOverrideAsync(card),
+            onLaunchWithoutChanges: card => { if (!HasSelection) LaunchGame(card, withoutChanges: true); },
+            onCreateShortcut: CreateGameShortcut
         );
         // Sessions outlive library reloads (a rescan while a game is running), so a fresh card
         // must pick up the live state rather than wait for the next SessionStarted event.
@@ -691,6 +693,7 @@ public partial class LibraryViewModel : ViewModelBase
         GameEditViewModel.EditField? showField = null)
     {
         bool requestedLaunch = false;
+        bool requestedLaunchWithoutChanges = false;
         bool requestedDelete = false;
         bool requestedCloseGame = false;
         bool requestedForceClose = false;
@@ -719,7 +722,8 @@ public partial class LibraryViewModel : ViewModelBase
                 () => _settings.EnableGameScripts,
                 () => _settings.ScriptDefaults is { Enabled: true, HasAny: true }),
             heroArt: HeroArtService.Shared,
-            openActivityAction: () => requestedActivity = true);
+            openActivityAction: () => requestedActivity = true,
+            launchWithoutChangesAction: _ => requestedLaunchWithoutChanges = true);
         if (startOnSettings) vm.ShowSettings(field: showField);
 
         var dlg = new Views.GameDetailsDialog(vm);
@@ -732,6 +736,10 @@ public partial class LibraryViewModel : ViewModelBase
         if (requestedLaunch)
         {
             LaunchGame(card);
+        }
+        else if (requestedLaunchWithoutChanges)
+        {
+            LaunchGame(card, withoutChanges: true);
         }
         else if (requestedDelete)
         {

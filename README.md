@@ -79,7 +79,7 @@ Start with the one thing you change by hand before every session.
 
 The launch is the trigger. Pick a game, and everything you chose for it happens around it.
 
-**1. Launch.** Pick a game from the tray menu, the library or its own hotkey. It starts through its store's client, or directly.
+**1. Launch.** Pick a game from the tray menu, the library, its own hotkey, or a shortcut or Stream Deck button that runs `TrayTrigger.exe --play "Game"`. It starts through its store's client, or directly.
 
 <p align="center">
   <img src="site/assets/library-current.png" width="800" alt="The games library, a poster grid with launcher badges">

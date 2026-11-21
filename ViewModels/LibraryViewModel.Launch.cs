@@ -19,7 +19,11 @@ namespace TrayTrigger.ViewModels;
 /// <summary>Playing a game from its card: the checks, the launch itself, and what the player sees when it fails.</summary>
 public partial class LibraryViewModel
 {
-    public void LaunchGame(GameCardViewModel card)
+    // Two overloads rather than one optional parameter, so LaunchGame stays usable as an Action<GameCardViewModel> (a method group).
+    public void LaunchGame(GameCardViewModel card) => LaunchGame(card, withoutChanges: false);
+
+    /// <param name="withoutChanges">Play Without Changes: start the game but apply none of its settings (profile, display and sound, CPU cores, scripts, tools) this once.</param>
+    public void LaunchGame(GameCardViewModel card, bool withoutChanges)
     {
         Window? owner = WindowHelper.ActiveOwner();
         if (card.IsUnavailable)
@@ -75,9 +79,9 @@ public partial class LibraryViewModel
         // before the actual launch happens, so a game that takes focus or goes fullscreen almost
         // at once can't cover the notice before it is read. With the window hidden or behind
         // another app the toast can't be seen at all, so the launch popup stands in for it.
-        if (LaunchPopup?.TryBeginLaunch(LaunchTarget.ForGame(card.Game)) != true)
+        if (LaunchPopup?.TryBeginLaunch(PopupTargetFor(card.Game, withoutChanges)) != true)
         {
-            ShowLaunchToast($"Launching \"{card.Name}\"...",
+            ShowLaunchToast(withoutChanges ? $"Launching \"{card.Name}\" without changes..." : $"Launching \"{card.Name}\"...",
                 seconds: (int)Math.Ceiling((LaunchDispatchDelay + LaunchToastAfterDispatch).TotalSeconds));
         }
 
@@ -85,9 +89,59 @@ public partial class LibraryViewModel
         launchDelayTimer.Tick += (s, e) =>
         {
             launchDelayTimer.Stop();
-            DispatchLaunch(card, owner);
+            DispatchLaunch(card, owner, withoutChanges);
         };
         launchDelayTimer.Start();
+    }
+
+    /// <summary>
+    /// What the launch popup is told about the game. Its "Launching" line names the game's profile; a launch without
+    /// changes applies none, so the profile is left off the target rather than named and then not applied.
+    /// </summary>
+    internal static LaunchTarget PopupTargetFor(GameEntry game, bool withoutChanges)
+    {
+        var target = LaunchTarget.ForGame(game);
+        return withoutChanges ? target with { PerformanceProfile = PerformanceProfileMode.Off } : target;
+    }
+
+    /// <summary>
+    /// Create Shortcut: a .lnk, by default on the desktop, that plays the game through TrayTrigger (<c>--play</c>), so it
+    /// can be pinned or put on a Stream Deck and still get the game's profile.
+    /// </summary>
+    public void CreateGameShortcut(GameCardViewModel card)
+    {
+        string? exe = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe))
+        {
+            StatusMessage = "Couldn't create the shortcut: TrayTrigger's own program wasn't found.";
+            return;
+        }
+
+        string safeName = string.Concat(card.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? ' ' : c)).Trim();
+        if (safeName.Length == 0) safeName = "Game";
+        var dialog = new SaveFileDialog
+        {
+            Title = $"Create a Shortcut for {card.Name}",
+            Filter = "Shortcut (*.lnk)|*.lnk",
+            DefaultExt = ".lnk",
+            AddExtension = true,
+            OverwritePrompt = true,
+            FileName = safeName + ".lnk",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+        };
+        if (FileDialogCloak.Show(dialog) != true) return;
+
+        try
+        {
+            ShortcutService.CreateGameShortcut(dialog.FileName, exe, card.Game.Id, card.Name, card.Game.ExecutablePath);
+            StatusMessage = $"Created a shortcut for {card.Name}";
+            LoggingService.Info("Library", $"Created a play shortcut for '{card.Name}' at '{dialog.FileName}'.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Library", $"Could not create a shortcut for '{card.Name}': {ex.Message}");
+            StatusMessage = $"Couldn't create the shortcut: {ex.Message}";
+        }
     }
 
     /// <summary>What the status line says when Play finds the game already tracked.</summary>
@@ -182,7 +236,7 @@ public partial class LibraryViewModel
         }
     }
 
-    private void DispatchLaunch(GameCardViewModel card, Window? owner)
+    private void DispatchLaunch(GameCardViewModel card, Window? owner, bool withoutChanges)
     {
         // LaunchGame can block for a long time - a UAC prompt plus an elevated Defender cmdlet
         // for an Aggressive profile, then a pre-launch script wait - so it runs off the UI
@@ -194,7 +248,7 @@ public partial class LibraryViewModel
             bool isMissing;
             try
             {
-                ok = _launcherService.LaunchGame(card.Game, out err, out isMissing);
+                ok = _launcherService.LaunchGame(card.Game, out err, out isMissing, withoutChanges);
             }
             catch (Exception ex)
             {
