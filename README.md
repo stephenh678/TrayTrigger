@@ -82,7 +82,7 @@ The launch is the trigger. Pick a game, and everything you chose for it happens 
 **1. Launch.** Pick a game from the tray menu, the library, its own hotkey, or a shortcut or Stream Deck button that runs `TrayTrigger.exe --play "Game"`. It starts through its store's client, or directly.
 
 <p align="center">
-  <img src="site/assets/library-current.png" width="800" alt="The games library, a poster grid with launcher badges">
+  <img src="site/assets/library-current.png" width="800" alt="The games library, a poster grid with category tabs, a row of collections and launcher badges">
 </p>
 
 **2. Set up.** TrayTrigger notes how Windows is set, then applies the game's profile: power plan, HDR, GPU preference, CPU cores, DLSS Override. Your tools close or start, and your script runs.

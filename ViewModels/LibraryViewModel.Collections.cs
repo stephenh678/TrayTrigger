@@ -83,6 +83,9 @@ public partial class LibraryViewModel
     /// <summary>A collection was renamed (old name, new name): tools limited to it follow.</summary>
     public event Action<string, string>? CollectionRenamed;
 
+    /// <summary>A collection was deleted: tools limited to it drop it, and stop starting or closing with games if it was their only one.</summary>
+    public event Action<string>? CollectionDeleted;
+
     private ICommand? _cmdBatchCollectionsCommand;
     public ICommand BatchCollectionsCommand => _cmdBatchCollectionsCommand ??= new RelayCommand(() =>
     {
@@ -274,6 +277,7 @@ public partial class LibraryViewModel
         SaveLibrary();
         RebuildCollectionTabs();
         FilteredGames.Refresh();
+        CollectionDeleted?.Invoke(name);
         LoggingService.Info("Library", $"Collection '{name}' deleted; its games stay in the library.");
         StatusMessage = $"Deleted collection {name}";
     }

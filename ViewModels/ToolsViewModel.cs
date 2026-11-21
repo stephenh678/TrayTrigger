@@ -277,10 +277,48 @@ public sealed class ToolsViewModel : ViewModelBase
 
     private void Save() => _storage.SaveTools(Tools.Select(c => c.Tool));
 
+    /// <summary>The tools limited to a collection, by name: what deleting it would change.</summary>
+    public IReadOnlyList<string> ToolsLimitedTo(string collection) => Tools
+        .Where(c => c.Tool.OnlyForCollections is { } only && only.Any(o => string.Equals(o, collection, StringComparison.OrdinalIgnoreCase)))
+        .Select(c => c.Name)
+        .ToList();
+
+    /// <summary>
+    /// A collection was deleted in the Library: tools limited to it drop it. One that had only that
+    /// collection would otherwise widen to every game, so it goes back to "Do nothing" instead, and the
+    /// status line says so.
+    /// </summary>
+    public void DeleteCollection(string name)
+    {
+        var turnedOff = new List<string>();
+        bool changed = false;
+        foreach (var card in Tools)
+        {
+            var list = card.Tool.OnlyForCollections;
+            if (list == null || !list.Any(c => string.Equals(c, name, StringComparison.OrdinalIgnoreCase))) continue;
+            var rest = list.Where(c => !string.Equals(c, name, StringComparison.OrdinalIgnoreCase)).ToList();
+            // A new list, not an edit in place (a launch on its own thread reads it).
+            card.Tool.OnlyForCollections = rest;
+            if (rest.Count == 0)
+            {
+                var tool = card.Tool;
+                tool.StartWithGames = false;
+                tool.WaitBeforeGame = false;
+                tool.CloseAfterGames = false;
+                tool.CloseForGames = false;
+                tool.ReopenAfterGames = false;
+                turnedOff.Add(card.Name);
+            }
+            card.Refresh();
+            changed = true;
+        }
+        if (!changed) return;
+        CommitChanges(turnedOff.Count == 0 ? null : $"Collection \"{name}\" was deleted, so {string.Join(", ", turnedOff)} no longer start or close with games");
+    }
+
     /// <summary>
     /// A collection was renamed in the Library: tools limited to it follow, so their Start/Close with
-    /// games keeps applying to the same games. Deleting a collection leaves tools alone on purpose - a tool
-    /// limited to a collection nobody is in now applies to no game, rather than widening to every game.
+    /// games keeps applying to the same games.
     /// </summary>
     public void RenameCollection(string oldName, string newName)
     {

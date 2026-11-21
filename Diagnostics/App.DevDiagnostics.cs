@@ -784,9 +784,27 @@ public partial class App
                 string previousMode = _mainViewModel.SettingsVM.LibraryViewMode;
                 _mainViewModel.CurrentSection = NavSection.Library;
                 _mainViewModel.SettingsVM.LibraryViewMode = viewMode;
+                // "collections": a few demonstration collections on the games in this run only (never saved), and a
+                // larger window, for the site's hero image.
+                bool withCollections = e.Args.Any(a => a.Equals("collections", StringComparison.OrdinalIgnoreCase));
+                if (withCollections)
+                {
+                    var demoCards = _mainViewModel.Library.Games.OrderBy(c => c.Name).ToList();
+                    for (int n = 0; n < demoCards.Count; n++)
+                    {
+                        var demo = new List<string>();
+                        if (n % 3 == 0) demo.Add("Co-op");
+                        if (n % 4 == 1) demo.Add("With Discord");
+                        if (n % 5 == 2) demo.Add("Family");
+                        demoCards[n].Game.Collections = demo;
+                    }
+                    // Twelve games make two full rows of six.
+                    if (demoCards.Count > 12) _mainViewModel.Library.Games.Remove(demoCards[^1]);
+                    _mainViewModel.Library.RebuildCategories();
+                }
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
-                CaptureVisual(_mainWindow, 960, 700, targetPng);
+                CaptureVisual(_mainWindow, withCollections ? 1380 : 960, withCollections ? 900 : 700, targetPng);
                 _mainViewModel.SettingsVM.LibraryViewMode = previousMode;
                 ExitApplication();
                 return;
