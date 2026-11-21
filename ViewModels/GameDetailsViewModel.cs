@@ -563,6 +563,9 @@ public partial class GameDetailsViewModel : ViewModelBase
     public ICommand OpenPcGamingWikiCommand { get; }
 
     public ICommand LaunchGameCommand { get; }
+    /// <summary>Play Without Changes, from the ... menu: the game starts once with none of its settings applied.</summary>
+    public ICommand LaunchWithoutChangesCommand { get; }
+    private readonly Action<GameEntry>? _launchWithoutChangesAction;
     public ICommand EditGameCommand { get; }
     public ICommand DeleteGameCommand { get; }
 
@@ -610,8 +613,10 @@ public partial class GameDetailsViewModel : ViewModelBase
         GameEditHost? editHost = null,
         HeroArtService? heroArt = null,
         ActivityService? activity = null,
-        Action? openActivityAction = null)
+        Action? openActivityAction = null,
+        Action<GameEntry>? launchWithoutChangesAction = null)
     {
+        _launchWithoutChangesAction = launchWithoutChangesAction;
         _activity = activity;
         _openActivityAction = openActivityAction;
         _editHost = editHost;
@@ -648,6 +653,7 @@ public partial class GameDetailsViewModel : ViewModelBase
         RefreshNowCommand = new RelayCommand(() => _ = RefreshNowAsync(), () => !IsRefreshingNow);
         ToggleFavoriteCommand = new RelayCommand(() => IsFavorite = !IsFavorite);
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
+        LaunchWithoutChangesCommand = new RelayCommand(ExecuteLaunchWithoutChanges, () => _launchWithoutChangesAction != null);
         EditGameCommand = new RelayCommand(() => ShowSettings(), () => CanEdit);
         SelectTabCommand = new RelayCommand(p => { if (p is GameDetailsTab tab) SelectedTab = tab; else if (p is string name && Enum.TryParse(name, out GameDetailsTab parsed)) SelectedTab = parsed; });
         DeleteGameCommand = new RelayCommand(ExecuteDelete);
@@ -1196,6 +1202,13 @@ public partial class GameDetailsViewModel : ViewModelBase
         if (!CanLeave()) return;
         RequestClose?.Invoke();
         _launchAction?.Invoke(Game);
+    }
+
+    private void ExecuteLaunchWithoutChanges()
+    {
+        if (!CanLeave()) return;
+        RequestClose?.Invoke();
+        _launchWithoutChangesAction?.Invoke(Game);
     }
 
     private void ExecuteDelete()

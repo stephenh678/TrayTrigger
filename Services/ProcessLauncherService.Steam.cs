@@ -167,7 +167,7 @@ public partial class ProcessLauncherService
 
         // Registered up front (not on the Running flip) so a TrayTrigger exit during Steam's
         // own startup still runs the post-exit script on shutdown.
-        _scriptService.TrackPostExit(game, session.PlaytimeStartUtc);
+        if (!session.WithoutChanges) _scriptService.TrackPostExit(game, session.PlaytimeStartUtc);
 
         Poller? poller = null;
         poller = new Poller(SteamSessionPollInterval, () =>
@@ -223,9 +223,12 @@ public partial class ProcessLauncherService
                     {
                         session.Process = proc;
                         LoggingService.Verbose("Launcher", $"Found Steam game process for '{game.Name}' (PID {proc.Id}).");
-                        _performanceProfileService.OnGameProcessStarted(game, proc);
-                        TrackGameWindow(session, proc.Id);
-                        CpuTopologyService.ApplyCpuCores(proc, game);
+                        if (!session.WithoutChanges)
+                        {
+                            _performanceProfileService.OnGameProcessStarted(game, proc);
+                            TrackGameWindow(session, proc.Id);
+                            CpuTopologyService.ApplyCpuCores(proc, game);
+                        }
                         WaitForWindowAndActivate(session, proc);
                         StartDlssObservation(session, proc);
                     }

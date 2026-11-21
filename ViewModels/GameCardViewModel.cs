@@ -80,8 +80,12 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onQuickSettingChanged = null,
         Action<GameCardViewModel>? onToggleDlssOverride = null,
         Action<GameCardViewModel>? onToggleSuspend = null,
-        Action<GameCardViewModel>? onRestoreSettings = null)
+        Action<GameCardViewModel>? onRestoreSettings = null,
+        Action<GameCardViewModel>? onLaunchWithoutChanges = null,
+        Action<GameCardViewModel>? onCreateShortcut = null)
     {
+        CreateShortcutCommand = new RelayCommand(() => onCreateShortcut?.Invoke(this), () => onCreateShortcut != null);
+        LaunchWithoutChangesCommand = new RelayCommand(() => onLaunchWithoutChanges?.Invoke(this), () => onLaunchWithoutChanges != null);
         RestoreSettingsCommand = new RelayCommand(() => onRestoreSettings?.Invoke(this), () => onRestoreSettings != null);
         _onQuickSettingChanged = onQuickSettingChanged;
         _onToggleDlssOverride = onToggleDlssOverride;
@@ -463,6 +467,10 @@ public class GameCardViewModel : ViewModelBase
     }
 
     public ICommand LaunchCommand { get; }
+    /// <summary>Play Without Changes: starts the game once with none of its settings applied (no profile, display and sound, CPU cores, scripts or tools).</summary>
+    public ICommand LaunchWithoutChangesCommand { get; }
+    /// <summary>Create Shortcut: a .lnk that plays this game through TrayTrigger (<c>--play</c>).</summary>
+    public ICommand CreateShortcutCommand { get; }
     public ICommand EditCommand { get; }
     public ICommand DeleteCommand { get; }
     public ICommand ViewDetailsCommand { get; }

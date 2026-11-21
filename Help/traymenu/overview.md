@@ -37,6 +37,8 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 
 ## When you launch from the tray or a hotkey
 
+- Hold Shift and click a game in the tray menu to play it once without TrayTrigger's settings for it (Play Without Changes; see How a game is launched).
+
 - With the window hidden, a game started from the tray menu or its own hotkey shows a small popup near the tray clock: the game's icon and name, and what it's waiting for (Battle.net signing in, for example).
 - The popup never takes focus, and clicks pass through it to whatever is underneath. It closes once the game starts, or after 100 seconds if the game never does.
 - If the launch fails, the popup shows why and stays until you close it. Its link opens TrayTrigger, or lets you locate a game whose executable is missing.

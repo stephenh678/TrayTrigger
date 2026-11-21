@@ -25,6 +25,7 @@ Leave it on across the whole session you are reporting, including the launch and
 
 ## Reporting a problem
 
+- If a game misbehaves, try Play Without Changes (the game's right-click menu, or Shift+click in the tray menu) first. If the problem stays, it is not the game's TrayTrigger settings, and saying so in the report saves a round of questions. See How a game is launched.
 - Reproduce the issue with verbose logging on, so the log captures it.
 - On the About page, click Copy Diagnostic Info. That puts a report on the clipboard: version, Windows build, CPU, GPU and RAM, the number of monitors and the main one's refresh rate, which launchers are installed, library counts and how many games use each per-game setting, the settings that matter to bugs (including text size, font and theme, and which tweaks your Optimized and Aggressive profiles switch on), applied tweaks, the last Stutter Check, the last 30 days of problems and changes from Activity & History, and the last warnings from the log. API keys are never included, and your Windows user folder is replaced by %USERPROFILE% so the report doesn't give out your user name. Save Report writes the same thing to a file.
 - Open Report an Issue on the About page, describe what you did and what happened, paste the diagnostic info, and attach debug.log. If TrayTrigger would not start or stopped on its own, attach crash.log too.

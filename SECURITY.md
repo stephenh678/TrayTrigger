@@ -44,6 +44,10 @@ The optional per-game Defender exclusion (part of the Aggressive performance pro
 - **Scoped to one game's executable**, not a folder or drive-wide exclusion.
 - **Session-scoped and reversible** — removed automatically when the game closes, unless that exact path was already excluded before TrayTrigger touched it (in which case TrayTrigger leaves it alone rather than removing something it didn't add).
 
+## Playing a game from outside TrayTrigger
+
+`TrayTrigger.exe --play "Game"` (and the shortcut Create Shortcut makes) asks a running TrayTrigger to play a game. The request travels over a local named pipe that only your own Windows user can open (`PipeOptions.CurrentUserOnly`, with your user's id in its name); it is not a network port, and nothing is registered with Windows (no URL protocol). The request is one line holding a game's id or title and an optional flag, and the only thing it can do is play a game that is already in your library, exactly as its Play button would. Nothing in it is run, downloaded or written. Anything else a program running as you could do, it could already do without TrayTrigger. The code is `Services/PlayRequest.cs` and `Services/PlayRequestChannel.cs`.
+
 ## Scripts and hotkeys
 
 The optional pre-launch/post-exit script feature (disabled by default; must be enabled in Settings) runs a `.bat`, `.cmd`, `.ps1`, or `.exe` file **that you explicitly attach to a specific game**. TrayTrigger does not download, generate, or execute any script on your behalf — you are always the one supplying the script and its contents are entirely your responsibility.

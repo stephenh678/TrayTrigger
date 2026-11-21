@@ -94,9 +94,13 @@
         <MenuItem Header="Play" Command="{Binding LaunchCommand}" FontWeight="SemiBold">
             <MenuItem.Icon><TextBlock Text="&#xE768;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushAccentText}"/></MenuItem.Icon>
         </MenuItem>
+        <MenuItem Header="Play Without Changes" Command="{Binding LaunchWithoutChangesCommand}"
+                  ToolTip="Starts the game once with none of TrayTrigger's settings for it: no profile, display or sound change, CPU cores, scripts or tools. Use it to see whether a problem is TrayTrigger's."/>
         <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
             <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
         </MenuItem>
+        <MenuItem Header="Create Shortcut..." Command="{Binding CreateShortcutCommand}"
+                  ToolTip="Makes a shortcut that plays this game through TrayTrigger, with its profile, so you can pin it or put it on a Stream Deck."/>
         <!-- Now Playing: one flyout to the right, as the tray menu's Now Playing row has. Only
              shown while the game has a session; Suspend's wording follows the game's state. -->
         <MenuItem Header="Now Playing">

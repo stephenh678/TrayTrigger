@@ -53,6 +53,11 @@ public sealed class ActiveGameSession
     internal DateTime StartedAtUtc { get; private set; }
     /// <summary>True once the real game process (or Steam's Running flag) has been observed.</summary>
     public bool GameStarted { get; internal set; }
+    /// <summary>
+    /// Play Without Changes: this launch applies none of the game's settings (profile, display and sound,
+    /// CPU cores, mouse hold, scripts, tools). Fixed when the session begins; the game is just started and tracked.
+    /// </summary>
+    public bool WithoutChanges { get; internal set; }
     /// <summary>The game's process when TrayTrigger has a handle to it; null for a Steam session whose
     /// process hasn't been located (yet).</summary>
     public Process? Process { get; internal set; }
@@ -150,6 +155,19 @@ public partial class ProcessLauncherService
     private readonly Dictionary<string, ActiveGameSession> _sessions = new(StringComparer.Ordinal);
     /// <summary>Games whose LaunchGame call is still deciding its route, before any session exists. Guarded by <see cref="_sessionsLock"/>.</summary>
     private readonly HashSet<string> _launchesInProgress = new(StringComparer.Ordinal);
+    /// <summary>Games whose LaunchGame call in progress was asked to apply none of their settings (Play Without Changes). Guarded by <see cref="_sessionsLock"/>.</summary>
+    private readonly HashSet<string> _withoutChangesLaunches = new(StringComparer.Ordinal);
+
+    /// <summary>The next <see cref="BeginSession"/> for this game applies none of its settings. A test seam: LaunchGame sets it itself.</summary>
+    internal void MarkWithoutChanges(string gameId)
+    {
+        lock (_sessionsLock) { _withoutChangesLaunches.Add(gameId); }
+    }
+
+    private bool IsWithoutChangesLaunch(string gameId)
+    {
+        lock (_sessionsLock) { return _withoutChangesLaunches.Contains(gameId); }
+    }
 
     /// <summary>LastPlayed/playtime changed - the library should refresh and save.</summary>
     public event Action<GameEntry>? GameUpdated;
@@ -568,7 +586,7 @@ public partial class ProcessLauncherService
     /// Order: profile → pre-launch script → tools → game. See PerformanceProfileService for why the
     /// profile goes first.
     /// </summary>
-    private ActiveGameSession? BeginSession(GameEntry game, LaunchRoute route, out string? abortReason)
+    internal ActiveGameSession? BeginSession(GameEntry game, LaunchRoute route, out string? abortReason)
     {
         abortReason = null;
         // The Played row's record starts here: everything done for this launch is noted under the game's id.
@@ -580,6 +598,12 @@ public partial class ProcessLauncherService
         lock (_sessionsLock)
         {
             _sessions[game.Id] = session;
+            session.WithoutChanges = _withoutChangesLaunches.Contains(game.Id);
+        }
+        if (session.WithoutChanges)
+        {
+            LaunchRecord.Note(game.Id, LaunchRecord.Launch, "played without changes");
+            LoggingService.Info("Launcher", $"'{game.Name}' is launched without changes: no profile, display, sound, CPU core, script or tool settings are applied.");
         }
 
         // Before the profile, and deliberately outside it: DLSS settings are persistent driver
@@ -588,16 +612,19 @@ public partial class ProcessLauncherService
 
         // Before the profile, which goes by the default playback device: its Unmute audio has to act on the device the
         // game will play through, and put the mute back on that same one. FinishSession ends the profile first and this last.
-        AudioOutputService.Shared.Begin(game);
-        AudioOutputService.SharedInput.Begin(game);
+        if (!session.WithoutChanges)
+        {
+            AudioOutputService.Shared.Begin(game);
+            AudioOutputService.SharedInput.Begin(game);
 
-        _performanceProfileService.BeginGameSession(game);
+            _performanceProfileService.BeginGameSession(game);
+        }
 
         // The game's own display mode, if it has one: set before the game exists, put back in FinishSession. After the
         // profile, whose HDR change comes first; the profile's frame cap asks the display setting for the refresh rate to expect.
-        DisplayModeService.Shared.Begin(game);
+        if (!session.WithoutChanges) DisplayModeService.Shared.Begin(game);
 
-        var scriptResult = _scriptService.RunPreLaunch(game);
+        var scriptResult = session.WithoutChanges ? PreLaunchScriptResult.Proceed : _scriptService.RunPreLaunch(game);
         if (!scriptResult.ProceedWithLaunch)
         {
             abortReason = $"Launch of \"{game.Name}\" was cancelled because {scriptResult.AbortReason}.";
@@ -608,7 +635,7 @@ public partial class ProcessLauncherService
 
         // After the script, so a launch it cancels closes and starts nothing; before the game, so a
         // tool's administrator prompt is answered before the game can go full screen over it.
-        CompanionTools?.StartForGame(game, remember: true);
+        if (!session.WithoutChanges) CompanionTools?.StartForGame(game, remember: true);
 
         // Guarded like SessionGameStarted and SessionEnded: a subscriber's failure must not turn
         // into a rolled-back session and a "launch failed" for a game that was about to start.
@@ -674,7 +701,7 @@ public partial class ProcessLauncherService
     /// Built-in tweaks restore first so the user's post-exit script sees the machine back in its
     /// normal state.
     /// </summary>
-    private void FinishSession(ActiveGameSession session, bool gameRan, string reason, bool closeLauncher = true)
+    internal void FinishSession(ActiveGameSession session, bool gameRan, string reason, bool closeLauncher = true)
     {
         if (Interlocked.Exchange(ref session.Finished, 1) != 0) return;
 
@@ -724,21 +751,26 @@ public partial class ProcessLauncherService
         }
 
         PerformanceProfileMode? profilePutBack = null;
-        try
+        // A launch without changes applied none of these, so there is nothing to put back (and ending them
+        // here must not take away what an earlier session of the same game set).
+        if (!session.WithoutChanges)
         {
-            _performanceProfileService.EndGameSession(game.Id, out profilePutBack);
+            try
+            {
+                _performanceProfileService.EndGameSession(game.Id, out profilePutBack);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error("Launcher", $"Error restoring profile for '{game.Name}': {ex.Message}", ex);
+            }
+            // Never throws; a game that set no display mode is ignored.
+            DisplayModeService.Shared.End(game.Id);
+            AudioOutputService.SharedInput.End(game.Id);
+            AudioOutputService.Shared.End(game.Id);
         }
-        catch (Exception ex)
-        {
-            LoggingService.Error("Launcher", $"Error restoring profile for '{game.Name}': {ex.Message}", ex);
-        }
-        // Never throws; a game that set no display mode is ignored.
-        DisplayModeService.Shared.End(game.Id);
-        AudioOutputService.SharedInput.End(game.Id);
-        AudioOutputService.Shared.End(game.Id);
         CursorLockService.Shared.Untrack(game.Id);
         ScreenDimService.Shared.Untrack(game.Id);
-        if (gameRan)
+        if (gameRan && !session.WithoutChanges)
         {
             _scriptService.RunPostExit(game, minutes);
         }
@@ -763,7 +795,7 @@ public partial class ProcessLauncherService
         var record = LaunchRecord.Take(game.Id);
         if (gameRan)
         {
-            var (text, detail) = DescribePlaySession(game.Name, minutes, game.PerformanceProfile, session.StartedAtUtc, DateTime.UtcNow, record);
+            var (text, detail) = DescribePlaySession(game.Name, minutes, session.WithoutChanges ? PerformanceProfileMode.Off : game.PerformanceProfile, session.StartedAtUtc, DateTime.UtcNow, record);
             // One row per game, its times listed when opened: a history, not a log of every launch.
             var row = ActivityService.Add(profilePutBack != null ? ActivityLevel.Change : ActivityLevel.Activity, text,
                 subject: game.Name, detail: detail, groupKey: $"played|{game.Id}");
@@ -863,7 +895,7 @@ public partial class ProcessLauncherService
 
             session.Game.CumulativePlaytimeMinutes += minutes;
             LoggingService.Info("Launcher", $"'{session.Game.Name}' is still running at exit. +{minutes}m playtime recorded.");
-            var (text, _) = DescribePlaySession(session.Game.Name, minutes, session.Game.PerformanceProfile, default, default);
+            var (text, _) = DescribePlaySession(session.Game.Name, minutes, session.WithoutChanges ? PerformanceProfileMode.Off : session.Game.PerformanceProfile, default, default);
             ActivityService.Add(ActivityLevel.Activity, $"{text} · still running when TrayTrigger closed", subject: session.Game.Name,
                 groupKey: $"played|{session.GameId}");
             try { GameUpdated?.Invoke(session.Game); }
@@ -939,7 +971,8 @@ public partial class ProcessLauncherService
     /// anywhere from milliseconds to minutes. All events are raised on whatever thread ends up
     /// observing the change; subscribers marshal to the UI thread themselves.
     /// </summary>
-    public bool LaunchGame(GameEntry game, out string? errorMessage, out bool isMissing)
+    /// <param name="withoutChanges">Play Without Changes: start and track the game but apply none of its settings this once.</param>
+    public bool LaunchGame(GameEntry game, out string? errorMessage, out bool isMissing, bool withoutChanges = false)
     {
         errorMessage = null;
         isMissing = false;
@@ -966,6 +999,7 @@ public partial class ProcessLauncherService
                         LoggingService.Info("Launcher", $"'{game.Name}' is already being launched; not dispatching again.");
                         return true;
                     }
+                    if (withoutChanges) _withoutChangesLaunches.Add(game.Id);
                 }
             }
             if (inFlight != null)
@@ -1061,7 +1095,7 @@ public partial class ProcessLauncherService
         {
             if (claimed)
             {
-                lock (_sessionsLock) { _launchesInProgress.Remove(game.Id); }
+                lock (_sessionsLock) { _launchesInProgress.Remove(game.Id); _withoutChangesLaunches.Remove(game.Id); }
                 CloseCompanionToolsIfIdle();
             }
         }
@@ -1111,7 +1145,8 @@ public partial class ProcessLauncherService
 
         // Pre-launch only: there's no process handle or running flag to detect the exit, so
         // neither a Performance Profile nor a post-exit script can be honoured for these.
-        var scriptResult = _scriptService.RunPreLaunch(game);
+        bool withoutChanges = IsWithoutChangesLaunch(game.Id);
+        var scriptResult = withoutChanges ? PreLaunchScriptResult.Proceed : _scriptService.RunPreLaunch(game);
         if (!scriptResult.ProceedWithLaunch)
         {
             errorMessage = $"Launch of \"{game.Name}\" was cancelled because {scriptResult.AbortReason}.";
@@ -1119,7 +1154,7 @@ public partial class ProcessLauncherService
         }
 
         // No exit to wait for either, so what starts here is left running, and what closes stays closed.
-        CompanionTools?.StartForGame(game, remember: false);
+        if (!withoutChanges) CompanionTools?.StartForGame(game, remember: false);
 
         LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
         Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true })?.Dispose();
@@ -1246,6 +1281,7 @@ public partial class ProcessLauncherService
     /// </summary>
     private static void TrackGameWindow(ActiveGameSession session, int processId)
     {
+        if (session.WithoutChanges) return;
         CursorLockService.Shared.Track(session.Game, processId);
         ScreenDimService.Shared.Track(session.Game, processId);
         if (Volatile.Read(ref session.Finished) != 0)

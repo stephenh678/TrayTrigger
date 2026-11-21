@@ -355,9 +355,20 @@ public partial class App : Application
                 {
                     try
                     {
-                        using var evt = EventWaitHandle.OpenExisting(EventName);
-                        evt.Set();
-                        Log("Signaled existing instance.");
+                        // "--play <game>" goes to the running copy as a request and leaves its window alone; anything
+                        // else is the usual "bring your window forward".
+                        var playRequest = PlayRequest.FromArguments(e.Args);
+                        if (playRequest != null)
+                        {
+                            bool sent = PlayRequestChannel.TrySend(playRequest, TimeSpan.FromSeconds(10));
+                            Log(sent ? "Sent the play request to the existing instance." : "No existing instance took the play request.");
+                        }
+                        else
+                        {
+                            using var evt = EventWaitHandle.OpenExisting(EventName);
+                            evt.Set();
+                            Log("Signaled existing instance.");
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -411,10 +422,12 @@ public partial class App : Application
             {
                 Log($"Could not initialize ShowWindow event listener: {ex.Message}");
             }
+            StartPlayChannel();
         }
 
-        // Check command-line arguments
-        bool startMinimized = isScreenshot || e.Args.Any(a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase) ||
+        // Check command-line arguments. "--play" starts quietly in the tray: the game is the point, not the window.
+        var startupPlayRequest = isScreenshot ? null : PlayRequest.FromArguments(e.Args);
+        bool startMinimized = isScreenshot || startupPlayRequest != null || e.Args.Any(a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase) ||
                                                               a.Equals("-minimized", StringComparison.OrdinalIgnoreCase));
         Log($"startMinimized={startMinimized}");
 
@@ -636,6 +649,12 @@ public partial class App : Application
             Dispatcher.BeginInvoke(() => ShowRestoreResult(result), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
+        // This copy was started by "--play": the library is loaded and the tray is up, so play the game once the UI is idle.
+        if (startupPlayRequest != null)
+        {
+            Dispatcher.BeginInvoke(() => HandlePlayRequest(startupPlayRequest), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+
         Log("OnStartup completed successfully.");
     }
 
@@ -829,6 +848,7 @@ public partial class App : Application
             _trayToolTipTimer?.Stop();
             _trayToolTipTimer = null;
             _hotkeyManager?.Dispose();
+            _playChannel?.Dispose();
             _launchPopup?.Dispose();
             _trayIcon?.Dispose();
 

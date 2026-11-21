@@ -838,7 +838,7 @@ public partial class ImportCoordinator : ViewModelBase
     /// a URL with a scheme outside <see cref="UrlProtocolHelper.IsAllowedLaunchUrl"/>'s allow-list,
     /// a UNC/network target, or a local target that doesn't exist.
     /// </summary>
-    private static string? ValidateDroppedTarget(ShortcutResolution shortcut)
+    internal static string? ValidateDroppedTarget(ShortcutResolution shortcut)
     {
         string target = shortcut.TargetPath;
         if (string.IsNullOrWhiteSpace(target)) return "the shortcut has no target";
@@ -854,6 +854,10 @@ public partial class ImportCoordinator : ViewModelBase
             return "it points at a network location - copy the game locally first";
 
         if (!File.Exists(target)) return "its target file doesn't exist";
+
+        // A shortcut made by "Create Shortcut" starts a game through TrayTrigger; that game is already in the library.
+        if (Path.GetFileName(target).Equals("TrayTrigger.exe", StringComparison.OrdinalIgnoreCase))
+            return "it starts a game through TrayTrigger, which is already in your library";
 
         return null;
     }

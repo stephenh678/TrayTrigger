@@ -897,7 +897,9 @@ public class MainViewModel : ViewModelBase
     public void LoadLibrary() => Library.LoadLibrary();
     public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false) => Library.CreateCardViewModel(game, deferHeavyInit);
     public void OpenGameDetails(GameCardViewModel card) => Library.OpenGameDetails(card);
+    // Two overloads rather than one optional parameter: this one is passed as an Action<GameCardViewModel> (a method group).
     public void LaunchGame(GameCardViewModel card) => Library.LaunchGame(card);
+    public void LaunchGame(GameCardViewModel card, bool withoutChanges) => Library.LaunchGame(card, withoutChanges);
     public void RelocateGame(GameCardViewModel card) => Library.RelocateGame(card);
     public void ChangeGameIcon(GameCardViewModel card) => Library.ChangeGameIcon(card);
     public void ChangeGameCover(GameCardViewModel card) => Library.ChangeGameCover(card);

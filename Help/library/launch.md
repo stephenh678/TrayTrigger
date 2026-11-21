@@ -6,6 +6,24 @@ Edit Game is the Settings tab of a game's Game Details window. It opens on its o
 
 Pressing Play (or the game's hotkey) on a game that is already running, starting or suspended does not launch it again: no scripts run, no profile is applied twice, and there is no "Launching" popup. The game's window comes forward (a suspended game resumes), and the status line says so.
 
+## Play Without Changes
+
+Play Without Changes starts a game once with none of TrayTrigger's settings for it, so you can tell whether a crash, stutter or odd behavior is down to TrayTrigger or to the game. It is in the game's right-click menu, in the ... menu of its Game Details, and in the tray menu: hold Shift and click the game. (In the library, Shift+click selects a range of cards, so there it is a menu item.)
+
+- **Not applied:** the Performance Profile (power plan, HDR, Auto HDR, the profile's process settings), CPU Cores, the game's display mode, sound output and microphone, keeping the mouse on one screen, dimming other screens, the pre-launch and post-exit scripts, and tools that start or close with games.
+- **Still the same:** the game starts through its launcher as always, with its arguments and Run as Administrator, and its playtime and last played are recorded. Close the launcher after this game exits still applies if it is ticked. DLSS Override is a driver setting rather than something done for a launch, so it stays as you have it; turn it off for the game to rule it out.
+- **On the record:** the game's Played row in Activity & History says "played without changes", and shows no profile changes.
+- **Once only.** The next ordinary Play applies everything again.
+
+## Play from a shortcut or the command line
+
+`TrayTrigger.exe --play "Game"` plays a game from outside the window, so a shortcut, a Stream Deck button, a scheduled task, or a streaming host's command can start a game through TrayTrigger and give it its profile and put-back.
+
+- **Create Shortcut** in a game's right-click menu makes a `.lnk` (on the desktop unless you choose another folder) that runs `TrayTrigger.exe --play <the game's id>`. Pin it, copy it, or put it on a Stream Deck. (A shortcut added to Steam as a non-Steam game starts the game, but Steam only sees the shortcut's brief run, so its overlay and playtime don't follow the game.) It uses the game's id, so renaming the game does not break it. It points at the TrayTrigger you made it from: make it again if you move or reinstall TrayTrigger in another folder.
+- **By hand** the game can be named by its id or its title. Case does not matter, and part of a title works when only one game matches; when two match, nothing starts and a tray notification says so. Add `--no-changes` for Play Without Changes.
+- **If TrayTrigger is running,** the request goes to it and its window is left alone. **If it is not,** it starts quietly in the tray and plays the game. A game that is already running is handled as pressing Play would be: its window comes forward. A name that matches no game says so in a tray notification.
+- **Who can ask:** only the same Windows user, on this PC, through a local pipe. A request can only play a game already in your library; nothing in it is run.
+
 ## Which route a game takes
 
 TrayTrigger decides how to start a game from what the entry is, not from the path alone:
