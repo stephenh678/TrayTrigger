@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using TrayTrigger.Services;
 
@@ -14,6 +15,12 @@ public class GameEntry
     public bool RunAsAdmin { get; set; }
     public string Category { get; set; } = LibraryConstants.Uncategorized;
     public bool IsFavorite { get; set; }
+    /// <summary>
+    /// The collections the player put this game in, by name: a manual grouping, any number per game,
+    /// never filled by TrayTrigger. Unlike <see cref="Category"/> (one, set from store data). A
+    /// collection exists only through the games that name it; see LibraryViewModel.Collections.
+    /// </summary>
+    public List<string> Collections { get; set; } = new();
     /// <summary>
     /// Hidden from the library grid and tray menu, but the record itself is kept - unlike
     /// deleting, this means "Scan for Games"/"Add Folder" still recognize this exe/AppId as

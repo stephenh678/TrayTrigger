@@ -95,6 +95,25 @@ public static class ToolCatalog
     /// </summary>
     public static bool ClosesForGames(ToolEntry tool) => tool.CloseForGames && !tool.StartWithGames && CanStartWithGames(tool);
 
+    /// <summary>
+    /// Whether a tool's start/close-with-games setting applies to this game: always when the tool has no
+    /// collections picked, otherwise only when the game is in one of them (names compare without regard
+    /// to case, as collection names do everywhere).
+    /// </summary>
+    public static bool AppliesToGame(ToolEntry tool, GameEntry game)
+    {
+        if (tool.OnlyForCollections is not { Count: > 0 } only) return true;
+        if (game.Collections is not { Count: > 0 } mine) return false;
+        foreach (var name in only)
+        {
+            foreach (var m in mine)
+            {
+                if (string.Equals(name, m, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+        return false;
+    }
+
     /// <summary>Starts with games or closes for them: the tools with a game icon on their card and a game tab of their own.</summary>
     public static bool IsWithGames(ToolEntry tool) => StartsWithGames(tool) || ClosesForGames(tool);
 

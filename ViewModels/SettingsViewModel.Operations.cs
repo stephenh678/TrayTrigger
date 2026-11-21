@@ -73,6 +73,7 @@ public partial class SettingsViewModel
         var excludedFromReset = new HashSet<string>
         {
             nameof(AppSettings.LastCategoryFilter),
+            nameof(AppSettings.LastCollectionFilter),
             nameof(AppSettings.LastSortOption),
             // Tools page view state, the same bucket as the Library's two above.
             nameof(AppSettings.ToolsSortOption),
@@ -200,6 +201,7 @@ public partial class SettingsViewModel
         OnPropertyChanged(nameof(SearchOfficialTitleOnline));
         OnPropertyChanged(nameof(OnlineMatchSensitivity));
         OnPropertyChanged(nameof(AutoCategorizeFromSteam));
+        OnPropertyChanged(nameof(ShowCategoryTabs));
         OnPropertyChanged(nameof(UseVerticalPosterArt));
         OnPropertyChanged(nameof(UseSteamGridDbArt));
         OnPropertyChanged(nameof(SteamGridDbApiKey));

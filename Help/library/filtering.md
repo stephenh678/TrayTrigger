@@ -4,7 +4,7 @@ The filter button sits beside the sort box in the library toolbar, under the sta
 
 ## How it relates to the tabs and the filter box
 
-- The category tabs are your own labels for your games, and stay the primary cut. The filter works inside whichever tab is selected.
+- The category tabs and the Collections row below them are the primary cut. The filter works inside whichever tab and collection are selected. See Collections.
 - The filter box is a text match on title, category, and path.
 - All three apply together. On the RPG tab, with "steam" typed and the Steam filter on, you see RPG games from Steam whose title, category, or path contains "steam".
 

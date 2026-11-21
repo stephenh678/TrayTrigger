@@ -87,6 +87,9 @@ public class MainViewModel : ViewModelBase
     public ObservableCollection<GameCardViewModel> Games => Library.Games;
     public ObservableCollection<string> Categories => Library.Categories;
     public ObservableCollection<CategoryTabItem> CategoryTabs => Library.CategoryTabs;
+    public ObservableCollection<CategoryTabItem> CollectionTabs => Library.CollectionTabs;
+    public bool HasCollections => Library.HasCollections;
+    public ICommand BatchCollectionsCommand => Library.BatchCollectionsCommand;
     public ObservableCollection<string> SortOptions => Library.SortOptions;
     public ICollectionView FilteredGames => Library.FilteredGames;
     // The library empty states bind this; without it the first-run and "No favorites yet" panels never show.
@@ -108,6 +111,8 @@ public class MainViewModel : ViewModelBase
     public event Action<GameCardViewModel>? RequestQuickRename;
     public event Action<GameCardViewModel>? RequestQuickCategory;
     public event Action<List<GameCardViewModel>>? RequestBatchCategory;
+    /// <summary>A card's or the selection bar's "Collections...": the window shows the dialog for these games.</summary>
+    public event Action<List<GameCardViewModel>>? RequestCollections;
     public event Action<GameCardViewModel>? RequestEditSteamAppId;
     public event Action? LibraryUpdated;
     public event Action? RequestMinimizeToTray;
@@ -243,6 +248,9 @@ public class MainViewModel : ViewModelBase
         Library.RequestQuickRename += card => RequestQuickRename?.Invoke(card);
         Library.RequestQuickCategory += card => RequestQuickCategory?.Invoke(card);
         Library.RequestBatchCategory += cards => RequestBatchCategory?.Invoke(cards);
+        Library.RequestCollections += cards => RequestCollections?.Invoke(cards);
+        Library.CollectionRenamed += (oldName, newName) => Tools.RenameCollection(oldName, newName);
+        Tools.GetCollectionNames = () => Library.CollectionNames();
         Library.RequestEditSteamAppId += card => RequestEditSteamAppId?.Invoke(card);
         Library.RequestMinimizeToTray += () => RequestMinimizeToTray?.Invoke();
         Library.LibraryUpdated += () => LibraryUpdated?.Invoke();
@@ -259,6 +267,11 @@ public class MainViewModel : ViewModelBase
             if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(SettingsViewModel.EnableTools))
             {
                 OnToolsEnabledChanged();
+            }
+            // Settings > Library "Show category tabs" (and Reset to Defaults): the tab row follows.
+            if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(SettingsViewModel.ShowCategoryTabs))
+            {
+                Library.RebuildCategories();
             }
         };
 

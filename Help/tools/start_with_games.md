@@ -2,6 +2,11 @@
 
 Edit Tool asks what to do with the tool when you launch a game: nothing (the default), start it, or close it. Choose "Start it" and TrayTrigger starts the tool just before any game it launches, so a program like MSI Afterburner or SimHub no longer has to start with Windows. Choose "Close it" and TrayTrigger closes the tool before the game instead, and can open it again after: Discord, OneDrive, a browser, whatever you'd rather not have using memory and the graphics card while you play.
 
+## Which games
+
+- By default a tool applies to every game. Under "Limit to a collection", Choose Collections... limits it to games in the collections you pick: Discord starting only with the games in a "Play with Discord" collection, for example. Remove them all for no limit. The choice applies to Start and to Close. See Collections.
+- Renaming a collection updates the tools limited to it. A tool limited to a collection that no game is in now applies to no game until you put one in it again.
+
 ## Starting
 
 - It works for games you launch from the library, a hotkey or the tray menu.

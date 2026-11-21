@@ -112,6 +112,8 @@ public partial class App
             // Game Details has two tabs, and only the one on show is laid out: the Overview, then the Settings tab (all of the editor's cards).
             Dialog("Game Details", new GameDetailsDialog(new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService(), editHost: DiagnosticEditHost()) { IsLoading = false }));
             Dialog("Game Details Settings", NewEditGameWindow(game));
+            Dialog("Change Category", new QuickInputDialog("Change Category", "Change Category", "Select or enter a category:", "Action", new[] { "Action", "RPG" }, showAdd: true));
+            Dialog("Collections", new CollectionsDialog("Collections", "Pick a collection, or type a new one, and press Add.", new[] { new TrayTrigger.ViewModels.CollectionChoice("Co-op", true), new TrayTrigger.ViewModels.CollectionChoice("Kids", null) }, _ => null, "No collections yet.", "Not in any collection."));
             Dialog("Edit Tool", new ToolEditDialog(new ToolEntry { Name = "Audit Tool", TargetPath = @"C:\Windows\notepad.exe" }, new[] { "Mods" }, _iconExtractorService));
             var themeEditor = new ThemeEditorViewModel(TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance);
             Dialog("Edit Theme", new ThemeEditDialog(themeEditor));

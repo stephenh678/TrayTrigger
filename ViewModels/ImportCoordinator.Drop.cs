@@ -141,6 +141,7 @@ public partial class ImportCoordinator
                         Arguments = shortcut.Arguments,
                         WorkingDirectory = shortcut.WorkingDirectory,
                         Category = NewEntryCategory,
+                        Collections = NewEntryCollections,
                         IsSteamGame = shortcut.IsSteamUrl,
                         SteamAppId = onlineAppId
                     };

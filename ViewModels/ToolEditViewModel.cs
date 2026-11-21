@@ -31,6 +31,7 @@ public sealed class ToolEditViewModel : ViewModelBase
     private bool _closeAfterGames;
     private bool _closeForGames;
     private bool _reopenAfterGames;
+    private List<string> _onlyForCollections;
     private string _validationMessage = string.Empty;
     private string? _pendingIconSource;
     private BitmapImage? _iconPreview;
@@ -55,6 +56,7 @@ public sealed class ToolEditViewModel : ViewModelBase
         _closeAfterGames = tool.CloseAfterGames;
         _closeForGames = tool.CloseForGames;
         _reopenAfterGames = tool.ReopenAfterGames;
+        _onlyForCollections = (tool.OnlyForCollections ?? new List<string>()).ToList();
         ExistingCategories = categories.ToList();
         _iconPreview = IconExtractorService.LoadBitmapSafely(tool.IconPath, decodePixelWidth: 64);
 
@@ -78,7 +80,7 @@ public sealed class ToolEditViewModel : ViewModelBase
     private string EditState() => string.Join("", new object?[]
     {
         Name, Category, TargetPath, Arguments, WorkingDirectory, Hotkey, RunAsAdmin, HideWindow, IsFavorite,
-        StartWithGames, WaitBeforeGame, WaitBeforeGameSeconds, CloseAfterGames, CloseForGames, ReopenAfterGames, _pendingIconSource,
+        StartWithGames, WaitBeforeGame, WaitBeforeGameSeconds, CloseAfterGames, CloseForGames, ReopenAfterGames, _pendingIconSource, string.Join("|", _onlyForCollections),
     });
 
     public event Action<bool>? RequestClose;
@@ -122,6 +124,28 @@ public sealed class ToolEditViewModel : ViewModelBase
     public bool IsScript => IsProgram && ToolCatalog.IsScriptPath(TargetPath);
     /// <summary>A program, not a script or Store app, so it can start with games (<see cref="ToolCatalog.CanStartWithGames"/>). Follows the path as it's edited.</summary>
     public bool CanStartWithGames => IsProgram && !IsScript;
+    /// <summary>A game action (Start or Close) is chosen: "Limit to a collection" only means something then.</summary>
+    public bool HasGameAction => _startWithGames || _closeForGames;
+
+    /// <summary>The collections known to the library, for the picker; the tool's own names are added to it.</summary>
+    public IReadOnlyList<string> KnownCollections { get; set; } = Array.Empty<string>();
+
+    /// <summary>"Only for these collections": empty means every game.</summary>
+    public IReadOnlyList<string> OnlyForCollections
+    {
+        get => _onlyForCollections;
+        set
+        {
+            _onlyForCollections = value.ToList();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CollectionsSummary));
+        }
+    }
+
+    public string CollectionsSummary => _onlyForCollections.Count == 0
+        ? "No limit: every game"
+        : "Only games in: " + string.Join(", ", _onlyForCollections);
+
     /// <summary>
     /// "When I launch a game": do nothing (the default), start the tool, or close it. One of three, as
     /// checkboxes: ticking one clears the others, and clearing an action falls back to Do nothing, which
@@ -150,6 +174,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             if (!SetProperty(ref _startWithGames, value)) return;
             if (value) CloseForGames = false;
             OnPropertyChanged(nameof(LeaveAlone));
+            OnPropertyChanged(nameof(HasGameAction));
         }
     }
 
@@ -161,6 +186,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             if (!SetProperty(ref _closeForGames, value)) return;
             if (value) StartWithGames = false;
             OnPropertyChanged(nameof(LeaveAlone));
+            OnPropertyChanged(nameof(HasGameAction));
         }
     }
 
@@ -297,6 +323,8 @@ public sealed class ToolEditViewModel : ViewModelBase
             _tool.CloseAfterGames = startWithGames && CloseAfterGames;
             _tool.CloseForGames = closeForGames;
             _tool.ReopenAfterGames = closeForGames && ReopenAfterGames;
+            // The limit only means something with an action chosen; a script or Store app keeps none.
+            _tool.OnlyForCollections = startWithGames || closeForGames ? _onlyForCollections.ToList() : new List<string>();
         }
 
         _tool.Name = name;

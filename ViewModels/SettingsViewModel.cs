@@ -783,6 +783,21 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Settings > Library: the Library shows its category tabs (Action, RPG...). Off keeps All, Favorites and Hidden.</summary>
+    public bool ShowCategoryTabs
+    {
+        get => _settings.ShowCategoryTabs;
+        set
+        {
+            if (_settings.ShowCategoryTabs != value)
+            {
+                _settings.ShowCategoryTabs = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public bool AutoCategorizeFromSteam
     {
         get => _settings.AutoCategorizeFromSteam;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TrayTrigger.Services;
 
 namespace TrayTrigger.Models;
@@ -66,4 +67,10 @@ public class ToolEntry
     /// launched has exited, unless it is running again by then.
     /// </summary>
     public bool ReopenAfterGames { get; set; }
+    /// <summary>
+    /// Limits <see cref="StartWithGames"/> and <see cref="CloseForGames"/> to games in one of these
+    /// collections, by name. Empty (the default) means every game, as before. See
+    /// <see cref="ToolCatalog.AppliesToGame"/>.
+    /// </summary>
+    public List<string> OnlyForCollections { get; set; } = new();
 }

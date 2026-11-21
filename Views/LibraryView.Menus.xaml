@@ -32,6 +32,7 @@
         <MenuItem Header="{Binding BatchHideLabel}" Command="{Binding BatchHideCommand}"/>
         <Separator/>
         <MenuItem Header="Change Category..." Command="{Binding BatchChangeCategoryCommand}"/>
+        <MenuItem Header="Collections..." Command="{Binding BatchCollectionsCommand}"/>
         <!-- All-or-nothing like the toggles below: checked only when every selected game has it,
              and a click on a mixed selection turns it on for all of them. First in this group, as
              in the single-game menu. Hidden on a PC with no NVIDIA driver. -->
@@ -219,6 +220,7 @@
                  uses, so a wrong match is corrected in one step instead of three. -->
             <MenuItem Header="Match..." Command="{Binding ChangeMatchCommand}"/>
             <MenuItem Header="Category..." Command="{Binding ChangeCategoryCommand}"/>
+            <MenuItem Header="Collections..." Command="{Binding ChangeCollectionsCommand}"/>
             <MenuItem Header="Icon..." Command="{Binding ChangeIconCommand}"/>
             <MenuItem Header="Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
             <Separator/>

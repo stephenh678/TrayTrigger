@@ -77,7 +77,12 @@
                                </Button>
                            </StackPanel>
 
-                           <!-- Left: Segmented Category Tabs -->
+                           <!-- Left: the category tabs, with the collections row below them. The category strip can be as long as
+                                the library's categories (Settings > Library "Show category tabs" turns the real
+                                categories off, leaving All, Favorites and Hidden); collections are the player's own
+                                groups and stay short. The collections row is hidden until a game is in one. -->
+                           <StackPanel VerticalAlignment="Center">
+                           <!-- Segmented Category Tabs -->
                            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" Margin="0,0,16,0"
                                    HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -109,6 +114,39 @@
                                    </ItemsControl>
                                </ScrollViewer>
                            </Border>
+                           <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                                       Visibility="{Binding HasCollections, Converter={StaticResource BoolToVis}}">
+                               <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                                       BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}"
+                                       HorizontalAlignment="Left" VerticalAlignment="Center">
+                                   <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}"
+                                                 PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
+                                       <ItemsControl ItemsSource="{Binding CollectionTabs}">
+                                           <ItemsControl.ItemsPanel>
+                                               <ItemsPanelTemplate>
+                                                   <StackPanel Orientation="Horizontal"/>
+                                               </ItemsPanelTemplate>
+                                           </ItemsControl.ItemsPanel>
+                                           <ItemsControl.ItemTemplate>
+                                               <DataTemplate>
+                                                   <Button AutomationProperties.Name="{Binding DisplayName}" Command="{Binding SelectCommand}"
+                                                           Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
+                                                           Margin="0,0,2,0" ContextMenuOpening="CollectionChip_ContextMenuOpening">
+                                                       <Button.ContextMenu>
+                                                           <ContextMenu>
+                                                               <MenuItem Header="Rename..." Click="CollectionRename_Click"/>
+                                                               <MenuItem Header="Delete Collection..." Click="CollectionDelete_Click"/>
+                                                           </ContextMenu>
+                                                       </Button.ContextMenu>
+                                                       <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                                   </Button>
+                                               </DataTemplate>
+                                           </ItemsControl.ItemTemplate>
+                                       </ItemsControl>
+                                   </ScrollViewer>
+                               </Border>
+                           </StackPanel>
+                           </StackPanel>
                        </DockPanel>
 
                        <!-- 3. Search, Sort & View Mode Bar -->
@@ -308,6 +346,14 @@
                                                <DataTrigger Binding="{Binding SelectedCategory}" Value="Favorites">
                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                </DataTrigger>
+                                               <!-- With a collection chosen, "No favorites yet" would be untrue (the favorites may be outside it). -->
+                                               <MultiDataTrigger>
+                                                   <MultiDataTrigger.Conditions>
+                                                       <Condition Binding="{Binding Library.IsCollectionSelected}" Value="True"/>
+                                                       <Condition Binding="{Binding HasAnyGames}" Value="True"/>
+                                                   </MultiDataTrigger.Conditions>
+                                                   <Setter Property="Visibility" Value="Visible"/>
+                                               </MultiDataTrigger>
                                                <DataTrigger Binding="{Binding Library.IsEmptyBecauseOfFilters}" Value="True">
                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                </DataTrigger>
@@ -319,7 +365,7 @@
                                    <TextBlock Text="No games match"
                                               FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                               FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
-                                   <TextBlock Text="Nothing in this category matches your search. Press Esc to clear the search, or pick another tab."
+                                   <TextBlock Text="Nothing here matches your search, category or collection. Press Esc to clear the search, or pick another tab or collection."
                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                               FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                    <TextBlock Text="Adding a game instead? Drop its exe, shortcut, or install folder anywhere on this window, or use Add Game / Add Folder above."
@@ -339,6 +385,9 @@
                                                    </MultiDataTrigger.Conditions>
                                                    <Setter Property="Visibility" Value="Visible"/>
                                                </MultiDataTrigger>
+                                               <DataTrigger Binding="{Binding Library.IsCollectionSelected}" Value="True">
+                                                   <Setter Property="Visibility" Value="Collapsed"/>
+                                               </DataTrigger>
                                                <!-- Last trigger wins: on the Favorites tab with filters on,
                                                     "clear filters" is the useful advice, not "star a game". -->
                                                <DataTrigger Binding="{Binding Library.IsEmptyBecauseOfFilters}" Value="True">

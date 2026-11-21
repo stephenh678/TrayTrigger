@@ -762,6 +762,16 @@
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
 
+                            <CheckBox Content="Show category tabs" Margin="0,12,0,0"
+                                      IsChecked="{Binding ShowCategoryTabs}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
+                            <TextBlock Text="The Library's row of categories (Action, RPG, Steam). Turn it off for a library with many categories: All, Favorites and Hidden stay, and your collections are unaffected."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
+                                       Margin="24,3,0,2" TextWrapping="Wrap"/>
+                            <Button AutomationProperties.Name="Learn more about collections and category tabs" Style="{StaticResource HelpLinkButton}"
+                                    Margin="24,0,0,0" HorizontalAlignment="Left"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/collections"/>
+
                         </StackPanel>
                     </Border>
 

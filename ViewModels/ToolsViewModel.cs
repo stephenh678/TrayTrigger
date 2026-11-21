@@ -277,6 +277,29 @@ public sealed class ToolsViewModel : ViewModelBase
 
     private void Save() => _storage.SaveTools(Tools.Select(c => c.Tool));
 
+    /// <summary>
+    /// A collection was renamed in the Library: tools limited to it follow, so their Start/Close with
+    /// games keeps applying to the same games. Deleting a collection leaves tools alone on purpose - a tool
+    /// limited to a collection nobody is in now applies to no game, rather than widening to every game.
+    /// </summary>
+    public void RenameCollection(string oldName, string newName)
+    {
+        bool changed = false;
+        foreach (var card in Tools)
+        {
+            var list = card.Tool.OnlyForCollections;
+            if (list == null || !list.Any(c => string.Equals(c, oldName, StringComparison.OrdinalIgnoreCase))) continue;
+            // A new list, not an edit in place: a launch on its own thread reads it (ToolCatalog.AppliesToGame).
+            card.Tool.OnlyForCollections = list
+                .Select(c => string.Equals(c, oldName, StringComparison.OrdinalIgnoreCase) ? newName : c)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            card.Refresh();
+            changed = true;
+        }
+        if (changed) CommitChanges();
+    }
+
     private void SaveSettings() => _storage.SaveSettings(_settings, source: "ToolsViewModel");
 
     /// <summary>After any change to the tools: tabs, view, disk, then hotkeys and tray.</summary>
@@ -739,9 +762,12 @@ public sealed class ToolsViewModel : ViewModelBase
         CommitChanges();
     }
 
+    /// <summary>Set by the main view model: the Library's collections, for Edit Tool's "Limit to a collection".</summary>
+    public Func<IEnumerable<string>>? GetCollectionNames { get; set; }
+
     public void Edit(ToolCardViewModel card, bool showHotkey = false)
     {
-        var dialog = new ToolEditDialog(card.Tool, ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)), _icons, showHotkey);
+        var dialog = new ToolEditDialog(card.Tool, ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)), _icons, showHotkey, GetCollectionNames?.Invoke());
         if (dialog.ShowDialog() == true)
         {
             card.Refresh();
@@ -770,7 +796,8 @@ public sealed class ToolsViewModel : ViewModelBase
             "Change Category",
             $"Choose or type a category for \"{card.Name}\":",
             card.Category,
-            ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)))
+            ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)),
+            showAdd: true)
         {
             Owner = WindowHelper.ActiveOwner()
         };
@@ -916,7 +943,8 @@ public sealed class ToolsViewModel : ViewModelBase
             "Change Category",
             $"Choose or type a category for {cards.Count} tools:",
             ToolCatalog.CommonCategory(cards.Select(c => c.Tool)),
-            ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)))
+            ToolCatalog.CategoriesOf(Tools.Select(c => c.Tool)),
+            showAdd: true)
         {
             Owner = WindowHelper.ActiveOwner()
         };

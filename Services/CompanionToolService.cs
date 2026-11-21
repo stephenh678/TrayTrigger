@@ -195,8 +195,8 @@ public sealed partial class CompanionToolService
     public void StartForGame(GameEntry game, bool remember)
     {
         var tools = _tools();
-        var toClose = tools.Where(ToolCatalog.ClosesForGames).ToList();
-        var flagged = tools.Where(t => t.StartWithGames).ToList();
+        var toClose = tools.Where(t => ToolCatalog.ClosesForGames(t) && ToolCatalog.AppliesToGame(t, game)).ToList();
+        var flagged = tools.Where(t => t.StartWithGames && ToolCatalog.AppliesToGame(t, game)).ToList();
         if (toClose.Count == 0 && flagged.Count == 0) return;
         if (!_isEnabled())
         {
