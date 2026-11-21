@@ -250,6 +250,7 @@ public class MainViewModel : ViewModelBase
         Library.RequestBatchCategory += cards => RequestBatchCategory?.Invoke(cards);
         Library.RequestCollections += cards => RequestCollections?.Invoke(cards);
         Library.CollectionRenamed += (oldName, newName) => Tools.RenameCollection(oldName, newName);
+        Library.CollectionDeleted += name => Tools.DeleteCollection(name);
         Tools.GetCollectionNames = () => Library.CollectionNames();
         Library.RequestEditSteamAppId += card => RequestEditSteamAppId?.Invoke(card);
         Library.RequestMinimizeToTray += () => RequestMinimizeToTray?.Invoke();

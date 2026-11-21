@@ -306,7 +306,7 @@
                                 </Button>
                                 <Button Command="{Binding Appearance.EditCommand}" Style="{StaticResource ModernOutlineButton}" Padding="12,5" Margin="0,0,8,4" VerticalAlignment="Center"
                                         AutomationProperties.Name="{Binding Appearance.EditLabel}"
-                                        ToolTip="Change the colors, the picture and the name. A built-in theme cannot be changed, so this makes a new theme of your own from it.">
+                                        ToolTip="Change the colors, picture and name. A built-in theme can't be changed, so this makes a theme of your own from it.">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE70F;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding Appearance.EditLabel}" VerticalAlignment="Center"/>
@@ -342,7 +342,7 @@
                                         Command="{Binding Appearance.ResetFontCommand}"
                                         Visibility="{Binding Appearance.CanResetFont, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
-                            <TextBlock Text="The font for all of TrayTrigger's text. Any font installed on this computer works; Segoe UI fills in anything the font does not have. Icons stay as they are."
+                            <TextBlock Text="The font for all of TrayTrigger's text. Any installed font works; Segoe UI fills in anything it lacks. Icons stay as they are."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="0,4,0,0" TextWrapping="Wrap"/>
 
@@ -374,7 +374,7 @@
                                         Command="{Binding Appearance.ResetTextSizeCommand}"
                                         Visibility="{Binding Appearance.CanResetTextSize, Converter={StaticResource BoolToVis}}"/>
                             </Grid>
-                            <TextBlock Text="Makes all of TrayTrigger's text larger or smaller, in proportion, for every theme that does not set its own size. 100% is the size it was designed at."
+                            <TextBlock Text="Makes all of TrayTrigger's text larger or smaller, in proportion, for every theme that doesn't set its own size. 100% is the designed size."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="0,4,0,0" TextWrapping="Wrap"/>
                             <views:NoteBar Kind="Info" Text="{Binding Appearance.TextSizeNote}" Margin="0,8,0,0"
@@ -414,7 +414,7 @@
                             <TextBlock Text="{Binding Message, ElementName=ManageHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ManageHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=ManageHotkeyBox, Converter={StaticResource BoolToVis}}"
                                        FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                            <TextBlock Text="Press this key combination anywhere in Windows to show or hide the TrayTrigger window (default: Ctrl+Alt+G). Click the box and press the keys: Ctrl, Alt or Shift plus a key, or a function key on its own."
+                            <TextBlock Text="Press this anywhere in Windows to show or hide the TrayTrigger window (default: Ctrl+Alt+G). Click the box and press the keys: Ctrl, Alt or Shift plus a key, or a function key on its own."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"/>
 
                             <TextBlock Style="{StaticResource StrongText}" Text="Open Tray Menu Hotkey" Margin="0,14,0,6"/>
@@ -423,7 +423,7 @@
                             <TextBlock Text="{Binding Message, ElementName=TrayMenuHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=TrayMenuHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=TrayMenuHotkeyBox, Converter={StaticResource BoolToVis}}"
                                        FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                            <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu by the tray icon, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
+                            <TextBlock Text="Press this anywhere in Windows to open the tray menu by the tray icon, as right-clicking it does, ready to type a search (default: Ctrl+Alt+T)."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"/>
 
                             <TextBlock Style="{StaticResource StrongText}" Text="Suspend / Resume Game Hotkey" Margin="0,14,0,6"/>
@@ -432,7 +432,7 @@
                             <TextBlock Text="{Binding Message, ElementName=SuspendHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=SuspendHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=SuspendHotkeyBox, Converter={StaticResource BoolToVis}}"
                                        FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                            <TextBlock Text="Press it in a game you launched from TrayTrigger to minimize it, freeze it where it is, mute it and stop its playtime clock; press it again to bring it back and carry on (default: Ctrl+Alt+P). For cutscenes you can't pause, or stepping away. The tray menu's Now Playing section does the same. Online games disconnect while suspended, and games protected by anti-cheat (Easy Anti-Cheat, BattlEye and the like) are never suspended."
+                            <TextBlock Text="In a game launched from TrayTrigger, press it to minimize the game, freeze it, mute it and stop its playtime clock; press it again to carry on (default: Ctrl+Alt+P). For cutscenes you can't pause, or stepping away; the tray menu's Now Playing section does the same. Online games disconnect while suspended, and anti-cheat games (Easy Anti-Cheat, BattlEye and the like) are never suspended."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Suspend works" Margin="0,4,0,0" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/suspend"/>
@@ -443,7 +443,7 @@
                             <TextBlock Text="{Binding Message, ElementName=LastPlayedHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=LastPlayedHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=LastPlayedHotkeyBox, Converter={StaticResource BoolToVis}}"
                                        FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                            <TextBlock Text="Press this key combination anywhere in Windows to play the game you played most recently, with its profile, tools and scripts, the same as its Play button. If it is already running, it comes to the front (default: Ctrl+Alt+L)."
+                            <TextBlock Text="Press this anywhere in Windows to play the game you played most recently, with its profile, tools and scripts, as its Play button does. If it is already running, it comes to the front (default: Ctrl+Alt+L)."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
@@ -456,7 +456,7 @@
                             <TextBlock Style="{StaticResource CardTitle}" Text="Tools" Margin="0,0,0,8"/>
                             <CheckBox Content="Enable Tools" IsChecked="{Binding EnableTools}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Adds a Tools page to the sidebar for the programs you use alongside games, like DLSS Swapper, Vortex or MSI Afterburner. Drop a program or its shortcut to add it, sort tools into their own categories, star favorites and give them hotkeys. Turning it off hides the page and keeps your tools for next time."
+                            <TextBlock Text="Adds a Tools page to the sidebar for programs you use alongside games, like DLSS Swapper, Vortex or MSI Afterburner. Drop a program or its shortcut to add it, sort tools into categories, star favorites and give them hotkeys. Turning it off hides the page and keeps your tools."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,0" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" Margin="24,4,0,0" HorizontalAlignment="Left"
@@ -540,7 +540,7 @@
                             Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Launcher Integrations" Margin="0,0,0,4"/>
-                            <TextBlock Text="Each toggle controls whether Scan for Games looks for that launcher's installed games. Turning one off never removes or changes games already in your library."
+                            <TextBlock Text="Each toggle sets whether Scan for Games looks for that launcher's games. Turning one off never removes or changes games already in your library."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How the Game Scanner works" Margin="0,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
@@ -629,7 +629,7 @@
                                     <TextBlock Text="Enable Xbox / PC Game Pass library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
-                            <TextBlock Text="Found via Windows' own Gaming Services records, so every game installed through the Xbox app is covered, on any drive. Games launch through Windows like the Xbox app does - no direct-exe option. Limitation: only modern (GDK) titles are detected; a few older Microsoft Store games that never moved to the current format are not."
+                            <TextBlock Text="Found via Windows' Gaming Services records, so every game installed through the Xbox app is covered, on any drive. Games launch through Windows like the Xbox app does, with no direct-exe option. Limitation: only modern (GDK) titles are detected, not older Microsoft Store games that never moved to the current format."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
@@ -640,7 +640,7 @@
                                     <TextBlock Text="Enable Battle.net library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
-                            <TextBlock Text="Found via Blizzard's install records, on any drive. Games launch through Battle.net - no direct-exe option, because Battle.net signs the game in. If Battle.net is closed it's started for you. Limitation: right after Battle.net's own cache is cleared, a newly installed game's launch code can't be read until Battle.net has been opened once."
+                            <TextBlock Text="Found via Blizzard's install records, on any drive. Games launch through Battle.net, with no direct-exe option because Battle.net signs the game in; if it's closed, it's started for you. Limitation: right after Battle.net's cache is cleared, a new game's launch code can't be read until Battle.net has been opened once."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
@@ -669,7 +669,7 @@
                                         Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
                                         VerticalAlignment="Center" Padding="10,4"/>
                             </DockPanel>
-                            <TextBlock Text="Finds installed games through the launchers above and in any extra folders you add here, marks the ones in your library that are no longer installed, and lets you keep the scanner out of what it should skip."
+                            <TextBlock Text="Finds installed games through the launchers above and any extra folders you add here, marks library games that are no longer installed, and lets you keep the scanner out of what it should skip."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How scanning works" Margin="0,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
@@ -677,7 +677,7 @@
                             <CheckBox Content="Automatically scan on startup"
                                       IsChecked="{Binding AutoScanForGamesOnStartup}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens, covering the launchers above and your Scan Locations - only interrupts you with the New Games Found picker if it actually finds something new. A game you have uninstalled is greyed out and tagged either way: that check runs at startup whether this is on or not."
+                            <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens, covering the launchers above and your Scan Locations, and shows the New Games Found picker only if it finds something new. Uninstalled games are greyed out and tagged either way: that check runs at startup whether this is on or not."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
                             <CheckBox Content="Notify me when a scan finds new games"
@@ -735,7 +735,7 @@
                             Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Game Titles &amp; Categories" Margin="0,0,0,4"/>
-                            <TextBlock Text="How games you add are named and which category they go in, whether you scan for them or drop them on the window."
+                            <TextBlock Text="How added games are named and which category they go in, whether scanned or dropped on the window."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,0,10" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
@@ -783,7 +783,7 @@
                             Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Art &amp; Info Sources" Margin="0,0,0,4"/>
-                            <TextBlock Text="Steam's posters and game info need no setup. SteamGridDB and RAWG fill in what Steam doesn't have; both are free and optional, each with a key from a free account."
+                            <TextBlock Text="Steam's posters and game info need no setup. SteamGridDB and RAWG fill in what Steam lacks; both are free and optional, each needing a key from a free account."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Getting the free keys"
@@ -829,7 +829,7 @@
                             <CheckBox Content="Use RAWG for non-Steam game info (optional)"
                                       IsChecked="{Binding UseRawgMetadata}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Developer, publisher, release date, synopsis, and genre for games that aren't on Steam (Game Pass, Epic exclusives, Roblox, and so on). Needs a free RAWG API key: Get Free Key opens the page, and once you've signed up, paste the key here. Shown via a source toggle in each game's details window."
+                            <TextBlock Text="Developer, publisher, release date, synopsis and genre for games not on Steam (Game Pass, Epic exclusives, Roblox and so on). Needs a free RAWG API key: Get Free Key opens the page; once you've signed up, paste the key here. Shown via a source toggle in each game's details window."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
                             <!-- Never greyed out, like the SteamGridDB key above. -->
@@ -904,7 +904,7 @@
                             <DockPanel Margin="0,0,0,12" LastChildFill="False">
                                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
                                     <TextBlock Text="Library view mode:" Foreground="{DynamicResource BrushTextPrimary}" FontSize="{DynamicResource FontSizeBody}"/>
-                                    <TextBlock Text="The same setting as the view buttons above the library; it is remembered between sessions." Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,2,0,0"/>
+                                    <TextBlock Text="Same setting as the view buttons above the library, remembered between sessions." Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ComboBox AutomationProperties.Name="Library view mode" ItemsSource="{Binding ViewModeOptions}" 
                                           SelectedItem="{Binding LibraryViewMode, Mode=TwoWay}" 
@@ -921,7 +921,7 @@
                             <CheckBox Content="Show details on hover"
                                       IsChecked="{Binding PosterDetailsOnHover}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Poster Grid and Extra Large show only each game's artwork until you point at one; then the art zooms in and the rest of its details appear. Choose below what stays on every card. The same setting as the eye button beside the view buttons."
+                            <TextBlock Text="Poster Grid and Extra Large show only each game's artwork until you point at one; then the art zooms in and its details appear. Choose below what stays on every card. Same setting as the eye button beside the view buttons."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
 
@@ -1013,7 +1013,7 @@
                             <CheckBox Content="Show a Recent section in the tray menu"
                                       IsChecked="{Binding ShowRecentInTray}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Your last-played games, at the top of the tray menu, whether category grouping is on or not."
+                            <TextBlock Text="Your last-played games, at the top of the tray menu with or without category grouping."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" 
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
@@ -1037,7 +1037,7 @@
                             <CheckBox Content="Show a Favorites section in the tray menu"
                                       IsChecked="{Binding ShowFavoritesInTray}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Your starred games, near the top of the tray menu, whether category grouping is on or not. Hidden while you have no favorites."
+                            <TextBlock Text="Your starred games, near the top of the tray menu with or without category grouping. Hidden while you have no favorites."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
@@ -1150,7 +1150,7 @@
                             <CheckBox Content="Minimize to system tray when launching a game"
                                       IsChecked="{Binding MinimizeOnGameLaunch}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Automatically hides the TrayTrigger window to the system tray whenever a game starts so it never covers your game."
+                            <TextBlock Text="Hides the TrayTrigger window to the system tray whenever a game starts, so it never covers your game."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,12" TextWrapping="Wrap"/>
 
@@ -1178,7 +1178,7 @@
                                           IsChecked="{Binding ShowLaunchPopupOnEveryLaunch}"
                                           IsEnabled="{Binding ShowLaunchPopup}"
                                           Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                                <TextBlock Text="Off: only while TrayTrigger is hidden, or when &quot;Minimize to system tray when launching a game&quot; is about to hide it. On: every launch from the open window uses the popup, in place of the notice inside the window. A launch error still opens a dialog while the window is in front."
+                                <TextBlock Text="Off: only while TrayTrigger is hidden, or about to be hidden by &quot;Minimize to system tray when launching a game&quot;. On: every launch from the open window uses the popup instead of the notice inside the window. A launch error still opens a dialog while the window is in front."
                                            Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                            Margin="24,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -1203,7 +1203,7 @@
                             <CheckBox Content="Enable scripts (per-game and default)"
                                       IsChecked="{Binding EnableGameScripts}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="The master switch. While off, no script runs for any game - not a game's own, not the defaults below - and the Scripts card stays out of Edit Game. Turning it on also installs the templates and examples in the scripts folder, and shows the default scripts for every game below. Games that already have a script keep their settings either way."
+                            <TextBlock Text="The master switch. While off, no script runs for any game, its own or the defaults below, and the Scripts card stays out of Edit Game. Turning it on also installs the templates and examples in the scripts folder and shows the default scripts for every game below. Games that already have a script keep their settings either way."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal" Margin="24,0,0,2">
@@ -1224,7 +1224,7 @@
                             <!-- Default scripts: run for every game that has no script of its own for that phase. -->
                             <StackPanel Margin="0,12,0,0" Visibility="{Binding EnableGameScripts, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Style="{StaticResource StrongText}" Text="Default scripts for every game" Margin="0,0,0,2"/>
-                                <TextBlock Text="Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;."
+                                <TextBlock Text="Run for any game with no script of its own for that phase; a game with its own pre-launch or post-exit script uses that instead. Any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;."
                                            Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                                 <CheckBox Content="Run the default scripts"
@@ -1355,7 +1355,7 @@
                             <CheckBox Content="Show the NVIDIA DLSS overlays in games (asks for administrator permission)"
                                       IsChecked="{Binding Dlss.IndicatorOn}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="NVIDIA's own two overlays, together: the corner line with the DLSS version, preset letter and render resolution, and, in a game using Frame Generation, the bar across the top with the driver and Streamline versions, the output and motion-vector resolutions, the frame multiplier, refresh rate and the driver profile in use. For checking that an override is in effect, not for leaving on - they draw over every DLSS game until you untick this."
+                            <TextBlock Text="NVIDIA's two overlays together: a corner line with the DLSS version, preset letter and render resolution, and, in a Frame Generation game, a top bar with the driver and Streamline versions, output and motion-vector resolutions, frame multiplier, refresh rate and driver profile. For checking that an override is in effect, not for leaving on: they draw over every DLSS game until you untick this."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="About the DLSS overlays" Margin="24,0,0,2"
@@ -1420,7 +1420,7 @@
                             Padding="{StaticResource CardPadding}" Margin="{StaticResource CardGap}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Diagnostic Logging &amp; Traces" Margin="0,0,0,4"/>
-                            <TextBlock Text="Configure diagnostic logging to catch errors and trace execution while troubleshooting issues." 
+                            <TextBlock Text="Diagnostic logging to catch errors and trace execution while troubleshooting." 
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Enable verbose logging" 

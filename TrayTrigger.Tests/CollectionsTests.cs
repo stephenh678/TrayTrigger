@@ -497,6 +497,45 @@ public class CollectionsTests : IDisposable
     }
 
     [Fact]
+    public void DeletingACollection_DropsItFromTools_AndTurnsOffOneThatHadOnlyThat()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var storage = new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"));
+            var tools = new ToolsViewModel(storage, new IconExtractorService(storage), new ShortcutService(), new ToolLauncherService(), new XboxScannerService(), new AppSettings());
+            var only = new ToolEntry { Name = "Discord", TargetPath = @"C:\Tools\Discord.exe", StartWithGames = true, CloseAfterGames = true, OnlyForCollections = ["Co-op"] };
+            var two = new ToolEntry { Name = "Afterburner", TargetPath = @"C:\Tools\ab.exe", StartWithGames = true, OnlyForCollections = ["Co-op", "Voice"] };
+            var other = new ToolEntry { Name = "Vortex", TargetPath = @"C:\Tools\v.exe", StartWithGames = true, OnlyForCollections = ["Voice"] };
+            tools.ReplaceToolsForCapture([only, two, other]);
+
+            Assert.Equal(["Discord", "Afterburner"], tools.ToolsLimitedTo("co-op"));
+            tools.DeleteCollection("Co-op");
+
+            Assert.Empty(only.OnlyForCollections);
+            Assert.False(only.StartWithGames);
+            Assert.False(only.CloseAfterGames);
+            Assert.Equal(["Voice"], two.OnlyForCollections);
+            Assert.True(two.StartWithGames);
+            Assert.Equal(["Voice"], other.OnlyForCollections);
+            Assert.True(other.StartWithGames);
+            Assert.False(storage.LoadTools().Single(t => t.Name == "Discord").StartWithGames);
+        });
+    }
+
+    [Fact]
+    public void DeletingACollection_TellsTools() => Sta(() =>
+    {
+        var library = CreateLibrary(null, "Alpha");
+        library.ApplyCollections(Cards(library, "Alpha"), ["Co-op"], []);
+        string? told = null;
+        library.CollectionDeleted += n => told = n;
+
+        library.DeleteCollection("Co-op");
+
+        Assert.Equal("Co-op", told);
+    });
+
+    [Fact]
     public void AToolCardsLabel_SaysWhichCollectionsItIsLimitedTo()
     {
         WpfTestHost.Run(() =>

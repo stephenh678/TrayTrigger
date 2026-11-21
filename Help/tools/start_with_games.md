@@ -5,7 +5,7 @@ Edit Tool asks what to do with the tool when you launch a game: nothing (the def
 ## Which games
 
 - By default a tool applies to every game. Under "Limit to a collection", Choose Collections... limits it to games in the collections you pick: Discord starting only with the games in a "Play with Discord" collection, for example. Remove them all for no limit. The choice applies to Start and to Close. See Collections.
-- Renaming a collection updates the tools limited to it. A tool limited to a collection that no game is in now applies to no game until you put one in it again.
+- Renaming a collection updates the tools limited to it. Deleting a collection takes it off the tools limited to it; a tool that had only that one goes back to "Do nothing" instead of starting for every game.
 
 ## Starting
 

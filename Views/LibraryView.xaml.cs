@@ -117,9 +117,16 @@ public partial class LibraryView : UserControl
     private void CollectionDelete_Click(object sender, RoutedEventArgs e)
     {
         if (ChipOf(sender) is not { } tab) return;
+        var tools = ViewModel.Tools.ToolsLimitedTo(tab.Name);
+        string detail = "The games stay in your library; they are only taken out of this collection.";
+        if (tools.Count > 0)
+        {
+            detail += tools.Count == 1
+                ? $" {tools[0]} is limited to it and will stop starting or closing with games, unless it has another collection."
+                : $" {string.Join(", ", tools)} are limited to it and will stop starting or closing with games, unless they have another collection.";
+        }
         bool ok = ModernDialog.ConfirmDelete(Window.GetWindow(this), "Delete Collection",
-            $"Delete the collection \"{tab.Name}\"?",
-            "The games stay in your library; they are only taken out of this collection.",
+            $"Delete the collection \"{tab.Name}\"?", detail,
             confirmText: "Delete", cancelText: "Cancel");
         if (ok) ViewModel.Library.DeleteCollection(tab.Name);
     }
