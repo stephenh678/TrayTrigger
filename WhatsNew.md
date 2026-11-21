@@ -4,7 +4,7 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
-## 1.7.8
+## 1.8.0
 
 - **Collections** - Group games your own way (Co-op, Kids) from a game's right-click menu > Change > Collections. A row of collections below the category tabs narrows the Library to one.
 - **Tools for a collection** - Edit Tool can start or close a tool only for the games in a collection, such as Discord with your multiplayer games.

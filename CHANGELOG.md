@@ -8,7 +8,7 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
-## 1.7.8
+## 1.8.0
 
 - **Collections** - group games your own way: Co-op, Kids, Play with Discord. A game can be in any number of collections, and TrayTrigger never fills them for you. Right-click a game > Change > Collections... (or select several and use Collections... in More) to pick or type a name and press Add (Change Category has the same Add button); a collection exists while a game is in it. A row of collection chips, starting with **All Collections**, appears below the category tabs: pick a chip to narrow the library, together with the category tab, filter and search. Right-click a chip to rename or delete it; deleting never deletes games. Categories are unchanged: still one per game, set from store data.
 - **Show category tabs** - Settings > Library can turn off the row of categories for a library with many of them, keeping All, Favorites and Hidden. Collections are unaffected.

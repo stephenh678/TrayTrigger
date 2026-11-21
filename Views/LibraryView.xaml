@@ -44,7 +44,7 @@
                            <StackPanel VerticalAlignment="Center">
                                <TextBlock Text="Library" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                                           FontFamily="{DynamicResource AppFont}" FontWeight="Normal"/>
-                               <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, and local folders"
+                               <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, Rockstar, and local folders"
                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
                                           FontFamily="{DynamicResource AppFont}" Margin="0,4,0,0"/>
                            </StackPanel>
@@ -308,7 +308,7 @@
                                    <TextBlock Text="Your library is empty"
                                               FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                               FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
-                                   <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox (PC Game Pass), and Battle.net. Or drop a game's exe, shortcut, or install folder anywhere on this window."
+                                   <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox (PC Game Pass), Battle.net, and Rockstar. Or drop a game's exe, shortcut, or install folder anywhere on this window."
                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                               FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
