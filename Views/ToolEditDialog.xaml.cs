@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using TrayTrigger.Models;
@@ -10,13 +12,16 @@ namespace TrayTrigger.Views;
 public partial class ToolEditDialog : Window
 {
     /// <param name="showHotkey">Scrolls to the hotkey and outlines it (About's list of hotkeys opens the tool at it).</param>
-    public ToolEditDialog(ToolEntry tool, IEnumerable<string> categories, IconExtractorService iconExtractorService, bool showHotkey = false)
+    /// <param name="collections">The library's collections, for "Limit to a collection".</param>
+    public ToolEditDialog(ToolEntry tool, IEnumerable<string> categories, IconExtractorService iconExtractorService, bool showHotkey = false,
+        IEnumerable<string>? collections = null)
     {
         InitializeComponent();
         TrayTrigger.Services.WindowSizeMemory.Attach(this, "ToolEdit");
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
         var viewModel = new ToolEditViewModel(tool, categories, iconExtractorService);
+        viewModel.KnownCollections = (collections ?? Array.Empty<string>()).ToList();
         DataContext = viewModel;
 
         Owner = WindowHelper.ActiveOwner();
@@ -48,5 +53,22 @@ public partial class ToolEditDialog : Window
             DialogResult = success;
             Close();
         };
+    }
+
+    private void ChooseCollections_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = (ToolEditViewModel)DataContext;
+        // The library's collections, plus any this tool names that no game is in now (one deleted, or renamed by hand).
+        var names = vm.KnownCollections.Concat(vm.OnlyForCollections)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        var choices = names.Select(n => new CollectionChoice(n, vm.OnlyForCollections.Any(o => string.Equals(o, n, StringComparison.OrdinalIgnoreCase)))).ToList();
+        var dialog = new CollectionsDialog("Collections", "Limit this tool to games in the collections you add. Remove them all and it applies to every game.",
+            choices, validateNew: null,
+            emptyText: "No collections yet. Put games in collections from the Library's right-click menu, then come back.",
+            noneChosenText: "No limit: this tool applies to every game.");
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true) vm.OnlyForCollections = dialog.Ticked;
     }
 }

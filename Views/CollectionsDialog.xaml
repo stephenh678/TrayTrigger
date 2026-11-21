@@ -1,0 +1,81 @@
+<Window x:Class="TrayTrigger.Views.CollectionsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="clr-namespace:TrayTrigger.Services"
+        Title="Collections"
+        SizeToContent="Height" Width="440"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource BrushBackground}"
+        Foreground="{DynamicResource BrushTextPrimary}">
+
+    <!-- The same layout as Change Category (QuickInputDialog): a box to pick or type, Add beside it, then the
+         buttons. What is added shows below as a chip per collection, since a game can be in several. -->
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title & prompt -->
+            <RowDefinition Height="Auto"/> <!-- Pick or type, and Add -->
+            <RowDefinition Height="Auto"/> <!-- Chosen collections -->
+            <RowDefinition Height="Auto"/> <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock x:Name="HeadingTextBlock" Text="Collections" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Normal"
+                       Foreground="{DynamicResource BrushTextPrimary}" FontFamily="{DynamicResource AppFont}"/>
+            <TextBlock x:Name="PromptTextBlock" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{DynamicResource AppFont}" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="_Add" Click="AddButton_Click"
+                        Style="{StaticResource ModernOutlineButton}" MinWidth="70" Margin="10,0,0,0"/>
+                <ComboBox x:Name="NameComboBox" Style="{StaticResource ModernComboBox}" IsEditable="True"
+                          AutomationProperties.Name="Collection name" PreviewKeyDown="NameComboBox_PreviewKeyDown"/>
+            </DockPanel>
+            <TextBlock x:Name="ErrorTextBlock" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,6,0,0"
+                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushDanger}"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="2" MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock x:Name="EmptyTextBlock" TextWrapping="Wrap"
+                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                <ItemsControl x:Name="ChosenList">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="10,2,2,2" Margin="0,0,8,8">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}"/>
+                                    <TextBlock Text="some games" Margin="8,0,0,0" VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                               Visibility="{Binding IsMixed, Converter={StaticResource BoolToVis}}"/>
+                                    <Button Click="RemoveChip_Click" Style="{StaticResource ModernGhostButton}" Padding="8,2" Margin="4,0,0,0"
+                                            AutomationProperties.Name="Remove from this collection">
+                                        <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <DockPanel Grid.Row="3">
+            <Button DockPanel.Dock="Left" AutomationProperties.Name="Learn more about collections" Style="{StaticResource HelpLinkButton}"
+                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/collections"/>
+            <Button DockPanel.Dock="Right" Content="_Save" Click="SaveButton_Click" IsDefault="True"
+                    Style="{StaticResource ModernAccentButton}" MinWidth="90" Margin="10,0,0,0"/>
+            <Button DockPanel.Dock="Right" Content="_Cancel" Click="CancelButton_Click" IsCancel="True"
+                    Style="{StaticResource ModernGhostButton}" MinWidth="75"/>
+        </DockPanel>
+    </Grid>
+</Window>

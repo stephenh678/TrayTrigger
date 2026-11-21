@@ -26,7 +26,7 @@ A check mark shows the current value. In the batch menu it shows only when every
 
 ## Change
 
-Match, Category, Icon, Poster Artwork, and Steam App ID moved into one Change submenu. Rename stayed at the top level because it is used far more often than the rest.
+Match, Category, Collections, Icon, Poster Artwork, and Steam App ID moved into one Change submenu. Rename stayed at the top level because it is used far more often than the rest.
 
 ## The batch menu
 

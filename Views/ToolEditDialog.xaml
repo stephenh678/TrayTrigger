@@ -197,6 +197,19 @@
                                     <TextBlock Text="Started again once your last game has closed, unless you've opened it yourself in the meantime."
                                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,6"/>
                                 </StackPanel>
+                                <!-- Which games: every game, or only those in the collections picked. Greyed out with nothing chosen above. -->
+                                <StackPanel IsEnabled="{Binding HasGameAction}" Margin="0,4,0,8">
+                                    <TextBlock Text="Limit to a collection" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Choose Collections..." Click="ChooseCollections_Click"
+                                                AutomationProperties.Name="Choose the collections this tool is limited to"
+                                                Style="{StaticResource ModernOutlineButton}" Margin="12,0,0,0"/>
+                                        <TextBlock Text="{Binding CollectionsSummary}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                                   FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    </DockPanel>
+                                    <TextBlock Text="Leave it open and this applies to every game, or choose collections and it applies only to games in them. Put games in collections from the Library's right-click menu."
+                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                </StackPanel>
                                 <Button AutomationProperties.Name="Learn more about starting and closing tools with games" Style="{StaticResource HelpLinkButton}"
                                         Margin="22,0,0,12"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/start_with_games"/>

@@ -6,6 +6,9 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 1.7.8
 
+- **Collections** - Group games your own way (Co-op, Kids) from a game's right-click menu > Change > Collections. A row of collections below the category tabs narrows the Library to one.
+- **Tools for a collection** - Edit Tool can start or close a tool only for the games in a collection, such as Discord with your multiplayer games.
+- **Show category tabs** - Settings > Library can hide the category row if you have a lot of categories.
 - **Launch your last game (Ctrl+Alt+L)** - One shortcut plays the game you played most recently, or brings it forward if it's already running. Change it in Settings > General.
 - **Game updates don't confuse it** - If a launcher updates a game as it starts, TrayTrigger now waits for the game itself instead of treating the update as the game and ending early.
 - **Play from a shortcut or button** - Right-click a game and choose Create Shortcut, or run `TrayTrigger.exe --play "Game"` from a Stream Deck, Task Scheduler or a streaming host. The game starts through TrayTrigger with its profile.

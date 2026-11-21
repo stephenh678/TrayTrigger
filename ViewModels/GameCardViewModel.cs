@@ -82,8 +82,10 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onToggleSuspend = null,
         Action<GameCardViewModel>? onRestoreSettings = null,
         Action<GameCardViewModel>? onLaunchWithoutChanges = null,
-        Action<GameCardViewModel>? onCreateShortcut = null)
+        Action<GameCardViewModel>? onCreateShortcut = null,
+        Action<GameCardViewModel>? onChangeCollections = null)
     {
+        ChangeCollectionsCommand = new RelayCommand(() => onChangeCollections?.Invoke(this), () => onChangeCollections != null);
         CreateShortcutCommand = new RelayCommand(() => onCreateShortcut?.Invoke(this), () => onCreateShortcut != null);
         LaunchWithoutChangesCommand = new RelayCommand(() => onLaunchWithoutChanges?.Invoke(this), () => onLaunchWithoutChanges != null);
         RestoreSettingsCommand = new RelayCommand(() => onRestoreSettings?.Invoke(this), () => onRestoreSettings != null);
@@ -480,6 +482,8 @@ public class GameCardViewModel : ViewModelBase
     public ICommand RelocateCommand { get; }
     public ICommand RenameCommand { get; }
     public ICommand ChangeCategoryCommand { get; }
+    /// <summary>The card menu's "Collections...": which collections this game is in.</summary>
+    public ICommand ChangeCollectionsCommand { get; }
     public ICommand ChangeIconCommand { get; }
     public ICommand ChangeCoverCommand { get; }
     public ICommand OpenFolderCommand { get; }

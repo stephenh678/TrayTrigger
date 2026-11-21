@@ -168,6 +168,9 @@ public partial class ImportCoordinator : ViewModelBase
     /// view (All, Favorites, Hidden) rather than a category a game can belong to.</summary>
     private string NewEntryCategory => LibraryConstants.NormalizeCategory(_library.SelectedCategory);
 
+    /// <summary>The collections a hand-added game starts in: the collection chip the user is on, if any.</summary>
+    private List<string> NewEntryCollections => _library.SelectedCollection.Length > 0 ? new List<string> { _library.SelectedCollection } : new List<string>();
+
     // Shared commit step of every import pipeline: add the prepared entries to the visible
     // library and refresh everything that depends on it. See L-12.
     internal void CommitImportedEntries(IEnumerable<GameEntry> entries, string? statusMessage)
@@ -570,6 +573,7 @@ public partial class ImportCoordinator : ViewModelBase
                         ExecutablePath = c.ExePath,
                         WorkingDirectory = c.WorkingDirectory,
                         Category = NewEntryCategory,
+                        Collections = NewEntryCollections,
                         SteamAppId = matchedAppId
                     };
 
@@ -710,6 +714,7 @@ public partial class ImportCoordinator : ViewModelBase
                 ExecutablePath = candidate.ExePath,
                 WorkingDirectory = candidate.WorkingDirectory,
                 Category = NewEntryCategory,
+                Collections = NewEntryCollections,
                 SteamAppId = matchedAppId
             };
 

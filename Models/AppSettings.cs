@@ -92,6 +92,10 @@ public class AppSettings
     /// combo keeps it (see HotkeyManager.RegisterHotkeys).</summary>
     public string LaunchLastPlayedHotkey { get; set; } = "Ctrl+Alt+L";
     public string LastCategoryFilter { get; set; } = LibraryConstants.AllCategory;
+    /// <summary>The Library's selected collection chip, kept across restarts; blank means All collections.</summary>
+    public string LastCollectionFilter { get; set; } = string.Empty;
+    /// <summary>Show the game categories (Action, RPG...) as tabs in the Library. Off keeps All, Favorites and Hidden; collections are unaffected.</summary>
+    public bool ShowCategoryTabs { get; set; } = true;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
 
     /// <summary>

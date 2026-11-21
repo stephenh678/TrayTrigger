@@ -51,6 +51,9 @@ public partial class LibraryViewModel
         // Categories are deduped case-insensitively above, so the kept spelling can differ from
         // the selected one ("RPG" vs "rpg"); match the same way.
         string? kept = Categories.FirstOrDefault(c => string.Equals(c, previous, StringComparison.OrdinalIgnoreCase));
+        // With the category tabs turned off, a real category can't be picked, so one still selected
+        // would filter the library with no tab to show or undo it.
+        if (kept != null && !_settings.ShowCategoryTabs && !IsViewTab(kept)) kept = null;
         if (kept != null)
         {
             _selectedCategory = kept;
@@ -64,6 +67,7 @@ public partial class LibraryViewModel
         OnPropertyChanged(nameof(SelectedCategory));
 
         RebuildCategoryTabs();
+        RebuildCollectionTabs();
         // Same trigger points as the category tabs, and for the same reason: the Launcher options
         // only list launchers the library actually contains. The refresh afterwards is not
         // optional: this is where a launcher tick saved from the last run is re-applied (its
@@ -79,11 +83,16 @@ public partial class LibraryViewModel
         CategoryTabs.Clear();
         foreach (var cat in Categories)
         {
+            // Settings > Library "Show category tabs" off: only the views (All, Favorites, Hidden) stay.
+            if (!_settings.ShowCategoryTabs && !IsViewTab(cat)) continue;
             string display = cat == LibraryConstants.AllCategory ? "All Games" : cat == LibraryConstants.FavoritesCategory ? LibraryConstants.FavoritesCategory : cat;
             bool isSelected = string.Equals(cat, SelectedCategory, StringComparison.OrdinalIgnoreCase);
             CategoryTabs.Add(new CategoryTabItem(cat, display, isSelected, SelectCategoryTab));
         }
     }
+
+    /// <summary>All, Favorites or Hidden: a view of the library rather than a category a game belongs to.</summary>
+    private static bool IsViewTab(string tab) => tab is LibraryConstants.AllCategory or LibraryConstants.FavoritesCategory or LibraryConstants.HiddenCategory;
 
     public void SelectCategoryTab(string category)
     {
@@ -169,6 +178,9 @@ public partial class LibraryViewModel
                 return false;
             }
         }
+
+        // Collection chip: narrows whichever category tab is selected, in either branch above.
+        if (_selectedCollection.Length > 0 && !IsInCollection(card.Game, _selectedCollection)) return false;
 
         // Flyout filters: launcher, performance profile, per-entry state. AND'd with the tab and
         // the search box, so they narrow what those already chose rather than reaching past them.

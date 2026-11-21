@@ -27,10 +27,29 @@
         </StackPanel>
 
         <!-- Either TextBox or Editable ComboBox -->
-        <Grid Grid.Row="1" VerticalAlignment="Center" Margin="0,0,0,16">
-            <TextBox x:Name="ValueTextBox" Style="{StaticResource ModernTextBox}" Visibility="Visible"/>
-            <ComboBox x:Name="ValueComboBox" Style="{StaticResource ModernComboBox}" IsEditable="True" Visibility="Collapsed"/>
-        </Grid>
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,0,0,16">
+        <DockPanel>
+            <!-- Only where a name is being picked or made (Change Category): puts the typed name in the list, selected. -->
+            <Button x:Name="AddButton" DockPanel.Dock="Right" Content="_Add" Click="AddButton_Click" Visibility="Collapsed"
+                    Style="{StaticResource ModernOutlineButton}" MinWidth="70" Margin="10,0,0,0"/>
+            <Grid>
+                <TextBox x:Name="ValueTextBox" Style="{StaticResource ModernTextBox}" Visibility="Visible"/>
+                <ComboBox x:Name="ValueComboBox" Style="{StaticResource ModernComboBox}" IsEditable="True" Visibility="Collapsed"/>
+            </Grid>
+        </DockPanel>
+        <!-- Change Category: the category the game has, as a chip like Collections shows. The x clears it. -->
+        <Border x:Name="ChipBorder" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,12,0,0"
+                Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="10,2,2,2">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="ChipText" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}"/>
+                <Button x:Name="ChipRemove" Click="ChipRemove_Click" Style="{StaticResource ModernGhostButton}" Padding="8,2" Margin="4,0,0,0"
+                        AutomationProperties.Name="Clear the category">
+                    <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"/>
+                </Button>
+            </StackPanel>
+        </Border>
+        </StackPanel>
 
         <DockPanel Grid.Row="2">
             <Button DockPanel.Dock="Right" Content="_Save" Click="SaveButton_Click" IsDefault="True" 

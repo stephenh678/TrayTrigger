@@ -182,6 +182,7 @@ public partial class LibraryViewModel : ViewModelBase
         {
             _selectedCategory = _settings.LastCategoryFilter;
         }
+        _selectedCollection = _settings.LastCollectionFilter?.Trim() ?? string.Empty;
 
         Filter = new LibraryFilterViewModel(OnFilterChanged,
             saved: _settings.SavedLibraryFilters,
@@ -544,7 +545,8 @@ public partial class LibraryViewModel : ViewModelBase
             onQuickSettingChanged: _ => SaveGamesOnly(),
             onToggleDlssOverride: card => _ = ToggleDlssOverrideAsync(card),
             onLaunchWithoutChanges: card => { if (!HasSelection) LaunchGame(card, withoutChanges: true); },
-            onCreateShortcut: CreateGameShortcut
+            onCreateShortcut: CreateGameShortcut,
+            onChangeCollections: card => RequestCollections?.Invoke(new List<GameCardViewModel> { card })
         );
         // Sessions outlive library reloads (a rescan while a game is running), so a fresh card
         // must pick up the live state rather than wait for the next SessionStarted event.

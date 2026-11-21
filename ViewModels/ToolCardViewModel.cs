@@ -46,13 +46,16 @@ public sealed class ToolCardViewModel : ViewModelBase
     public bool ClosesForGames => ToolCatalog.ClosesForGames(Tool);
     /// <summary>Starts with games or closes for them: the card shows <see cref="WithGamesGlyph"/>, with <see cref="WithGamesLabel"/> as its tooltip.</summary>
     public bool IsWithGames => ToolCatalog.IsWithGames(Tool);
-    public string WithGamesLabel => StartsWithGames ? "Starts with games" : ClosesForGames ? "Closes for games" : string.Empty;
+    public string WithGamesLabel => WithGamesBase.Length == 0 ? string.Empty : WithGamesBase + WithGamesLimit;
+    private string WithGamesBase => StartsWithGames ? "Starts with games" : ClosesForGames ? "Closes for games" : string.Empty;
+    /// <summary>" in Voice, Co-op" for a tool limited to collections: the card must not read as every game.</summary>
+    private string WithGamesLimit => Tool.OnlyForCollections is { Count: > 0 } only ? " in " + string.Join(", ", only) : string.Empty;
     /// <summary>The Library's controller for a tool that starts with games; the power symbol for one that is closed for them. Also on their tabs.</summary>
     public const string StartsWithGamesGlyph = "\uE7FC";
     public const string ClosesForGamesGlyph = "\uE7E8";
     public string WithGamesGlyph => StartsWithGames ? StartsWithGamesGlyph : ClosesForGames ? ClosesForGamesGlyph : string.Empty;
     /// <summary>What Narrator reads for the card: the controller icon can't be seen, so its meaning is spoken.</summary>
-    public string AccessibleName => IsWithGames ? $"{Name}, {WithGamesLabel.ToLowerInvariant()}" : Name;
+    public string AccessibleName => IsWithGames ? $"{Name}, {WithGamesBase.ToLowerInvariant()}{WithGamesLimit}" : Name;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public string HotkeyDisplay => HotkeyManager.Normalize(Tool.Hotkey) ?? string.Empty;
     public bool HasHotkey => HotkeyDisplay.Length > 0;

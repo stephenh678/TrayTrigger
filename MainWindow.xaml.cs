@@ -112,6 +112,7 @@ public partial class MainWindow : Window
         _viewModel.RequestQuickRename += OnRequestQuickRename;
         _viewModel.RequestQuickCategory += OnRequestQuickCategory;
         _viewModel.RequestBatchCategory += OnRequestBatchCategory;
+        _viewModel.RequestCollections += OnRequestCollections;
         _viewModel.RequestEditSteamAppId += OnRequestEditSteamAppId;
         _viewModel.RequestMinimizeToTray += OnRequestMinimizeToTray;
 
@@ -125,6 +126,7 @@ public partial class MainWindow : Window
             _viewModel.RequestQuickRename -= OnRequestQuickRename;
             _viewModel.RequestQuickCategory -= OnRequestQuickCategory;
             _viewModel.RequestBatchCategory -= OnRequestBatchCategory;
+            _viewModel.RequestCollections -= OnRequestCollections;
             _viewModel.RequestEditSteamAppId -= OnRequestEditSteamAppId;
             _viewModel.RequestMinimizeToTray -= OnRequestMinimizeToTray;
         };
@@ -842,7 +844,7 @@ public partial class MainWindow : Window
     private void OnRequestQuickCategory(GameCardViewModel card)
     {
         var suggestions = AssignableCategories();
-        var dialog = new QuickInputDialog("Change Category", "Change Category", $"Select or enter a category for \"{card.Name}\":", card.Category, suggestions);
+        var dialog = new QuickInputDialog("Change Category", "Change Category", $"Select or enter a category for \"{card.Name}\":", card.Category, suggestions, showAdd: true);
         dialog.Owner = this;
         if (dialog.ShowDialog() == true)
         {
@@ -905,11 +907,28 @@ public partial class MainWindow : Window
         string prompt = cards.Count == 1
             ? $"Select or enter a category for \"{cards[0].Name}\":"
             : $"Select or enter a category for the {cards.Count} selected games:";
-        var dialog = new QuickInputDialog("Change Category", "Change Category", prompt, initial, suggestions);
+        var dialog = new QuickInputDialog("Change Category", "Change Category", prompt, initial, suggestions, showAdd: true);
         dialog.Owner = this;
         if (dialog.ShowDialog() == true)
         {
             _viewModel.ApplyCategoryToMany(cards, dialog.ResultValue);
+        }
+    }
+
+    private void OnRequestCollections(List<GameCardViewModel> cards)
+    {
+        var library = _viewModel.Library;
+        string prompt = cards.Count == 1
+            ? $"Pick a collection for \"{cards[0].Name}\", or type a new one, and press Add."
+            : $"Pick a collection for the {cards.Count} selected games, or type a new one, and press Add. A collection left as it is changes nothing.";
+        var dialog = new CollectionsDialog("Collections", prompt, library.BuildCollectionChoices(cards),
+            library.ValidateNewCollectionName,
+            emptyText: "No collections yet. Type a name in the box above and press Add to start one.",
+            noneChosenText: cards.Count == 1 ? "Not in any collection." : "None of these games is in a collection yet.");
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true)
+        {
+            library.ApplyCollections(cards, dialog.ToAdd, dialog.ToRemove);
         }
     }
 

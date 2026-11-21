@@ -88,6 +88,42 @@ public partial class LibraryView : UserControl
         e.Handled = true;
     }
 
+    private static CategoryTabItem? ChipOf(object sender)
+        => (sender as MenuItem)?.Parent is ContextMenu { PlacementTarget: FrameworkElement { DataContext: CategoryTabItem tab } } ? tab : null;
+
+    /// <summary>The "All" chip is not a collection: it has no menu.</summary>
+    private void CollectionChip_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: CategoryTabItem { Name.Length: 0 } }) e.Handled = true;
+    }
+
+    private void CollectionRename_Click(object sender, RoutedEventArgs e)
+    {
+        if (ChipOf(sender) is not { } tab) return;
+        var library = ViewModel.Library;
+        string initial = tab.Name;
+        while (true)
+        {
+            var dialog = new QuickInputDialog("Rename Collection", "Rename Collection", $"New name for \"{tab.Name}\":", initial);
+            dialog.Owner = Window.GetWindow(this);
+            if (dialog.ShowDialog() != true) return;
+            string? problem = library.RenameCollection(tab.Name, dialog.ResultValue);
+            if (problem == null) return;
+            ModernDialog.ShowInfo(Window.GetWindow(this), "Rename Collection", problem);
+            initial = dialog.ResultValue;
+        }
+    }
+
+    private void CollectionDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (ChipOf(sender) is not { } tab) return;
+        bool ok = ModernDialog.ConfirmDelete(Window.GetWindow(this), "Delete Collection",
+            $"Delete the collection \"{tab.Name}\"?",
+            "The games stay in your library; they are only taken out of this collection.",
+            confirmText: "Delete", cancelText: "Cancel");
+        if (ok) ViewModel.Library.DeleteCollection(tab.Name);
+    }
+
     /// <summary>
     /// An undo toast is held while the pointer is over it or keyboard focus is inside it, and its
     /// 10-second window pauses. Also re-read when the toast shows or hides: a hidden toast can keep
