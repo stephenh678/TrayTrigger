@@ -56,11 +56,23 @@ public class StorageService : IProfileSnapshotStore
     public string? SettingsLoadWarning { get; private set; }
 
     public StorageService()
-        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TrayTrigger"),
-               Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayTrigger"),
-               migrateLegacyData: true)
+        : this(DataFolder(Environment.SpecialFolder.ApplicationData, "roaming"),
+               DataFolder(Environment.SpecialFolder.LocalApplicationData, "local"),
+               migrateLegacyData: !HasCaptureData)
     {
     }
+
+#if DEBUG
+    /// <summary>Debug builds only: TRAYTRIGGER_CAPTURE_DATA=&lt;folder&gt; (with roaming and local inside) runs a screenshot capture on a copy of a library instead of the user's data.</summary>
+    private static string? CaptureData => Environment.GetEnvironmentVariable("TRAYTRIGGER_CAPTURE_DATA") is { Length: > 0 } folder && Directory.Exists(folder) ? folder : null;
+    private static bool HasCaptureData => CaptureData != null;
+    private static string DataFolder(Environment.SpecialFolder folder, string captureSub) =>
+        CaptureData is { } capture ? Path.Combine(capture, captureSub) : Path.Combine(Environment.GetFolderPath(folder), "TrayTrigger");
+#else
+    private static bool HasCaptureData => false;
+    private static string DataFolder(Environment.SpecialFolder folder, string captureSub) =>
+        Path.Combine(Environment.GetFolderPath(folder), "TrayTrigger");
+#endif
 
     /// <summary>
     /// Test seam: every file this service reads or writes lives under the two given folders, so a
