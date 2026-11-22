@@ -88,8 +88,9 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 ; In-app updates run Setup silently, so the postinstall checkbox above never shows; bring the
-; app back up ourselves.
-Filename: "{app}\{#MyAppExeName}"; Flags: nowait runasoriginaluser; Check: IsUpdate
+; app back up ourselves, through Explorer so the new copy's parent is the shell and it does not
+; inherit process mitigations (redirection trust) from the app that started Setup.
+Filename: "{win}\explorer.exe"; Parameters: """{app}\{#MyAppExeName}"""; Flags: nowait runasoriginaluser; Check: IsUpdate
 
 [UninstallRun]
 ; The DLSS Override is a setting in NVIDIA's driver, not a TrayTrigger file, so it would outlive
