@@ -28,7 +28,7 @@ Three ways to find something, named for what they do. A **filter** (Library, Too
 
 ### Search everything
 
-The magnifier at the top of the left bar, or **Ctrl+K** from any page, opens a search box over the window that looks in every place at once. Results are grouped: Games, Tools, then the cards of Settings, System and About, and one line for Activity & History when its entries match.
+The magnifier at the bottom of the left bar, above Activity, or **Ctrl+K** from any page, opens a search box over the window that looks in every place at once. Results are grouped: Games, Tools, then the cards of Settings, System and About, and one line for Activity & History when its entries match.
 
 - Up and Down pick a result and Enter or a click opens it. A game opens its Game Details; a tool is selected on the Tools page; a setting, system or About card is shown on its page and tab, outlined, with your words marked; the Activity line opens Activity & History with the filter set.
 - Each group shows the best few, so a settings card never pushes a game out of sight. When a game search finds more than five, the last line, "Show all 8 games matching ...", opens the Library with that word in its filter box.

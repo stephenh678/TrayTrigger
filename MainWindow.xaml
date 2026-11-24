@@ -91,28 +91,6 @@
 
                     <!-- Top Navigation Items -->
                     <StackPanel Grid.Row="0">
-                        <!-- 0. Search: finds a game, tool or setting from any page (Ctrl+K). Not a page, so it has no
-                             selected state; it opens the box over whatever is on screen. -->
-                        <Button Click="OnSearchButtonClick" AutomationProperties.Name="Search" ToolTip="Search everything (Ctrl+K)"
-                                Style="{StaticResource SidebarNavButton}" Margin="0,0,0,6">
-                            <DockPanel LastChildFill="True" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}"
-                                           Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                <TextBlock Text="Search" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </DockPanel>
-                        </Button>
-
                         <!-- 1. Library -->
                         <Button Command="{Binding SelectLibraryCommand}" AutomationProperties.Name="Library" Margin="0,0,0,6">
                             <Button.Style>
@@ -265,9 +243,31 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- Bottom Actions: Activity & History, then Exit TrayTrigger -->
+                    <!-- Bottom Actions: Search, Activity & History, then Exit TrayTrigger -->
                     <StackPanel Grid.Row="1" VerticalAlignment="Bottom">
                         <Separator Background="{DynamicResource BrushBorder}" Margin="2,0,2,8"/>
+                        <!-- Search: finds a game, tool or setting from any page (Ctrl+K). Not a page, so it has no
+                             selected state; it opens the box over whatever is on screen. -->
+                        <Button Click="OnSearchButtonClick" AutomationProperties.Name="Search" ToolTip="Search everything (Ctrl+K)"
+                                Style="{StaticResource SidebarNavButton}" Margin="0,0,0,6">
+                            <DockPanel LastChildFill="True" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}"
+                                           Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                <TextBlock Text="Search" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DockPanel>
+                        </Button>
+
                         <!-- The bell: a red dot while something needs attention, and the way into Activity & History.
                              The only indicator in the sidebar; the count is in the page header. -->
                         <Button Command="{Binding SelectActivityCommand}" Margin="0,0,0,6"
