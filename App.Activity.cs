@@ -55,6 +55,19 @@ public partial class App
     }
 
     /// <summary>
+    /// A TrayTrigger started with Windows' redirection-trust mitigation on passes it to every tool it starts, and those
+    /// tools then fail on junctions (error 448). It is inherited from whatever started us, so a restart from the Start
+    /// menu clears it. Logged, and said once in the tray, when the window isn't up to carry the message itself.
+    /// </summary>
+    private void WarnIfRedirectionTrustInherited()
+    {
+        if (!ProcessMitigation.IsRedirectionTrustEnforced()) return;
+        LoggingService.Warn("App", "This TrayTrigger was started with redirection trust enforced (inherited from the process that started it). Tools it starts inherit it and fail on junctions (error 448). Restarting TrayTrigger from the Start menu clears it.");
+        ShowTrayNotification("TrayTrigger started in a restricted mode",
+            "Tools it starts may fail on junctions. Quit TrayTrigger and start it from the Start menu.");
+    }
+
+    /// <summary>
     /// Notes an update once in Activity &amp; History. A first run (nothing recorded) is only
     /// remembered. Saved with the rest of the settings at startup or exit.
     /// </summary>
@@ -128,6 +141,7 @@ public partial class App
         }
 
         OfferWhatsNewFromTray();
+        WarnIfRedirectionTrustInherited();
 
         // Tweaks TrayTrigger applied that Windows has changed back since: read once, a minute in,
         // and only when it has applied some - never while a game is running.

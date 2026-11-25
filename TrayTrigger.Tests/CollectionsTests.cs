@@ -536,6 +536,21 @@ public class CollectionsTests : IDisposable
     });
 
     [Fact]
+    public void TakingOutACollectionsLastGame_TellsToolsItEnded() => Sta(() =>
+    {
+        var library = CreateLibrary(null, "Alpha", "Beta");
+        library.ApplyCollections(Cards(library, "Alpha", "Beta"), ["Co-op"], []);
+        var told = new List<string>();
+        library.CollectionDeleted += told.Add;
+
+        library.ApplyCollections(Cards(library, "Alpha"), [], ["Co-op"]);
+        Assert.Empty(told); // Beta is still in it
+
+        library.ApplyCollections(Cards(library, "Beta"), [], ["Co-op"]);
+        Assert.Equal(["Co-op"], told);
+    });
+
+    [Fact]
     public void AToolCardsLabel_SaysWhichCollectionsItIsLimitedTo()
     {
         WpfTestHost.Run(() =>

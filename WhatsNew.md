@@ -4,6 +4,11 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.8.1
+
+- **Search moved** - The search button is now at the bottom of the left bar, above Activity. Ctrl+K still works.
+- **Tools work after an update** - Programs a tool starts no longer fail on folder links after TrayTrigger updates itself.
+
 ## 1.8.0
 
 - **Collections** - Group games your own way (Co-op, Kids) from a game's right-click menu > Change > Collections. A row of collections below the category tabs narrows the Library to one.

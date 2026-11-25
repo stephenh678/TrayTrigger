@@ -215,6 +215,15 @@ public partial class LibraryViewModel
         LoggingService.Info("Library", $"Collections changed for {cards.Count} game(s): added {toAdd.Count}, removed {toRemove.Count}.");
         StatusMessage = cards.Count == 1 ? $"Updated collections for {cards[0].Name}" : $"Updated collections for {cards.Count} games";
         NotifySelectionChanged();
+
+        // A collection exists while a game is in it: taking out its last game ends it, the same as deleting it. Tools
+        // limited to it hear so, or they would stay limited to a collection no game can be in and never apply.
+        var now = CollectionNames();
+        foreach (var gone in existing.Where(e => !now.Any(n => string.Equals(n, e, StringComparison.OrdinalIgnoreCase))))
+        {
+            LoggingService.Info("Library", $"Collection '{gone}' has no games left, so it ends.");
+            CollectionDeleted?.Invoke(gone);
+        }
     }
 
     /// <summary>Renames a collection on every game in it; returns what is wrong, or null when it was renamed.</summary>

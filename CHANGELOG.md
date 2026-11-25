@@ -8,6 +8,13 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.8.1
+
+- **A tool's collection limit is kept** - in Edit Tool > Limit to a collection, a collection picked from the box was dropped unless you pressed Add before Save, so the tool still applied to every game. Save now keeps a picked collection.
+- **A tool no longer stays limited to a collection that is gone** - taking the last game out of a collection ends it, but a tool limited to it kept the limit, matched no game and so never started or closed. It now drops the collection, as deleting it does: a tool that was limited only to that collection goes back to doing nothing with games.
+- **Search moves to the bottom of the left bar** - the magnifier sat above the pages, where it is little used; it is now with the other tools, above Activity. Ctrl+K works as before.
+- **Tools that fail on junctions after an update** - a program started by a tool could fail with Windows error 448 ("untrusted mount point") when it followed a junction, such as uv and its Python folder, while the same command worked from a normal shell. TrayTrigger had been started with a Windows restriction (redirection trust) inherited from whatever relaunched it, and passed it on to its tools. After an update TrayTrigger is now started through Explorer so it does not inherit it, and if it is ever started with the restriction on it says so in the tray and in the log: quit it and start it from the Start menu.
+
 ## 1.8.0
 
 - **Collections** - group games your own way: Co-op, Kids, Play with Discord. A game can be in any number of collections, and TrayTrigger never fills them for you. Right-click a game > Change > Collections... (or select several and use Collections... in More) to pick or type a name and press Add (Change Category has the same Add button); a collection exists while a game is in it. A row of collection chips, starting with **All Collections**, appears below the category tabs: pick a chip to narrow the library, together with the category tab, filter and search. Right-click a chip to rename or delete it; deleting never deletes games. Categories are unchanged: still one per game, set from store data.
