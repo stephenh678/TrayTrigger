@@ -124,8 +124,10 @@ public partial class CollectionsDialog : Window
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        // A name typed but not added is still meant: add it before saving.
-        if (NameComboBox.IsEditable && NameComboBox.Text.Trim().Length > 0)
+        // A name typed, or picked from the box (the tool's limit, where nothing can be typed), but not added is still
+        // meant: add it before saving.
+        string pending = (NameComboBox.IsEditable ? NameComboBox.Text : NameComboBox.SelectedItem as string)?.Trim() ?? string.Empty;
+        if (pending.Length > 0)
         {
             AddNewName();
             if (ErrorTextBlock.Visibility == Visibility.Visible) return;
