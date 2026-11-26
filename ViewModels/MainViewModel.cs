@@ -34,9 +34,7 @@ public enum NavSection
 
 public enum AboutSubSection
 {
-    All,
     Overview,
-    Features,
     Shortcuts,
     Support
 }
@@ -269,7 +267,7 @@ public class MainViewModel : ViewModelBase
             {
                 OnToolsEnabledChanged();
             }
-            // Settings > Finding Games "Show category tabs" (and Reset to Defaults): the tab row follows.
+            // Settings > Launchers "Show category tabs" (and Reset to Defaults): the tab row follows.
             if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(SettingsViewModel.ShowCategoryTabs))
             {
                 Library.RebuildCategories();
@@ -346,11 +344,9 @@ public class MainViewModel : ViewModelBase
         SelectActivityCommand = new RelayCommand(() => CurrentSection = NavSection.Activity);
         GoToAboutTabCommand = new RelayCommand(tab =>
         {
-            if (tab is AboutSubSection target && CurrentAboutSection != AboutSubSection.All) CurrentAboutSection = target;
+            if (tab is AboutSubSection target) CurrentAboutSection = target;
         });
-        SelectAboutAllTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.All);
         SelectAboutOverviewTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Overview);
-        SelectAboutFeaturesTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Features);
         SelectAboutShortcutsTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Shortcuts);
         SelectAboutSupportTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Support);
         ShowHotkeySettingsCommand = new RelayCommand(() =>
@@ -537,7 +533,7 @@ public class MainViewModel : ViewModelBase
                 break;
             case NavSection.About:
                 AboutSearchText = string.Empty;
-                CurrentAboutSection = AboutSubSection.All;
+                CurrentAboutSection = AboutSubSection.Overview;
                 break;
             case NavSection.System:
                 SystemVM.SystemSearchText = string.Empty;
@@ -643,9 +639,7 @@ public class MainViewModel : ViewModelBase
 
     /// <summary>Search results take About to a card's tab (see Views/CardSearch); on All the card is already on screen.</summary>
     public ICommand GoToAboutTabCommand { get; }
-    public ICommand SelectAboutAllTabCommand { get; }
     public ICommand SelectAboutOverviewTabCommand { get; }
-    public ICommand SelectAboutFeaturesTabCommand { get; }
     public ICommand SelectAboutShortcutsTabCommand { get; }
     public ICommand SelectAboutSupportTabCommand { get; }
     /// <summary>About > Shortcuts' "App Hotkeys...": Settings on the card that holds TrayTrigger's own hotkeys, not just its tab.</summary>
@@ -739,7 +733,8 @@ public class MainViewModel : ViewModelBase
     public ICommand ShowWhatsNewCommand { get; }
 
     // --- ABOUT SUB-SECTIONS ---
-    private AboutSubSection _currentAboutSection = AboutSubSection.All;
+    // Opens on Overview: one tab at a time, as Settings and System do.
+    private AboutSubSection _currentAboutSection = AboutSubSection.Overview;
     public AboutSubSection CurrentAboutSection
     {
         get => _currentAboutSection;
@@ -749,13 +744,10 @@ public class MainViewModel : ViewModelBase
             {
                 _currentAboutSection = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(IsAboutAllTab));
                 OnPropertyChanged(nameof(IsAboutOverviewTab));
-                OnPropertyChanged(nameof(IsAboutFeaturesTab));
                 OnPropertyChanged(nameof(IsAboutShortcutsTab));
                 OnPropertyChanged(nameof(IsAboutSupportTab));
                 OnPropertyChanged(nameof(ShowAboutOverviewSection));
-                OnPropertyChanged(nameof(ShowAboutFeaturesSection));
                 OnPropertyChanged(nameof(ShowAboutShortcutsSection));
                 OnPropertyChanged(nameof(ShowAboutSupportSection));
             }
@@ -773,16 +765,13 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _aboutSearchText, value ?? string.Empty);
     }
 
-    public bool IsAboutAllTab => CurrentAboutSection == AboutSubSection.All;
     public bool IsAboutOverviewTab => CurrentAboutSection == AboutSubSection.Overview;
-    public bool IsAboutFeaturesTab => CurrentAboutSection == AboutSubSection.Features;
     public bool IsAboutShortcutsTab => CurrentAboutSection == AboutSubSection.Shortcuts;
     public bool IsAboutSupportTab => CurrentAboutSection == AboutSubSection.Support;
 
-    public bool ShowAboutOverviewSection => CurrentAboutSection == AboutSubSection.All || CurrentAboutSection == AboutSubSection.Overview;
-    public bool ShowAboutFeaturesSection => CurrentAboutSection == AboutSubSection.All || CurrentAboutSection == AboutSubSection.Features;
-    public bool ShowAboutShortcutsSection => CurrentAboutSection == AboutSubSection.All || CurrentAboutSection == AboutSubSection.Shortcuts;
-    public bool ShowAboutSupportSection => CurrentAboutSection == AboutSubSection.All || CurrentAboutSection == AboutSubSection.Support;
+    public bool ShowAboutOverviewSection => CurrentAboutSection == AboutSubSection.Overview;
+    public bool ShowAboutShortcutsSection => CurrentAboutSection == AboutSubSection.Shortcuts;
+    public bool ShowAboutSupportSection => CurrentAboutSection == AboutSubSection.Support;
 
     // --- APPLICATION VERSION & UPDATES (forwarded to UpdateCoordinator; see L-13) ---
 

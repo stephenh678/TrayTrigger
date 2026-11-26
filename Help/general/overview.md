@@ -45,7 +45,7 @@ Settings, About and System each have a search box beside their tabs. Type a word
 - The list searches the page you are on. When it finds nothing it says so and points to Search everything (Ctrl+K), which looks in every page.
 - A setting your PC can't use (an NVIDIA option without an NVIDIA card, the monitor options with one monitor) is not listed.
 - Press Enter in the box again to bring the list back after choosing. Esc, or the x in the box, clears the search.
-- Leaving the page by the sidebar clears the search, puts the page back on its first tab (About: its All tab) and scrolls it to the top, so it opens fresh next time. The Library, Tools and Activity do the same for their filter box (the category tab, sort and view you chose stay).
+- Leaving the page by the sidebar clears the search, puts the page back on its first tab and scrolls it to the top, so it opens fresh next time. The Library, Tools and Activity do the same for their filter box (the category tab, sort and view you chose stay).
 
 ## Window sizes
 

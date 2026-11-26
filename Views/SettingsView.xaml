@@ -115,7 +115,7 @@
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Settings" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                            FontFamily="{DynamicResource AppFont}" FontWeight="Normal"/>
-                <TextBlock Text="Startup and updates, finding games, art and the library view, the tray menu, launching and launch scripts, and diagnostics"
+                <TextBlock Text="Startup and updates, launchers and scanning, art and the library view, the tray menu, launching and launch scripts, and diagnostics"
                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" 
                            FontFamily="{DynamicResource AppFont}" Margin="0,4,0,0"/>
             </StackPanel>
@@ -144,8 +144,8 @@
             <StackPanel Orientation="Horizontal">
                 <Button Content="General" Command="{Binding SelectGeneralTabCommand}"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsGeneralTab}"/>
-                <Button Content="Finding Games" Command="{Binding SelectFindingGamesTabCommand}" Margin="2,0,0,0"
-                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsFindingGamesTab}"/>
+                <Button Content="Launchers" Command="{Binding SelectLaunchersTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLaunchersTab}"/>
                 <Button Content="Library &amp; Art" Command="{Binding SelectLibraryTabCommand}" Margin="2,0,0,0"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLibraryTab}"/>
                 <Button Content="Tray Menu" Command="{Binding SelectTrayMenuTabCommand}" Margin="2,0,0,0"
@@ -557,10 +557,10 @@
                 </StackPanel>
 
                 <!-- ============================================== -->
-                <!-- CATEGORY 2: FINDING GAMES: how games get into the library -->
+                <!-- CATEGORY 2: LAUNCHERS: how games get into the library -->
                 <!-- ============================================== -->
-                <StackPanel Visibility="{Binding ShowFindingGamesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
-                            views:CardSearch.Tab="{x:Static vm:SettingsCategoryTab.FindingGames}" views:CardSearch.TabLabel="Finding Games">
+                <StackPanel Visibility="{Binding ShowLaunchersSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                            views:CardSearch.Tab="{x:Static vm:SettingsCategoryTab.Launchers}" views:CardSearch.TabLabel="Launchers">
                     <!-- 2.1 Launcher Integrations -->
                     <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"

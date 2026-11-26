@@ -83,7 +83,7 @@ public partial class LibraryViewModel
         CategoryTabs.Clear();
         foreach (var cat in Categories)
         {
-            // Settings > Finding Games "Show category tabs" off: only the views (All, Favorites, Hidden) stay.
+            // Settings > Launchers "Show category tabs" off: only the views (All, Favorites, Hidden) stay.
             if (!_settings.ShowCategoryTabs && !IsViewTab(cat)) continue;
             string display = cat == LibraryConstants.AllCategory ? "All Games" : cat == LibraryConstants.FavoritesCategory ? LibraryConstants.FavoritesCategory : cat;
             bool isSelected = string.Equals(cat, SelectedCategory, StringComparison.OrdinalIgnoreCase);

@@ -19,9 +19,7 @@ public class CardSearchTitleGuardTests
     private static readonly string[] HeadingStyles = ["{StaticResource CardHeaderTitle}", "{StaticResource CardTitle}"];
     private const int MaxTitle = 60;
 
-    // About is searched the same way but not yet held to this: its hero, environment strip, feature grid and
-    // four support cards open with a button or a label (a known gap, left for its own change).
-    public static TheoryData<string> Pages() => new() { "Views/SettingsView.xaml", "Views/SystemView.xaml" };
+    public static TheoryData<string> Pages() => new() { "Views/SettingsView.xaml", "Views/SystemView.xaml", "Views/AboutView.xaml" };
 
     [Theory]
     [MemberData(nameof(Pages))]

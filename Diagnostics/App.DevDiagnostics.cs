@@ -1878,14 +1878,14 @@ public partial class App
                 return;
             }
 
-            // --screenshot-about-search <out.png> <query>: About's card search on its All tab.
+            // --screenshot-about-search <out.png> <query>: About's card search, from its Overview tab.
             if ((e.Args[i].Equals("--screenshot-about-search", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-about-search", StringComparison.OrdinalIgnoreCase)) &&
                 i + 2 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.CurrentSection = NavSection.About;
-                _mainViewModel.CurrentAboutSection = AboutSubSection.All;
+                _mainViewModel.CurrentAboutSection = AboutSubSection.Overview;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 // Search once the page has been laid out, so the help topic rows it reads exist.
@@ -2219,7 +2219,7 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.CurrentSection = NavSection.About;
-                _mainViewModel.CurrentAboutSection = AboutSubSection.All;
+                _mainViewModel.CurrentAboutSection = AboutSubSection.Overview;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);
@@ -2247,7 +2247,7 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.CurrentSection = NavSection.About;
-                _mainViewModel.CurrentAboutSection = AboutSubSection.All;
+                _mainViewModel.CurrentAboutSection = AboutSubSection.Overview;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 var sv = FindVisualChild<ScrollViewer>(_mainWindow, s => s.ScrollableHeight > 0);
@@ -2264,8 +2264,11 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.CurrentSection = NavSection.About;
-                _mainViewModel.CurrentAboutSection = AboutSubSection.Features;
+                // The key features are on Overview, below This Install: scrolled down to them.
+                _mainViewModel.CurrentAboutSection = AboutSubSection.Overview;
                 _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                FindVisualChild<ScrollViewer>(_mainWindow, s => s.ScrollableHeight > 0)?.ScrollToVerticalOffset(330);
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);
                 ExitApplication();
@@ -2738,7 +2741,7 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _skipSettingsSaveOnExit = true;
-                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.FindingGames;
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.Launchers;
                 _mainViewModel.CurrentSection = NavSection.Settings;
                 typeof(SettingsViewModel).GetMethod("OfferUndo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                     .Invoke(_mainViewModel.SettingsVM, new object[] { @"Removed scan location D:\Games", new Action(() => { }) });
@@ -3729,7 +3732,7 @@ public partial class App
 
                 _mainViewModel.SettingsVM.SelectTrayMenuTabCommand.Execute(null);
                 if (!_mainViewModel.SettingsVM.ShowTrayMenuSection) throw new Exception("Expected ShowTrayMenuSection to be true on Tray Menu tab");
-                if (_mainViewModel.SettingsVM.ShowGeneralSection || _mainViewModel.SettingsVM.ShowFindingGamesSection || _mainViewModel.SettingsVM.ShowLibrarySection || _mainViewModel.SettingsVM.ShowDiagnosticsSection)
+                if (_mainViewModel.SettingsVM.ShowGeneralSection || _mainViewModel.SettingsVM.ShowLaunchersSection || _mainViewModel.SettingsVM.ShowLibrarySection || _mainViewModel.SettingsVM.ShowDiagnosticsSection)
                     throw new Exception("Expected only the Tray Menu section on Tray Menu tab");
 
                 Console.WriteLine("TEST_SETTINGS_NAVIGATION_PASSED");
@@ -3775,15 +3778,9 @@ public partial class App
                 _mainViewModel.SelectAboutOverviewTabCommand.Execute(null);
                 if (_mainViewModel.CurrentAboutSection != AboutSubSection.Overview) throw new Exception("Expected Overview sub-section");
                 if (!_mainViewModel.IsAboutOverviewTab) throw new Exception("Expected IsAboutOverviewTab=true");
-                if (_mainViewModel.IsAboutAllTab) throw new Exception("Expected IsAboutAllTab=false");
                 if (!_mainViewModel.ShowAboutOverviewSection) throw new Exception("Expected ShowAboutOverviewSection=true on Overview tab");
-                if (_mainViewModel.ShowAboutFeaturesSection) throw new Exception("Expected ShowAboutFeaturesSection=false on Overview tab");
+                if (_mainViewModel.ShowAboutShortcutsSection) throw new Exception("Expected ShowAboutShortcutsSection=false on Overview tab");
 
-                _mainViewModel.SelectAboutFeaturesTabCommand.Execute(null);
-                if (_mainViewModel.CurrentAboutSection != AboutSubSection.Features) throw new Exception("Expected Features sub-section");
-                if (!_mainViewModel.IsAboutFeaturesTab) throw new Exception("Expected IsAboutFeaturesTab=true");
-                if (!_mainViewModel.ShowAboutFeaturesSection) throw new Exception("Expected ShowAboutFeaturesSection=true on Features tab");
-                if (_mainViewModel.ShowAboutOverviewSection) throw new Exception("Expected ShowAboutOverviewSection=false on Features tab");
 
                 _mainViewModel.SelectAboutShortcutsTabCommand.Execute(null);
                 if (_mainViewModel.CurrentAboutSection != AboutSubSection.Shortcuts) throw new Exception("Expected Shortcuts sub-section");
@@ -3795,13 +3792,9 @@ public partial class App
                 if (!_mainViewModel.IsAboutSupportTab) throw new Exception("Expected IsAboutSupportTab=true");
                 if (!_mainViewModel.ShowAboutSupportSection) throw new Exception("Expected ShowAboutSupportSection=true on Support tab");
 
-                _mainViewModel.SelectAboutAllTabCommand.Execute(null);
-                if (_mainViewModel.CurrentAboutSection != AboutSubSection.All) throw new Exception("Expected All sub-section");
-                if (!_mainViewModel.IsAboutAllTab) throw new Exception("Expected IsAboutAllTab=true");
-                if (!_mainViewModel.ShowAboutOverviewSection) throw new Exception("Expected ShowAboutOverviewSection=true on All tab");
-                if (!_mainViewModel.ShowAboutFeaturesSection) throw new Exception("Expected ShowAboutFeaturesSection=true on All tab");
-                if (!_mainViewModel.ShowAboutShortcutsSection) throw new Exception("Expected ShowAboutShortcutsSection=true on All tab");
-                if (!_mainViewModel.ShowAboutSupportSection) throw new Exception("Expected ShowAboutSupportSection=true on All tab");
+                // No All tab: one tab at a time, so only the chosen one shows.
+                if (_mainViewModel.ShowAboutOverviewSection || _mainViewModel.ShowAboutShortcutsSection)
+                    throw new Exception("Expected only the Support section on the Support tab");
 
                 Console.WriteLine("TEST_ABOUT_NAVIGATION_PASSED");
                 ExitApplication();

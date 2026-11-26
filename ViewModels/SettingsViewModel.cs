@@ -19,8 +19,8 @@ namespace TrayTrigger.ViewModels;
 public enum SettingsCategoryTab
 {
     General,
-    /// <summary>Finding Games: launcher integrations, Scan for Games, and how added games are named and filed.</summary>
-    FindingGames,
+    /// <summary>Launchers: launcher integrations, Scan for Games, and how added games are named and filed.</summary>
+    Launchers,
     /// <summary>Library &amp; Art: where art and game info come from, and how the library looks.</summary>
     Library,
     TrayMenu,
@@ -70,13 +70,13 @@ public partial class SettingsViewModel : ViewModelBase
             if (SetProperty(ref _selectedTab, value))
             {
                 OnPropertyChanged(nameof(IsGeneralTab));
-                OnPropertyChanged(nameof(IsFindingGamesTab));
+                OnPropertyChanged(nameof(IsLaunchersTab));
                 OnPropertyChanged(nameof(IsLibraryTab));
                 OnPropertyChanged(nameof(IsTrayMenuTab));
                 OnPropertyChanged(nameof(IsPerformanceTweaksTab));
                 OnPropertyChanged(nameof(IsDiagnosticsTab));
                 OnPropertyChanged(nameof(ShowGeneralSection));
-                OnPropertyChanged(nameof(ShowFindingGamesSection));
+                OnPropertyChanged(nameof(ShowLaunchersSection));
                 OnPropertyChanged(nameof(ShowLibrarySection));
                 OnPropertyChanged(nameof(ShowTrayMenuSection));
                 OnPropertyChanged(nameof(ShowPerformanceTweaksSection));
@@ -97,14 +97,14 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     public bool IsGeneralTab => SelectedTab == SettingsCategoryTab.General;
-    public bool IsFindingGamesTab => SelectedTab == SettingsCategoryTab.FindingGames;
+    public bool IsLaunchersTab => SelectedTab == SettingsCategoryTab.Launchers;
     public bool IsLibraryTab => SelectedTab == SettingsCategoryTab.Library;
     public bool IsTrayMenuTab => SelectedTab == SettingsCategoryTab.TrayMenu;
     public bool IsPerformanceTweaksTab => SelectedTab == SettingsCategoryTab.PerformanceTweaks;
     public bool IsDiagnosticsTab => SelectedTab == SettingsCategoryTab.Diagnostics;
 
     public bool ShowGeneralSection => SelectedTab == SettingsCategoryTab.General;
-    public bool ShowFindingGamesSection => SelectedTab == SettingsCategoryTab.FindingGames;
+    public bool ShowLaunchersSection => SelectedTab == SettingsCategoryTab.Launchers;
     public bool ShowLibrarySection => SelectedTab == SettingsCategoryTab.Library;
     public bool ShowTrayMenuSection => SelectedTab == SettingsCategoryTab.TrayMenu;
     public bool ShowPerformanceTweaksSection => SelectedTab == SettingsCategoryTab.PerformanceTweaks;
@@ -204,7 +204,7 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>Search results take the page to a card's tab (see Views/CardSearch).</summary>
     public ICommand GoToTabCommand { get; }
     public ICommand SelectGeneralTabCommand { get; }
-    public ICommand SelectFindingGamesTabCommand { get; }
+    public ICommand SelectLaunchersTabCommand { get; }
     public ICommand SelectLibraryTabCommand { get; }
     public ICommand SelectTrayMenuTabCommand { get; }
     public ICommand SelectPerformanceTweaksTabCommand { get; }
@@ -301,7 +301,7 @@ public partial class SettingsViewModel : ViewModelBase
             if (tab is SettingsCategoryTab target) SelectedTab = target;
         });
         SelectGeneralTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.General);
-        SelectFindingGamesTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.FindingGames);
+        SelectLaunchersTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.Launchers);
         SelectLibraryTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.Library);
         SelectTrayMenuTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.TrayMenu);
         SelectPerformanceTweaksTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.PerformanceTweaks);
@@ -803,7 +803,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Settings > Finding Games: the Library shows its category tabs (Action, RPG...). Off keeps All, Favorites and Hidden.</summary>
+    /// <summary>Settings > Launchers: the Library shows its category tabs (Action, RPG...). Off keeps All, Favorites and Hidden.</summary>
     public bool ShowCategoryTabs
     {
         get => _settings.ShowCategoryTabs;
