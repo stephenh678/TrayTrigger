@@ -38,6 +38,53 @@ public class ToolCatalogTests
         Assert.Equal(["Discord", "DLSS Swapper", "Afterburner", "vortex"], names);
     }
 
+    [Fact]
+    public void Sort_RecentlyUsed_NewestFirst_ThenNeverUsedAToZ()
+    {
+        var now = new DateTime(2026, 11, 26, 18, 0, 0, DateTimeKind.Utc);
+        ToolEntry[] tools =
+        [
+            Tool("vortex"),
+            new() { Name = "Discord", TargetPath = @"C:\Tools\d.exe", LastUsedUtc = now.AddDays(-2) },
+            new() { Name = "Afterburner", TargetPath = @"C:\Tools\a.exe", LastUsedUtc = now },
+            Tool("DLSS Swapper"),
+        ];
+        var names = ToolCatalog.Sort(tools, ToolCatalog.SortRecentlyUsed).Select(t => t.Name);
+        Assert.Equal(["Afterburner", "Discord", "DLSS Swapper", "vortex"], names);
+    }
+
+    [Fact]
+    public void Sort_RecentlyAdded_NewestFirst_ThenUnrecordedAToZ()
+    {
+        var now = new DateTime(2026, 11, 26, 18, 0, 0, DateTimeKind.Utc);
+        ToolEntry[] tools =
+        [
+            Tool("vortex"), // added before the date was recorded
+            new() { Name = "OBS", TargetPath = @"C:\Tools\o.exe", AddedUtc = now.AddMinutes(-5) },
+            new() { Name = "Afterburner", TargetPath = @"C:\Tools\a.exe", AddedUtc = now },
+            Tool("Discord"),
+        ];
+        var names = ToolCatalog.Sort(tools, ToolCatalog.SortRecentlyAdded).Select(t => t.Name);
+        Assert.Equal(["Afterburner", "OBS", "Discord", "vortex"], names);
+    }
+
+    [Fact]
+    public void Sort_WithGamesFirst_StartsThenClosesThenTheRest_EachAToZ()
+    {
+        ToolEntry[] tools =
+        [
+            Tool("vortex"),
+            new() { Name = "OneDrive", TargetPath = @"C:\Tools\o.exe", CloseForGames = true },
+            new() { Name = "RTSS", TargetPath = @"C:\Tools\r.exe", StartWithGames = true },
+            new() { Name = "Afterburner", TargetPath = @"C:\Tools\a.exe", StartWithGames = true },
+            new() { Name = "Discord", TargetPath = @"C:\Tools\d.exe", CloseForGames = true },
+            // A script can't start with games, so a box left ticked on one doesn't count.
+            new() { Name = "Backup", TargetPath = @"C:\Tools\b.ps1", StartWithGames = true },
+        ];
+        var names = ToolCatalog.Sort(tools, ToolCatalog.SortWithGamesFirst).Select(t => t.Name);
+        Assert.Equal(["Afterburner", "RTSS", "Discord", "OneDrive", "Backup", "vortex"], names);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

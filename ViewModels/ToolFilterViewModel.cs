@@ -34,12 +34,25 @@ public sealed class ToolFilterViewModel : FilterFlyoutViewModel
         AddTo(_settings, "status:startswithgames", "Starts with games", c => c.StartsWithGames, "Doesn't start with games");
         AddTo(_settings, "status:closesforgames", "Closes for games", c => c.ClosesForGames, "Doesn't close for games");
         AddTo(_settings, "status:hidewindow", "Hides its window", c => c.Tool.HideWindow, "Shows its window");
+        // The details of what a tool does with games. Each is offered only while some tool has it set (RefreshAvailability).
+        AddTo(_settings, "status:collection", "Limited to a collection", IsLimitedToACollection, "For every game");
+        AddTo(_settings, "status:waits", "Waits before the game", WaitsBeforeTheGame, "Doesn't wait before the game");
+        AddTo(_settings, "status:closesafter", "Closes after games", ClosesAfterGames, "Stays open after games");
+        AddTo(_settings, "status:reopens", "Reopens after games", ReopensAfterGames, "Stays closed after games");
 
         AddTo(_attention, "status:missing", "File missing", c => c.IsMissing);
         AddTo(_attention, "status:noicon", "No icon", c => !c.HasIcon);
+        AddTo(_attention, "status:hotkeyinactive", "Hotkey not working", c => c.IsHotkeyInactive);
 
         AddGroups(_kinds, _settings, _attention);
     }
+
+    // Only what the tool actually does: a setting saved while it can't apply (a wait on a tool that doesn't start
+    // with games, a collection on one that does nothing with games) isn't counted.
+    internal static bool IsLimitedToACollection(ToolCardViewModel c) => c.IsWithGames && c.Tool.OnlyForCollections.Count > 0;
+    internal static bool WaitsBeforeTheGame(ToolCardViewModel c) => c.StartsWithGames && c.Tool.WaitBeforeGame;
+    internal static bool ClosesAfterGames(ToolCardViewModel c) => c.StartsWithGames && c.Tool.CloseAfterGames;
+    internal static bool ReopensAfterGames(ToolCardViewModel c) => c.ClosesForGames && c.Tool.ReopenAfterGames;
 
     private void AddTo(FilterGroup group, string key, string label, Func<ToolCardViewModel, bool> match, string? negatedLabel = null) =>
         group.Options.Add(new FilterOption(key, label, c => match((ToolCardViewModel)c), OnOptionChanged, negatedLabel));
@@ -58,6 +71,11 @@ public sealed class ToolFilterViewModel : FilterFlyoutViewModel
         SetAvailable("kind:program", all.Any(c => !c.IsStoreApp && !c.IsScript));
         SetAvailable("kind:script", all.Any(c => c.IsScript));
         SetAvailable("kind:storeapp", all.Any(c => c.IsStoreApp));
+        SetAvailable("status:collection", all.Any(IsLimitedToACollection));
+        SetAvailable("status:waits", all.Any(WaitsBeforeTheGame));
+        SetAvailable("status:closesafter", all.Any(c => c.StartsWithGames));
+        SetAvailable("status:reopens", all.Any(c => c.ClosesForGames));
+        SetAvailable("status:hotkeyinactive", all.Any(c => c.IsHotkeyInactive));
         foreach (var group in Groups) group.NotifyVisibilityChanged();
         NotifyActiveChanged();
     }

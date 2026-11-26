@@ -672,38 +672,7 @@ public class GameCardViewModel : ViewModelBase
         ReloadCover();
     }
 
-    private void OpenContainingFolder()
-    {
-        try
-        {
-            string? targetPath = Game.ExecutablePath;
-            if (File.Exists(targetPath))
-            {
-                ShellOpen.Reveal(targetPath, "GameCard", $"the folder for '{Game.Name}'");
-            }
-            else if (Directory.Exists(Game.WorkingDirectory))
-            {
-                // Follow a junction to the real folder (an Xbox game's is a WindowsApps package
-                // folder linked to D:\XboxGames\<Game>\Content). A junction whose target is gone
-                // still passes Directory.Exists, and Explorer shows Documents for it instead.
-                if (LinkedDirectory.Resolve(Game.WorkingDirectory, out string folder) == LinkedDirectoryState.BrokenLink)
-                {
-                    LoggingService.Warn("GameCard", $"Cannot open the folder for '{Game.Name}': '{Game.WorkingDirectory}' links to a folder or drive that no longer exists.");
-                    Views.ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "Folder Not Found",
-                        $"The folder for \"{Game.Name}\" no longer exists.",
-                        $"{Game.WorkingDirectory} points to a folder or drive that has been removed or isn't connected.");
-                }
-                else
-                {
-                    ShellOpen.OpenFolder(folder, "GameCard", $"the folder for '{Game.Name}'");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("GameCard", $"Error opening folder: {ex.Message}");
-        }
-    }
+    private void OpenContainingFolder() => GameFolder.Open(Game, "GameCard");
 
     private void OpenStorePage()
     {

@@ -20,8 +20,15 @@ public static class ToolCatalog
     public const string SortAlphabetical = "Alphabetical (A - Z)";
     public const string SortAlphabeticalDescending = "Alphabetical (Z - A)";
     public const string SortFavoritesFirst = "Favorites First (A - Z)";
+    /// <summary>The tools started last first (<see cref="ToolEntry.LastUsedUtc"/>); never started, A to Z, after them.</summary>
+    public const string SortRecentlyUsed = "Recently Used";
+    /// <summary>Tools that start with games, then those that close for games, then the rest, each A to Z.</summary>
+    public const string SortWithGamesFirst = "With Games First (A - Z)";
+    /// <summary>The tools added last first (<see cref="ToolEntry.AddedUtc"/>); ones added before it was recorded, A to Z, after them.</summary>
+    public const string SortRecentlyAdded = "Recently Added";
 
-    public static readonly IReadOnlyList<string> SortOptions = [SortAlphabetical, SortAlphabeticalDescending, SortFavoritesFirst];
+    public static readonly IReadOnlyList<string> SortOptions =
+        [SortAlphabetical, SortAlphabeticalDescending, SortFavoritesFirst, SortRecentlyUsed, SortWithGamesFirst, SortRecentlyAdded];
 
     public const string ViewLargeIcons = "Large Icons";
     public const string ViewSmallIcons = "Small Icons";
@@ -210,10 +217,24 @@ public static class ToolCatalog
             case SortFavoritesFirst:
                 int favorites = b.IsFavorite.CompareTo(a.IsFavorite);
                 return favorites != 0 ? favorites : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+            case SortRecentlyUsed:
+                return NewestFirst(a.LastUsedUtc, b.LastUsedUtc) is int used and not 0 ? used : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+            case SortRecentlyAdded:
+                return NewestFirst(a.AddedUtc, b.AddedUtc) is int added and not 0 ? added : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+            case SortWithGamesFirst:
+                int role = WithGamesRank(a).CompareTo(WithGamesRank(b));
+                return role != 0 ? role : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
             default:
                 return StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
         }
     }
+
+    /// <summary>The later time first; a missing time after any time; 0 when both are missing or equal.</summary>
+    private static int NewestFirst(DateTime? a, DateTime? b) =>
+        a is { } x ? (b is { } y ? y.CompareTo(x) : -1) : (b is null ? 0 : 1);
+
+    /// <summary>0 for a tool that starts with games, 1 for one that closes for them, 2 for the rest.</summary>
+    private static int WithGamesRank(ToolEntry tool) => StartsWithGames(tool) ? 0 : ClosesForGames(tool) ? 1 : 2;
 
     public static IEnumerable<ToolEntry> Sort(IEnumerable<ToolEntry> tools, string? sortOption) => Sort(tools, t => t, sortOption);
 

@@ -264,4 +264,93 @@ public class ToolFilterTests : IDisposable
             Assert.True(cleared >= 1);
         });
     }
+
+    [Fact]
+    public void WhatAToolDoesWithGames_CanBeFilteredOn_CountingOnlyWhatApplies()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var vm = NewTools(new AppSettings(),
+                Program("Afterburner", t => { t.StartWithGames = true; t.WaitBeforeGame = true; t.CloseAfterGames = true; }),
+                Program("Discord", t => { t.CloseForGames = true; t.ReopenAfterGames = true; t.OnlyForCollections = ["Co-op"]; }),
+                Program("OneDrive", t => t.CloseForGames = true),
+                // Saved but can't apply: a wait and a collection on a tool that does nothing with games.
+                Program("Vortex", t => { t.WaitBeforeGame = true; t.OnlyForCollections = ["Co-op"]; }));
+
+            Option(vm, "status:collection").IsChecked = true;
+            Assert.Equal(["Discord"], Shown(vm));
+            Option(vm, "status:collection").IsExcluded = true;
+            Assert.Equal("For every game", Option(vm, "status:collection").DisplayLabel);
+            Assert.Equal(["Afterburner", "OneDrive", "Vortex"], Shown(vm));
+            Option(vm, "status:collection").IsChecked = false;
+            Option(vm, "status:collection").IsExcluded = false;
+
+            Option(vm, "status:waits").IsChecked = true;
+            Assert.Equal(["Afterburner"], Shown(vm));
+            Option(vm, "status:waits").IsChecked = false;
+
+            Option(vm, "status:closesafter").IsChecked = true;
+            Assert.Equal(["Afterburner"], Shown(vm));
+            Option(vm, "status:closesafter").IsChecked = false;
+
+            Option(vm, "status:reopens").IsChecked = true;
+            Assert.Equal(["Discord"], Shown(vm));
+        });
+    }
+
+    [Fact]
+    public void TheNewOptions_AreOfferedOnlyWhenSomeToolHasThem()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var plain = NewTools(new AppSettings(), Program("Vortex", t => { t.WaitBeforeGame = true; t.OnlyForCollections = ["Co-op"]; }));
+            foreach (string key in new[] { "status:collection", "status:waits", "status:closesafter", "status:reopens", "status:hotkeyinactive" })
+                Assert.False(Option(plain, key).IsAvailable, key);
+
+            var starts = NewTools(new AppSettings(), Program("Afterburner", t => t.StartWithGames = true));
+            Assert.True(Option(starts, "status:closesafter").IsAvailable);
+            Assert.False(Option(starts, "status:reopens").IsAvailable);
+        });
+    }
+
+    [Fact]
+    public void StartingATool_MarksItRecentlyUsed_AndSavesIt()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var afterburner = Program("Afterburner");
+            var vm = NewTools(new AppSettings(), Program("Discord"), afterburner);
+            Assert.Null(afterburner.LastUsedUtc);
+
+            var before = DateTime.UtcNow;
+            vm.RecordUsed(afterburner.Id);
+            Assert.True(afterburner.LastUsedUtc >= before);
+
+            vm.SelectedSortOption = ToolCatalog.SortRecentlyUsed;
+            Assert.Equal("Afterburner", vm.FilteredTools.Cast<ToolCardViewModel>().First().Name);
+            vm.RecordUsed("no-such-tool"); // a tool removed since: nothing to do
+        });
+    }
+
+    [Fact]
+    public void AHotkeyWindowsRefused_IsFoundUnderNeedsAttention()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var held = Program("Afterburner", t => t.Hotkey = "Ctrl+Alt+A");
+            var fine = Program("Discord", t => t.Hotkey = "Ctrl+Alt+D");
+            var vm = NewTools(new AppSettings(), held, fine, Program("Vortex"));
+            Assert.False(Option(vm, "status:hotkeyinactive").IsAvailable);
+
+            vm.SetInactiveHotkeys(new HashSet<string> { held.Id, "a-game-id" });
+            Assert.True(Option(vm, "status:hotkeyinactive").IsAvailable);
+            Option(vm, "status:hotkeyinactive").IsChecked = true;
+            Assert.Equal(["Afterburner"], Shown(vm));
+
+            // The clash is gone at the next registration: the option is withdrawn and no longer hides anything.
+            vm.SetInactiveHotkeys(new HashSet<string>());
+            Assert.False(Option(vm, "status:hotkeyinactive").IsAvailable);
+            Assert.Equal(["Afterburner", "Discord", "Vortex"], Shown(vm));
+        });
+    }
 }

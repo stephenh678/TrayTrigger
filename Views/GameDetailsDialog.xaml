@@ -271,15 +271,25 @@
                                 </Button>
                                 <Button AutomationProperties.Name="{Binding FavoriteButtonLabel}" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
                                         Margin="0,0,10,6" VerticalAlignment="Center"/>
-                                <!-- Store pages and Remove: the actions a player reaches for rarely. -->
+                                <!-- The actions a player reaches for rarely: playing without TrayTrigger's settings, the
+                                     launcher's own Verify, Repair and Uninstall (Open in <launcher>), the files, store
+                                     pages, and Remove. -->
                                 <Button x:Name="MoreButton" AutomationProperties.Name="More actions" Click="OpenMenu_Click"
                                         Style="{StaticResource ModernOutlineButton}" Padding="12,8" Margin="0,0,0,6" FontSize="{DynamicResource FontSizeBody}"
-                                        ToolTip="Play Without Changes, store pages, and Remove from library">
+                                        ToolTip="Play Without Changes, the game's launcher and files, store pages, and Remove from library">
                                     <TextBlock Text="&#xE712;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"/>
                                     <Button.ContextMenu>
                                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                             <MenuItem Header="Play Without Changes" Command="{Binding LaunchWithoutChangesCommand}"
                                                       ToolTip="Starts the game once with none of TrayTrigger's settings for it: no profile, display or sound change, CPU cores, scripts or tools. Use it to see whether a problem is TrayTrigger's."/>
+                                            <MenuItem Header="{Binding OpenInLauncherLabel}" Command="{Binding OpenInLauncherCommand}"
+                                                      Visibility="{Binding HasOpenInLauncher, Converter={StaticResource BoolToVis}}"
+                                                      ToolTip="Where the launcher keeps its own Verify, Repair and Uninstall for this game."/>
+                                            <MenuItem Header="Verify Game Files" Command="{Binding VerifyFilesCommand}"
+                                                      Visibility="{Binding CanVerifyFiles, Converter={StaticResource BoolToVis}}"
+                                                      ToolTip="Steam checks the game's files and downloads any that are missing or damaged."/>
+                                            <MenuItem Header="Open File Location" Command="{Binding OpenFileLocationCommand}"
+                                                      Visibility="{Binding CanOpenFileLocation, Converter={StaticResource BoolToVis}}"/>
                                             <MenuItem Header="Open the Steam Store Page" Command="{Binding OpenStorePageCommand}"
                                                       Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"/>
                                             <MenuItem Header="Open This Game on RAWG" Command="{Binding OpenRawgPageCommand}"

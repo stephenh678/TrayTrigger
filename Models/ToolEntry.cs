@@ -73,4 +73,10 @@ public class ToolEntry
     /// <see cref="ToolCatalog.AppliesToGame"/>.
     /// </summary>
     public List<string> OnlyForCollections { get; set; } = new();
+    /// <summary>When TrayTrigger last started the tool: from its card, the tray or its hotkey, or with a game (not when
+    /// it reopens one it closed for a game). Null until then. For the Recently Used sort.</summary>
+    public DateTime? LastUsedUtc { get; set; }
+    /// <summary>When the tool was added to Tools. Null for one added before 2.0.0-beta.2, which has no record of it.
+    /// For the Recently Added sort.</summary>
+    public DateTime? AddedUtc { get; set; }
 }

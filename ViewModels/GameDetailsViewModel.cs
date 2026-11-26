@@ -578,6 +578,21 @@ public partial class GameDetailsViewModel : ViewModelBase
     public ICommand CloseGameCommand { get; }
     public ICommand ForceCloseCommand { get; }
     public ICommand OpenStorePageCommand { get; }
+
+    /// <summary>"Open in Steam" and so on: the launcher's own page for the game, where it keeps Verify, Repair and
+    /// Uninstall (see <see cref="LauncherPages"/>). Null, which hides the item, for a game with no launcher or one
+    /// whose launcher isn't installed. Read when the page opens.</summary>
+    public string? OpenInLauncherLabel { get; }
+    public bool HasOpenInLauncher => OpenInLauncherLabel != null;
+    public ICommand OpenInLauncherCommand { get; }
+
+    /// <summary>Steam's own check of the game's files; Steam is the one launcher with a link for it.</summary>
+    public bool CanVerifyFiles => Game.IsSteamGame && UrlProtocolHelper.IsValidSteamAppId(Game.SteamAppId);
+    public ICommand VerifyFilesCommand { get; }
+
+    /// <summary>The game's exe in Explorer, as the library card's Open File Location.</summary>
+    public bool CanOpenFileLocation => GameFolder.CanOpen(Game);
+    public ICommand OpenFileLocationCommand { get; }
     public ICommand OpenNewsUrlCommand { get; }
     public ICommand OpenNewsHubCommand { get; }
     public ICommand ShowMinReqsCommand { get; }
@@ -660,6 +675,10 @@ public partial class GameDetailsViewModel : ViewModelBase
         CloseGameCommand = new RelayCommand(() => { if (!CanLeave()) return; RequestClose?.Invoke(); _closeGameAction?.Invoke(Game); }, () => IsPlaying);
         ForceCloseCommand = new RelayCommand(() => { if (!CanLeave()) return; RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
+        OpenInLauncherLabel = LauncherPages.OpenLabel(Game);
+        OpenInLauncherCommand = new RelayCommand(() => LauncherPages.Open(Game));
+        VerifyFilesCommand = new RelayCommand(() => SteamScannerService.VerifyGameFiles(Game.SteamAppId!), () => CanVerifyFiles);
+        OpenFileLocationCommand = new RelayCommand(() => GameFolder.Open(Game, "GameDetails"));
         OpenPcGamingWikiCommand = new RelayCommand(() => ExecuteOpenUrl(PcGamingWikiUrl), () => HasPcGamingWikiPage);
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
         OpenNewsHubCommand = new RelayCommand(() => ExecuteOpenUrl(NewsHubUrl), () => HasNewsHub);

@@ -232,6 +232,27 @@ public sealed class ToolsViewModel : ViewModelBase
 
     public ToolCardViewModel? FindCard(string id) => Tools.FirstOrDefault(c => c.Id == id);
 
+    /// <summary>
+    /// The tool was just started - from its card, the tray or its hotkey, or with a game - so it is the most recently
+    /// used. Saved at once, and the list re-sorted when it is in Recently Used order.
+    /// </summary>
+    internal void RecordUsed(string toolId)
+    {
+        var card = FindCard(toolId);
+        if (card == null) return;
+        card.Tool.LastUsedUtc = DateTime.UtcNow;
+        Save();
+        RefreshView();
+    }
+
+    /// <summary>After each hotkey registration: marks the tools whose hotkey Windows refused, for the "Hotkey not working" filter.</summary>
+    internal void SetInactiveHotkeys(IReadOnlySet<string> toolIds)
+    {
+        foreach (var card in Tools) card.IsHotkeyInactive = card.HasHotkey && toolIds.Contains(card.Id);
+        Filter.RefreshAvailability(Tools);
+        RefreshView();
+    }
+
     private volatile IReadOnlyList<ToolEntry> _snapshot = [];
 
     /// <summary>
@@ -508,6 +529,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
             // Only once it is really being added, so a skipped duplicate leaves no icon file behind.
             tool.IconPath = _icons.ExtractAndCacheIcon(tool.Id, iconSource, tool.Name);
+            tool.AddedUtc = DateTime.UtcNow;
             Tools.Add(new ToolCardViewModel(tool, this));
             added.Add(tool);
             LoggingService.Info("Tools", $"Added tool '{tool.Name}' ('{ToolCatalog.LaunchDisplay(tool)}', category '{tool.Category}', run as admin {tool.RunAsAdmin}).");
@@ -667,6 +689,7 @@ public sealed class ToolsViewModel : ViewModelBase
         {
             case ToolLaunchOutcome.Started:
             case ToolLaunchOutcome.ActivatedRunning:
+                RecordUsed(card.Id);
                 StatusMessage = $"Launched {card.Name}";
                 LaunchPopup?.LaunchDispatched(card.Id);
                 break;

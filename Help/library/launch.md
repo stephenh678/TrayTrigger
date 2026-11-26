@@ -15,6 +15,17 @@ Play Without Changes starts a game once with none of TrayTrigger's settings for 
 - **On the record:** the game's Played row in Activity & History says "played without changes", and shows no profile changes.
 - **Once only.** The next ordinary Play applies everything again.
 
+
+## Repairing a game
+
+When a game won't start or keeps crashing, its launcher has the tools to fix it. The ... menu of its Game Details takes you there:
+
+- **Open in <launcher>** - opens the place where the launcher keeps its own Verify, Repair and Uninstall. Steam and GOG Galaxy open on the game's own page; Battle.net comes to the front; the EA app, the Epic Games Launcher, Ubisoft Connect, the Rockstar Games Launcher and Amazon Games open as they are, and you pick the game there. It is shown only when the launcher is installed. Xbox / PC Game Pass games are repaired in the Xbox app, from the game's Manage page.
+- **Verify Game Files** - Steam games only: Steam checks the game's files and downloads any that are missing or damaged.
+- **Open File Location** - the game's program in File Explorer.
+
+TrayTrigger never uninstalls a game itself; the launcher asks first, in its own window.
+
 ## Play from a shortcut or the command line
 
 `TrayTrigger.exe --play "Game"` plays a game from outside the window, so a shortcut, a Stream Deck button, a scheduled task, or a streaming host's command can start a game through TrayTrigger and give it its profile and put-back.

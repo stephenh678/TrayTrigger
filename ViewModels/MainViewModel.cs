@@ -1105,6 +1105,7 @@ public class MainViewModel : ViewModelBase
             lastPlayedHotkeyStr: _settings.LaunchLastPlayedHotkey);
 
         var failedTools = failed.Where(b => b.Kind == HotkeyOwnerKind.Tool).ToList();
+        Tools.SetInactiveHotkeys(failedTools.Select(b => b.OwnerId).ToHashSet());
         string? warning = failedTools.Count switch
         {
             0 => null,

@@ -255,6 +255,7 @@ public partial class App : Application
         // A pre-launch script's "TT:" line, in the popup while the game waits. Queued: the script's
         // output thread mustn't wait on the UI, and a line a moment late is no loss.
         _gameScriptService!.Said += (game, text) => Dispatcher.BeginInvoke(() => _launchPopup?.OnScriptSaid(game.Id, text));
+        companionTools.Started += tool => Dispatcher.BeginInvoke(() => _mainViewModel?.Tools.RecordUsed(tool.Id));
         companionTools.StartFailed += message => Dispatcher.BeginInvoke(() =>
         {
             if (_mainViewModel != null) _mainViewModel.Library.StatusMessage = message;

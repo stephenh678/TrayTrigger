@@ -60,6 +60,14 @@ public sealed class ToolCardViewModel : ViewModelBase
     public string HotkeyDisplay => HotkeyManager.Normalize(Tool.Hotkey) ?? string.Empty;
     public bool HasHotkey => HotkeyDisplay.Length > 0;
 
+    /// <summary>The tool has a hotkey, and Windows refused it at the last registration: another app holds that key.</summary>
+    public bool IsHotkeyInactive
+    {
+        get => _isHotkeyInactive;
+        internal set => SetProperty(ref _isHotkeyInactive, value);
+    }
+    private bool _isHotkeyInactive;
+
     public BitmapImage? IconImage
     {
         get => _iconImage;
