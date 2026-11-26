@@ -694,6 +694,17 @@
                             </CheckBox>
                             <TextBlock Text="Found via Rockstar's install records, on any drive. Games launch through the Rockstar Games Launcher. A Rockstar game bought on Epic or Steam is found by that launcher's integration instead, so it isn't listed twice."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable Amazon Games library integration" IsChecked="{Binding AmazonIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable Amazon Games library integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via the Amazon Games app's install records, on any drive. Games launch through the Amazon Games app, which signs you in first. Only installed games are found: games you own but haven't installed aren't listed."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>

@@ -6,6 +6,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 2.0.0
 
+- **Amazon Games** - Scan for Games now finds your Amazon Games and launches them through the Amazon Games app.
 - **One line for categories and collections** - Collections now sit beside the category tabs. When they don't both fit, drag the divider between them to give either side more room.
 - **Tab arrows** - When the tabs don't fit, arrows at each end scroll them.
 - **Easier System, Settings and About pages** - Each opens on its first tab and shows one tab at a time, and cards that group settings have a clear heading. Settings has a new Launchers tab for launchers and scanning.

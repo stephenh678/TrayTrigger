@@ -105,6 +105,13 @@ public class GameEntry
     /// <summary>The game's key under Rockstar's registry ("Grand Theft Auto V") - the name Rockstar
     /// records the install under, and the game's identity for re-scans and ignores.</summary>
     public string? RockstarGameId { get; set; }
+    /// <summary>True for a game imported via Amazon Games scanning. Same semantics as
+    /// IsGogGame/IsEaGame/IsEpicGame: launched through the Amazon Games app
+    /// (<c>amazon-games://play/&lt;AmazonGameId&gt;</c>) when it is installed, otherwise from its exe.</summary>
+    public bool IsAmazonGame { get; set; }
+    /// <summary>Amazon's product id ("amzn1.adg.product.790f3b07-..."), from the game's uninstall entry -
+    /// the game's identity for re-scans and ignores, and what the launch link names.</summary>
+    public string? AmazonGameId { get; set; }
     /// <summary>Which source the Game Details window shows text metadata from (a per-game view
     /// preference; never affects the library category, art, or sorting). Auto by default - Steam
     /// when there's a Steam App ID, otherwise RAWG. See <see cref="MetadataSource"/>.</summary>
@@ -280,6 +287,7 @@ public class GameEntry
         : IsXboxGame ? "Xbox"
         : IsBattleNetGame ? "Battle.net"
         : IsRockstarGame ? "Rockstar"
+        : IsAmazonGame ? "Amazon"
         : "Local";
 
     /// <summary>A playtime as the library and Game Details write it: "45m" under an hour, then hours to one decimal ("2.5h").</summary>

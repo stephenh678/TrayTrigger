@@ -16,6 +16,7 @@ public class IgnoredGamePathRowViewModel : ViewModelBase
         ?? (Model.UbisoftGameId != null ? $"Ubisoft GameId {Model.UbisoftGameId}" : null)
         ?? (Model.BattleNetUid != null ? $"Battle.net uid {Model.BattleNetUid}" : null)
         ?? (Model.RockstarGameId != null ? $"Rockstar game {Model.RockstarGameId}" : null)
+        ?? (Model.AmazonGameId != null ? $"Amazon Games product {Model.AmazonGameId}" : null)
         ?? $"Xbox {Model.XboxAumid}";
 
     public IgnoredGamePathRowViewModel(IgnoredGamePath model)

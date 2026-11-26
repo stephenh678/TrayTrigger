@@ -33,6 +33,9 @@ public enum LaunchRoute
     /// <summary>Launcher.exe -launchTitleInFolder &lt;install folder&gt;, tracked by install directory.</summary>
     RockstarClient,
     RockstarDirect,
+    /// <summary>amazon-games://play/&lt;product id&gt; dispatch, tracked by install directory.</summary>
+    AmazonClient,
+    AmazonDirect,
     /// <summary>A non-file URL whose scheme is on the allow-list: fire-and-forget, pre-launch script only.</summary>
     ProtocolUrl,
     /// <summary>A non-file URL whose scheme is NOT on the allow-list: refused.</summary>
@@ -48,7 +51,8 @@ public readonly record struct LaunchClientAvailability(
     bool EaAppInstalled,
     bool EpicLauncherInstalled,
     bool UbisoftConnectInstalled,
-    bool RockstarLauncherInstalled = false);
+    bool RockstarLauncherInstalled = false,
+    bool AmazonGamesInstalled = false);
 
 /// <summary>
 /// The pure decision half of the launcher: given an entry and which clients exist, which route is
@@ -99,6 +103,11 @@ public static class LaunchRouter
         if (game.IsRockstarGame && !string.IsNullOrWhiteSpace(game.RockstarGameId))
         {
             return !game.LaunchDirectly && clients.RockstarLauncherInstalled ? LaunchRoute.RockstarClient : LaunchRoute.RockstarDirect;
+        }
+
+        if (game.IsAmazonGame && !string.IsNullOrWhiteSpace(game.AmazonGameId))
+        {
+            return !game.LaunchDirectly && clients.AmazonGamesInstalled ? LaunchRoute.AmazonClient : LaunchRoute.AmazonDirect;
         }
 
         // LaunchDirectly is deliberately ignored: there is no way to run a GDK exe outside its
@@ -158,6 +167,7 @@ public static class LaunchRouter
         LaunchRoute.Xbox => LauncherPlatform.Xbox,
         LaunchRoute.BattleNet => LauncherPlatform.BattleNet,
         LaunchRoute.RockstarClient or LaunchRoute.RockstarDirect => LauncherPlatform.Rockstar,
+        LaunchRoute.AmazonClient or LaunchRoute.AmazonDirect => LauncherPlatform.Amazon,
         _ => null
     };
 
@@ -173,6 +183,7 @@ public static class LaunchRouter
         LaunchRoute.Xbox => "Xbox",
         LaunchRoute.BattleNet => "Battle.net",
         LaunchRoute.RockstarClient or LaunchRoute.RockstarDirect => "Rockstar Games Launcher",
+        LaunchRoute.AmazonClient or LaunchRoute.AmazonDirect => "Amazon Games",
         LaunchRoute.ProtocolUrl => "link",
         _ => "Local"
     };

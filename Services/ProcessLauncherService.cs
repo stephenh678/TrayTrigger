@@ -150,6 +150,7 @@ public partial class ProcessLauncherService
     private readonly XboxScannerService _xboxScannerService;
     private readonly BattleNetScannerService _battleNetScannerService;
     private readonly RockstarScannerService _rockstarScannerService;
+    private readonly AmazonScannerService _amazonScannerService;
 
     private readonly Lock _sessionsLock = new();
     private readonly Dictionary<string, ActiveGameSession> _sessions = new(StringComparer.Ordinal);
@@ -239,9 +240,11 @@ public partial class ProcessLauncherService
         UbisoftScannerService ubisoftScannerService,
         XboxScannerService xboxScannerService,
         BattleNetScannerService battleNetScannerService,
-        RockstarScannerService? rockstarScannerService = null)
+        RockstarScannerService? rockstarScannerService = null,
+        AmazonScannerService? amazonScannerService = null)
     {
         _rockstarScannerService = rockstarScannerService ?? new RockstarScannerService();
+        _amazonScannerService = amazonScannerService ?? new AmazonScannerService();
         _storageService = storageService;
         _performanceProfileService = performanceProfileService;
         _scriptService = scriptService;
@@ -1070,11 +1073,18 @@ public partial class ProcessLauncherService
                 case LaunchRoute.RockstarClient:
                     return LaunchRockstarGame(game, out errorMessage, out isMissing);
 
+                // The link the Amazon Games app's own shortcuts use; the app signs in, syncs and starts
+                // fuel.json's Main.Command, found by install-directory polling like the other clients.
+                case LaunchRoute.AmazonClient:
+                    return LaunchViaClientUrl(game, route,
+                        AmazonScannerService.BuildLaunchUrl(game.AmazonGameId ?? string.Empty), out errorMessage);
+
                 case LaunchRoute.GogDirect:
                 case LaunchRoute.EaDirect:
                 case LaunchRoute.EpicDirect:
                 case LaunchRoute.UbisoftDirect:
                 case LaunchRoute.RockstarDirect:
+                case LaunchRoute.AmazonDirect:
                     LogDirectFallback(game, route);
                     return LaunchPlatformExeDirectly(game, route, out errorMessage, out isMissing);
 
@@ -1109,7 +1119,8 @@ public partial class ProcessLauncherService
             EaAppInstalled: game.IsEaGame && _eaScannerService.IsEaAppInstalled(),
             EpicLauncherInstalled: game.IsEpicGame && _epicScannerService.IsEpicLauncherInstalled(),
             UbisoftConnectInstalled: game.IsUbisoftGame && _ubisoftScannerService.IsUbisoftConnectInstalled(),
-            RockstarLauncherInstalled: game.IsRockstarGame && _rockstarScannerService.IsRockstarLauncherInstalled());
+            RockstarLauncherInstalled: game.IsRockstarGame && _rockstarScannerService.IsRockstarLauncherInstalled(),
+            AmazonGamesInstalled: game.IsAmazonGame && _amazonScannerService.IsAmazonGamesInstalled());
     }
 
     private static void LogDirectFallback(GameEntry game, LaunchRoute route)
@@ -1120,6 +1131,7 @@ public partial class ProcessLauncherService
             LaunchRoute.EaDirect => "EA App",
             LaunchRoute.EpicDirect => "Epic Games Launcher",
             LaunchRoute.RockstarDirect => "Rockstar Games Launcher",
+            LaunchRoute.AmazonDirect => "Amazon Games",
             _ => "Ubisoft Connect"
         };
         LoggingService.Verbose("Launcher", game.LaunchDirectly

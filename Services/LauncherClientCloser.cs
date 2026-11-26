@@ -31,6 +31,8 @@ public static class LauncherClientCloser
     // Launcher.exe: a name other programs use too, so only the one in Rockstar's own folder counts.
     // RockstarService (its background service) is left alone, like the other platforms' services.
     private static readonly string[] RockstarProcesses = [RockstarScannerService.ClientProcessName];
+    // The Amazon Games app's windows; "Amazon Games Services" (its background service) is left alone.
+    private static readonly string[] AmazonProcesses = AmazonScannerService.ClientProcessNames;
 
     /// <summary>For a platform whose client has a generic process name, which processes of that name
     /// are the client; null when the name alone says so. The client's location is read once per call.</summary>
@@ -58,6 +60,7 @@ public static class LauncherClientCloser
             LauncherPlatform.Xbox => XboxProcesses,
             LauncherPlatform.BattleNet => BattleNetProcesses,
             LauncherPlatform.Rockstar => RockstarProcesses,
+            LauncherPlatform.Amazon => AmazonProcesses,
             _ => []
         };
         var isClient = ClientFilter(platform);
@@ -99,6 +102,9 @@ public static class LauncherClientCloser
                     break;
                 case LauncherPlatform.Rockstar:
                     KillByName(RockstarProcesses, "Rockstar Games Launcher", ClientFilter(LauncherPlatform.Rockstar));
+                    break;
+                case LauncherPlatform.Amazon:
+                    KillByName(AmazonProcesses, "Amazon Games");
                     break;
             }
         }

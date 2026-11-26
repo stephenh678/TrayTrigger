@@ -1,7 +1,7 @@
 # Adding a game-platform integration
 
 How TrayTrigger integrates a launcher platform (Steam, GOG, EA App, Epic, Ubisoft Connect, Xbox /
-PC Game Pass, Battle.net and the Rockstar Games Launcher so far) into Scan for Games, manual import, launching and session tracking.
+PC Game Pass, Battle.net, the Rockstar Games Launcher and Amazon Games so far) into Scan for Games, manual import, launching and session tracking.
 
 This used to be a chronological build log - GOG, then EA, Epic, Ubisoft, Xbox - where each chapter
 added rules and later chapters renamed or overrode earlier ones. It is now organised as
@@ -105,6 +105,7 @@ Probing techniques that worked:
 | Xbox | `HKLM\SOFTWARE\Microsoft\GamingServices\GameConfig\<PackageFullName>` + per-user AppModel repository | `XboxAumid` | `IApplicationActivationManager` on the AUMID (`explorer shell:AppsFolder\<AUMID>` fallback) | **None** - GDK exes need package identity | Track by the junction target, not the WindowsApps root. Full name and root change every update, so they're re-resolved at launch. **Gap:** legacy UWP Store games. Accepted: always-resident tray helpers (Roblox) block the profile |
 | Battle.net | *Built in 1.4.2-beta.2 (`BattleNetScannerService`, `BattleNetCatalog`, `BattleNetCodeStore`); research and tests in section 3.1.* Uninstall entries: `--uid=<uid>` in `UninstallString`, `InstallLocation`, `DisplayName`; `DisplayIcon` is usually the game exe but can be a switcher (StarCraft II) | `BattleNetUid` (e.g. `btlr`, `hs_beta`), plus the saved launch code `BattleNetProgramId` and a backup uid → code map in `%APPDATA%\TrayTrigger\battlenet-codes.json` | `Battle.net.exe --exec="launch <program id>"`, where the program ID comes from the client's local catalog cache, not from the uid | **None** - the client passes an SSO token the game needs (`-launcherlogin`, `-sso=1`). `--exec="focus play"` when no program ID is found | A cold client drops the command: resend every 3 s until a process appears under the install folder (duplicates are harmless). Close `Battle.net`, not `Agent`. Skip the client's own `battle.net` uid |
 | Rockstar | `HKLM\SOFTWARE\WOW6432Node\Rockstar Games\<Title>` (both registry views): `InstallFolder` only. `InstallFolderEpic` / `InstallFolderSteam` mark a copy bought on that store, left to its scanner (RDR2 from Epic, verified on the test machine). `titles.dat` is encrypted. Exe from `ScanFolder` | `RockstarGameId` = the key name, also the trusted title | `Launcher.exe -launchTitleInFolder <install folder>` (the switch is in Launcher.exe's strings; Launcher.exe from the `Launcher` key's `InstallFolder`) | Direct exe | **Not tested against a real Rockstar-launcher install** (none available, 2026-11-13); cold/warm untested. Skip the `Launcher` and `Rockstar Games Social Club` keys. Close `Launcher.exe` only from Rockstar's folder - the name is generic. The launcher's log (`Documents\Rockstar Games\Launcher\launcher.log`) records each launch's path and command line |
+| Amazon Games | Per-user uninstall entries `HKCU\...\Uninstall\AmazonGames/<Title>`: `DisplayName`, `InstallLocation`, and `UninstallString` = `Amazon Game Remover.exe -m Game -p <product id>`. Exe from `fuel.json` in the install folder (`Main.Command`, what the app itself starts), else `ScanFolder`. The app's SQLite databases (`%LocalAppData%\Amazon Games\Data\Games\Sql\GameInstallInfo.sqlite`, table `DbSet`) hold the same plus owned-but-not-installed games; not read | `AmazonGameId` = the `-p` value as written: older installs `amzn1.adg.product.<guid>`, newer ones the bare GUID | `amazon-games://play/<id>` - the exact link the app's own shortcuts use (`WindowsShortcutDriver.CreateUrl` in `Data\Logs\Fuel_TrimLogs\Live-Desktop-*.log`, older days under `Data\Logs\Processed\<date>\`; checked 2026-11-26 with Darksiders II). A dropped shortcut (.url) is matched to its game by this id | Direct exe | Close `Amazon Games` and `Amazon Games UI`, not `Amazon Games Services`. The library's `__InstallData__` folder (Amazon Game Remover.exe) and the app's folder are skipped by folder scans. **Gap:** owned-but-not-installed games, stated in the toggle. A launch through the app worked on the test machine (Darksiders II, 2026-11-26); cold and warm weren't recorded separately. `Main.Args` is carried into `Arguments` for the direct fallback, as GOG's launch parameters are |
 
 ### 3.1 Battle.net research and launch tests (2026-09-12)
 
@@ -285,7 +286,7 @@ End-to-end on the test machine, through the real services (scan → `ProcessLaun
   launch-URL scheme allow-list (`AllowedLaunchSchemes`).
 - `Services/PlatformLookupService.cs` - resolves a dropped or browsed path to a platform game by
   install-directory containment, so manual imports route through the platform.
-- `Services/LibraryConstants.cs` - `PlatformCategories`, `IsEnrichableCategory`,
+- `Services/LibraryConstants.cs` - `IsEnrichableCategory`,
   `PlatformCategoryFor`: the single category allow-list.
 - `Services/LauncherClientCloser.cs` - client process names per platform.
 - `Services/GameNameExtractor.cs` / `LibraryViewModel.EnrichGameWithSteamMetadataAsync` - title and
@@ -309,15 +310,15 @@ catches the rest.
 | Scan dialog | `ScanForGamesViewModel` (constructor lists, ignore callbacks, `SourceLogoUri`), `ScanForGamesDialog.xaml.cs`, `MainWindow.xaml.cs` (`OnRequestScanResultsPicker`) |
 | Library UI | Platform badge in all three views (`Views/LibraryView.xaml`), `GameCardViewModel`, `LibraryFilterViewModel`, `GameEditViewModel` |
 | Detection + logos | `Views/LauncherDetectionDialog.xaml.cs` (`DetectedLauncher`), `FolderBatchImportViewModel` logo switch, `Assets/LauncherLogos/` |
-| Category | `LibraryConstants.<Platform>Category` + its `PlatformCategories` entry |
+| Category | `LibraryConstants.<Platform>Category` + its `PlatformCategoryFor` branch (a game's placeholder is only its own platform's, so a user's category of the same name is never replaced) |
 | ⚠ Ignored-games list label | `IgnoredGamePathRowViewModel.DisplayPath` |
 | ⚠ Dev diagnostics | `App.DevDiagnostics.cs` constructs `ScanForGamesDialog` directly |
 | ⚠ Folder scans | If the client can be installed under a Scan Location, skip its install folder in `FolderScannerService` |
 
-Eight platforms each have their own copy of the import, ignore, bucket, scan-dialog and badge rows,
+Nine platforms each have their own copy of the import, ignore, bucket, scan-dialog and badge rows,
 by the user's choice (principle 10). Merging them into one platform descriptor - ID, label, logo,
 category, route, scanner - is a possible future option the user decides on; it is not part of adding
-a platform. When one platform's copy changes, check the other seven.
+a platform. When one platform's copy changes, check the other eight.
 
 ## 5. Pitfalls
 

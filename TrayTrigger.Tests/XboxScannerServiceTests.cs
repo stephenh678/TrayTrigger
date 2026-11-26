@@ -58,8 +58,8 @@ public class XboxScannerServiceTests
     {
         var game = new GameEntry { IsXboxGame = true, XboxAumid = "a!b" };
         Assert.Equal(LibraryConstants.XboxCategory, LibraryConstants.PlatformCategoryFor(game));
-        Assert.True(LibraryConstants.IsEnrichableCategory(LibraryConstants.XboxCategory));
-        Assert.False(LibraryConstants.IsEnrichableCategory("Action"));
+        Assert.True(LibraryConstants.IsEnrichableCategory(LibraryConstants.XboxCategory, game));
+        Assert.False(LibraryConstants.IsEnrichableCategory("Action", game));
         Assert.Null(LibraryConstants.PlatformCategoryFor(new GameEntry()));
     }
 }

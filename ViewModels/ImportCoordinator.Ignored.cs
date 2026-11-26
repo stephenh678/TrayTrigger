@@ -65,6 +65,7 @@ public partial class ImportCoordinator
             if (p.XboxAumid != null) set.Add($"Xbox|{p.XboxAumid}");
             if (p.BattleNetUid != null) set.Add($"Battle.net|{p.BattleNetUid}");
             if (p.RockstarGameId != null) set.Add($"Rockstar|{p.RockstarGameId}");
+            if (p.AmazonGameId != null) set.Add($"Amazon|{p.AmazonGameId}");
         }
         return set;
     }
@@ -80,6 +81,7 @@ public partial class ImportCoordinator
         { Xbox: { } x } => $"Xbox|{x.Aumid}",
         { BattleNet: { } b } => $"Battle.net|{b.Uid}",
         { Rockstar: { } r } => $"Rockstar|{r.GameId}",
+        { Amazon: { } a } => $"Amazon|{a.GameId}",
         _ => string.Empty
     };
 
@@ -125,6 +127,7 @@ public partial class ImportCoordinator
             case { Xbox: { } x }: IgnoreXboxGame(x.Aumid, candidate.Name); break;
             case { BattleNet: { } b }: IgnoreBattleNetGame(b.Uid, candidate.Name); break;
             case { Rockstar: { } r }: IgnoreRockstarGame(r.GameId, candidate.Name); break;
+            case { Amazon: { } a }: IgnoreAmazonGame(a.GameId, candidate.Name); break;
             default: IgnoreGamePath(candidate.ExePath, candidate.Name); break;
         }
     }
@@ -147,7 +150,8 @@ public partial class ImportCoordinator
                 (p.UbisoftGameId != null && key.Equals($"Ubisoft|{p.UbisoftGameId}", StringComparison.OrdinalIgnoreCase)) ||
                 (p.XboxAumid != null && key.Equals($"Xbox|{p.XboxAumid}", StringComparison.OrdinalIgnoreCase)) ||
                 (p.BattleNetUid != null && key.Equals($"Battle.net|{p.BattleNetUid}", StringComparison.OrdinalIgnoreCase)) ||
-                (p.RockstarGameId != null && key.Equals($"Rockstar|{p.RockstarGameId}", StringComparison.OrdinalIgnoreCase)))));
+                (p.RockstarGameId != null && key.Equals($"Rockstar|{p.RockstarGameId}", StringComparison.OrdinalIgnoreCase)) ||
+                (p.AmazonGameId != null && key.Equals($"Amazon|{p.AmazonGameId}", StringComparison.OrdinalIgnoreCase)))));
         if (removed > 0)
         {
             _storageService.SaveSettings(_settings);
@@ -200,6 +204,10 @@ public partial class ImportCoordinator
     /// <summary>Permanently excludes a Rockstar title (its registry key name) from future "Scan for Games" results.</summary>
     public void IgnoreRockstarGame(string gameId, string name) =>
         IgnoreLauncherGame("Rockstar", "", gameId, name, p => p.RockstarGameId, (p, v) => p.RockstarGameId = v);
+
+    /// <summary>Permanently excludes an Amazon Games product id from future "Scan for Games" results.</summary>
+    public void IgnoreAmazonGame(string gameId, string name) =>
+        IgnoreLauncherGame("Amazon", "product ", gameId, name, p => p.AmazonGameId, (p, v) => p.AmazonGameId = v);
 
     /// <summary>
     /// Leaves one launcher game out of future scans, once. Each launcher says only which id on the ignore entry

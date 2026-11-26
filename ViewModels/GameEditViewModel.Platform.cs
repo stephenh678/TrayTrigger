@@ -53,6 +53,7 @@ public partial class GameEditViewModel
         SourceGame.IsXboxGame ? "Xbox" :
         SourceGame.IsBattleNetGame ? "Battle.net" :
         SourceGame.IsRockstarGame ? "Rockstar" :
+        SourceGame.IsAmazonGame ? "Amazon" :
         _isSteamGame ? "Steam" : "Local";
 
     /// <summary>"Launch this executable directly" has no meaning for a Game Pass title: a GDK exe
@@ -75,6 +76,7 @@ public partial class GameEditViewModel
                     ? SourceGame.BattleNetUid
                     : $"{SourceGame.BattleNetUid}, launch code {SourceGame.BattleNetProgramId}")
                 : SourceGame.IsRockstarGame ? SourceGame.RockstarGameId
+                : SourceGame.IsAmazonGame ? SourceGame.AmazonGameId
                 // Steam's App ID has its own box in the Identity card, so it isn't repeated here.
                 : null;
             string via = SourceGame.ImportedFrom != null ? "Imported from" : "Linked to";

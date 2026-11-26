@@ -955,7 +955,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                 // RAWG's genre fills the category the same way Steam's does - only while the
                 // game is still Uncategorized (or on a platform placeholder), never overriding
                 // a category the user or Steam already set.
-                if (_autoCategorize && LibraryConstants.IsEnrichableCategory(Game.Category) && !string.IsNullOrWhiteSpace(found.PrimaryGenre))
+                if (_autoCategorize && LibraryConstants.IsEnrichableCategory(Game) && !string.IsNullOrWhiteSpace(found.PrimaryGenre))
                 {
                     Game.Category = found.PrimaryGenre;
                     changed = true;
@@ -1147,7 +1147,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                 }
 
                 // Auto-categorize under the same setting and rule as the library's enrichment pass.
-                if (linked && _autoCategorize && LibraryConstants.IsEnrichableCategory(Game.Category) &&
+                if (linked && _autoCategorize && LibraryConstants.IsEnrichableCategory(Game) &&
                     !string.IsNullOrWhiteSpace(loaded.PrimaryGenre))
                 {
                     Game.Category = loaded.PrimaryGenre;
@@ -1161,7 +1161,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                     if (CanToggleSource)
                         _ = EnsureRawgLoadedAsync();
                 }
-                else if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game.Category))
+                else if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game))
                 {
                     // Steam listed no genre: let RAWG's fill the category in the background,
                     // the same as the library's enrichment pass does.
@@ -1171,7 +1171,7 @@ public partial class GameDetailsViewModel : ViewModelBase
             else if (_details == null && _activeSource == MetadataSource.Steam)
             {
                 // No Steam store page for this App ID. RAWG can still categorise it.
-                if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game.Category))
+                if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game))
                     _ = EnsureRawgLoadedAsync();
 
                 // Distinguish a real "Steam has no store data for this AppId" (delisted /

@@ -692,9 +692,24 @@ public partial class FolderScannerService
         return true;
     }
 
+    /// <summary>
+    /// The Amazon Games app's own folders, not games - same reasoning as <see cref="IsSteamClientInstall"/>.
+    /// Its game library (C:\Amazon Games\Library by default) keeps Amazon Game Remover.exe in a
+    /// <c>__InstallData__</c> folder beside the games, so adding the library as a scan location would offer it.
+    /// </summary>
+    internal static bool IsAmazonClientInstall(string dir)
+    {
+        bool remover = File.Exists(Path.Combine(dir, "Amazon Game Remover.exe"));
+        bool app = File.Exists(Path.Combine(dir, "Amazon Games.exe"));
+        if (!remover && !app) return false;
+
+        LoggingService.Verbose("FolderScanner", $"Skipped Amazon Games folder: '{dir}'");
+        return true;
+    }
+
     /// <summary>A launcher's own install folder, which a folder scan must never offer as a game.</summary>
     internal static bool IsLauncherClientInstall(string dir) =>
-        IsSteamClientInstall(dir) || IsBattleNetClientInstall(dir) || IsRockstarClientInstall(dir);
+        IsSteamClientInstall(dir) || IsBattleNetClientInstall(dir) || IsRockstarClientInstall(dir) || IsAmazonClientInstall(dir);
 
     private static bool ShouldPruneDirectory(string dirName)
     {

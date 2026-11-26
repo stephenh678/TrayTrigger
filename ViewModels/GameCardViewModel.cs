@@ -272,6 +272,7 @@ public class GameCardViewModel : ViewModelBase
     public bool IsXboxGame => Game.IsXboxGame;
     public bool IsBattleNetGame => Game.IsBattleNetGame;
     public bool IsRockstarGame => Game.IsRockstarGame;
+    public bool IsAmazonGame => Game.IsAmazonGame;
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
@@ -652,6 +653,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsXboxGame));
         OnPropertyChanged(nameof(IsBattleNetGame));
         OnPropertyChanged(nameof(IsRockstarGame));
+        OnPropertyChanged(nameof(IsAmazonGame));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));

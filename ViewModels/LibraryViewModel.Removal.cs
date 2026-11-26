@@ -168,6 +168,7 @@ public partial class LibraryViewModel
             { Xbox: { } x } => string.Equals(g.Game.XboxAumid, x.Aumid, StringComparison.OrdinalIgnoreCase),
             { BattleNet: { } b } => string.Equals(g.Game.BattleNetUid, b.Uid, StringComparison.OrdinalIgnoreCase),
             { Rockstar: { } r } => string.Equals(g.Game.RockstarGameId, r.GameId, StringComparison.OrdinalIgnoreCase),
+            { Amazon: { } a } => string.Equals(g.Game.AmazonGameId, a.GameId, StringComparison.OrdinalIgnoreCase),
             _ => false
         });
     }
@@ -241,6 +242,7 @@ public partial class LibraryViewModel
             DetectedLauncher.Xbox => game.IsXboxGame,
             DetectedLauncher.BattleNet => game.IsBattleNetGame,
             DetectedLauncher.Rockstar => game.IsRockstarGame,
+            DetectedLauncher.Amazon => game.IsAmazonGame,
             _ => false
         };
     }
@@ -254,6 +256,7 @@ public partial class LibraryViewModel
         DetectedLauncher.Xbox => LauncherPlatform.Xbox,
         DetectedLauncher.BattleNet => LauncherPlatform.BattleNet,
         DetectedLauncher.Rockstar => LauncherPlatform.Rockstar,
+        DetectedLauncher.Amazon => LauncherPlatform.Amazon,
         _ => LauncherPlatform.Ubisoft
     };
 

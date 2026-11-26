@@ -4,18 +4,20 @@
 
 ## Launcher Integrations
 
-Each "Enable X library integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Ubisoft's registry entries, EA's install manifests, Epic's install records from both the classic Epic Games Launcher and the new one, Windows' Gaming Services records for Xbox / PC Game Pass, Blizzard's install records for Battle.net, Rockstar's install records for the Rockstar Games Launcher), so no folder setup is needed.
+Each "Enable X library integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Ubisoft's registry entries, EA's install manifests, Epic's install records from both the classic Epic Games Launcher and the new one, Windows' Gaming Services records for Xbox / PC Game Pass, Blizzard's install records for Battle.net, Rockstar's install records for the Rockstar Games Launcher, the Amazon Games app's install records), so no folder setup is needed.
 
 Battle.net games launch through Battle.net, which signs the game in; if Battle.net is closed, TrayTrigger starts it first. If a game's launch code can't be read (just after Battle.net's cache was cleared, say), TrayTrigger opens Battle.net's Play tab and tells you to click Play; performance profiles and scripts still apply.
 
 Rockstar Games Launcher games launch through the Rockstar Games Launcher, which signs you in and syncs cloud saves; without the launcher, the game's own program runs. A Rockstar game bought on Epic or Steam (Red Dead Redemption 2 from the Epic store, say) is found by the Epic or Steam integration instead, so it isn't listed twice.
+
+Amazon games launch through the Amazon Games app, the same way its own shortcuts start them; without the app, the game's own program runs, with the arguments Amazon starts it with. Only installed games are found: games you own on Amazon but haven't installed aren't listed.
 
 - **Steam** is the one platform with several possible library folders. They're detected automatically and listed under the Steam toggle; untick one to skip that library on the next scan, or click "Refresh" to re-detect them (e.g. after adding a library to a new drive in Steam).
 - **EA** can only find games installed to EA's own default install folders. A game moved to a custom location won't be found - see the note under EA's toggle for details.
 
 Turning an integration off only stops *new* games from that platform being detected. Games already in your library stay put and keep launching through their launcher - so when you turn a toggle off, TrayTrigger asks whether you'd also like to remove that platform's games from the library. Either way, installed game files are never deleted.
 
-Dropping a game folder or exe onto the Library, or using "Add Folder", also recognizes launcher-owned installs regardless of these toggles: a folder inside a Steam or GOG install is imported as that platform's game, not as a plain local exe.
+Dropping a game folder or exe onto the Library, or using "Add Folder", also recognizes launcher-owned installs regardless of these toggles: a folder inside a Steam or GOG install is imported as that platform's game, not as a plain local exe. An Amazon Games desktop or Start menu shortcut is recognized too, and adds the game it starts.
 
 How each launcher is started, and how to keep it out of the way, is under How a game is launched.
 
@@ -35,7 +37,7 @@ How each launcher is started, and how to keep it out of the way, is under How a 
 
 A game you uninstall stays in your library, so its playtime, hotkey, scripts and performance profile are all still there when you put it back. It's greyed out and tagged instead:
 
-- **NOT INSTALLED** - a launcher game (Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net, Rockstar) that its own launcher no longer has. Reinstall it there and the tag goes on the next scan.
+- **NOT INSTALLED** - a launcher game (Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net, Rockstar, Amazon Games) that its own launcher no longer has. Reinstall it there and the tag goes on the next scan.
 - **MISSING** - a game you added yourself, by drop or by folder scan, whose file isn't where TrayTrigger left it. It may only have moved, so right-click it and choose "Locate Executable..." to point it at the new place.
 
 The check runs at startup and on every scan. Play still works on a tagged game: for a Steam game it offers to open it in Steam, where you can reinstall it, and for the rest it says which launcher to reinstall from. To find them all at once, open the filter beside the filter box and tick "Not installed" or "Executable missing" - from there you can select the ones you won't reinstall and remove them together.
@@ -52,7 +54,7 @@ You don't have to wait for either. Pressing Play on a tagged game asks its launc
 
 Folder scanning uses heuristics, so it can occasionally offer something that isn't really a game (a bundled tool, an installer, a benchmark). Click "Ignore" next to a candidate in the New Games Found picker to permanently exclude that exact file from every future scan. Ignored items are listed under "Ignored Games" here, where you can remove one to let it be detected again (Undo on the toast puts it back).
 
-> Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net and Rockstar games can be ignored too, by their own platform ID rather than file path - useful for something registered as a "game" that isn't really one (a soundtrack, an SDK, a demo).
+> Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net, Rockstar and Amazon games can be ignored too, by their own platform ID rather than file path - useful for something registered as a "game" that isn't really one (a soundtrack, an SDK, a demo).
 
 ## Ignoring a whole folder
 

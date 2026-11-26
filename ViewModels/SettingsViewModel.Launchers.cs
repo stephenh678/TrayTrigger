@@ -85,6 +85,13 @@ public partial class SettingsViewModel
         set => SetIntegrationEnabled(DetectedLauncher.Rockstar, "Rockstar", _settings.RockstarIntegrationEnabled, value, v => _settings.RockstarIntegrationEnabled = v);
     }
 
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool AmazonIntegrationEnabled
+    {
+        get => _settings.AmazonIntegrationEnabled;
+        set => SetIntegrationEnabled(DetectedLauncher.Amazon, "Amazon", _settings.AmazonIntegrationEnabled, value, v => _settings.AmazonIntegrationEnabled = v);
+    }
+
     // True while ApplyDetectedLauncherChoices runs: the first-launch picker is choosing initial
     // defaults on an (effectively) empty library, so the "also remove its games?" prompt and the
     // "run Scan for Games" hint would both be noise there.
@@ -203,6 +210,7 @@ public partial class SettingsViewModel
             if (Probed(DetectedLauncher.Xbox)) XboxIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Xbox);
             if (Probed(DetectedLauncher.BattleNet)) BattleNetIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.BattleNet);
             if (Probed(DetectedLauncher.Rockstar)) RockstarIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Rockstar);
+            if (Probed(DetectedLauncher.Amazon)) AmazonIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Amazon);
         }
         finally
         {

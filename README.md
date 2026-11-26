@@ -53,9 +53,10 @@
   <img src="Assets/LauncherLogos/xbox.png" height="40" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/battlenet.png" height="40" alt="Battle.net" title="Battle.net">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/rockstar_games.png" height="40" alt="Rockstar Games Launcher" title="Rockstar Games Launcher">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/amazon_games.png" height="40" alt="Amazon Games" title="Amazon Games">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/local_games.png" height="40" alt="Local games" title="Any executable or shortcut">
   <br>
-  <sub>Scans all eight, plus anything you drop on the window.</sub>
+  <sub>Scans all nine, plus anything you drop on the window.</sub>
 </p>
 
 ---
@@ -66,7 +67,7 @@ Start with the one thing you change by hand before every session.
 
 | If you... | TrayTrigger |
 |---|---|
-| Juggle too many launchers | Puts seven stores in one tray menu. Launchers start minimized and close after the game. [Launchers](https://stephenh678.github.io/TrayTrigger/#launchers) |
+| Juggle too many launchers | Puts nine stores in one tray menu. Launchers start minimized and close after the game. [Launchers](https://stephenh678.github.io/TrayTrigger/#launchers) |
 | Have a Ryzen X3D or an Intel hybrid CPU | Puts a game on the 3D V-Cache cores or the P-cores, for that game only. No Process Lasso rules. [CPU cores](https://stephenh678.github.io/TrayTrigger/#performance) |
 | Play on an HDR or OLED display | Turns HDR on for the game that does it well and off for the one that doesn't. No more Win+Alt+B. [HDR per game](https://stephenh678.github.io/TrayTrigger/#performance) |
 | Sim race or fly | Starts SimHub, CrewChief or TrackIR with the game and closes them when you're done. [Companion apps](https://stephenh678.github.io/TrayTrigger/#sim-racing) |
