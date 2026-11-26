@@ -7,6 +7,10 @@
     <!-- A card on a page (Settings, System, About): room inside it, and the gap below it to the next card. -->
     <Thickness x:Key="CardPadding">14,12</Thickness>
     <Thickness x:Key="CardGap">0,0,0,10</Thickness>
+    <!-- The heading band of a card that groups rows (CardHeaderBand): it reaches past the card's padding to
+         the card's edges, so the band is the card's top. The bleed is CardPadding, negative. -->
+    <Thickness x:Key="CardHeaderBleed">-14,-12,-14,10</Thickness>
+    <Thickness x:Key="CardHeaderPadding">14,10</Thickness>
 
     <!-- A card inside a dialog (Edit Game, Edit Tool, Game Details, Edit Theme), a little further apart. -->
     <Thickness x:Key="DialogCardPadding">14,12</Thickness>

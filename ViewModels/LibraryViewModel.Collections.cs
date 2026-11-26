@@ -51,6 +51,17 @@ public partial class LibraryViewModel
 
     public bool HasCollections => CollectionTabs.Count > 0;
 
+    /// <summary>The categories' share of the tab row when both strips can't fit (the divider between them). Saved when set.</summary>
+    public double TabSplit
+    {
+        get => LibraryTabRowLayout.ClampSplit(_settings.LibraryTabSplit);
+        set
+        {
+            _settings.LibraryTabSplit = LibraryTabRowLayout.ClampSplit(value);
+            _storageService.SaveSettings(_settings);
+        }
+    }
+
     /// <summary>A collection chip (not All Collections) is selected: the empty-state panels then say so, since a game outside it may match the tab.</summary>
     public bool IsCollectionSelected => _selectedCollection.Length > 0;
 

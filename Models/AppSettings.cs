@@ -96,6 +96,8 @@ public class AppSettings
     public string LastCollectionFilter { get; set; } = string.Empty;
     /// <summary>Show the game categories (Action, RPG...) as tabs in the Library. Off keeps All, Favorites and Hidden; collections are unaffected.</summary>
     public bool ShowCategoryTabs { get; set; } = true;
+    /// <summary>The categories' share of the Library's tab row when categories and collections can't both fit, set by dragging the divider between them.</summary>
+    public double LibraryTabSplit { get; set; } = LibraryTabRowLayout.DefaultSplit;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
 
     /// <summary>

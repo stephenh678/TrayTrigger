@@ -484,7 +484,7 @@ public class GameScriptService
         NoteScript(game, script, phase, what + (cancelledLaunch ? ", the launch was cancelled" : string.Empty));
         string explained = said != null ? $"{file} said: {said}." : $"{file}.";
         ActivityService.Add(ActivityLevel.Problem, text, subject: game.Name,
-            detail: $"{explained} Test it from {(script.IsDefault ? "Settings > Launch & Performance" : "Edit Game")}; what it printed is in the log.",
+            detail: $"{explained} Test it from {(script.IsDefault ? "Settings > Launching" : "Edit Game")}; what it printed is in the log.",
             groupKey: $"script.{phase}|{game.Id}");
     }
 

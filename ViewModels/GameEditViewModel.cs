@@ -422,7 +422,7 @@ public partial class GameEditViewModel : ViewModelBase
     private readonly Action<bool>? _setScriptsEnabled;
 
     /// <summary>
-    /// "Enable scripts" in the notice: the same switch as Settings > Launch &amp; Performance, which is one setting for
+    /// "Enable scripts" in the notice: the same switch as Settings > Launching, which is one setting for
     /// every game. It takes effect at once, like the DLSS switch, so Cancel does not undo it. Turned on, the notice goes
     /// and the scripts card takes its place.
     /// </summary>

@@ -102,18 +102,20 @@ public class ResizableBarTests
     }
 
     [Fact]
-    public void GpuCard_ShowsOnInTheDetailLine_AndWarnsOnlyWhenOff()
+    public void GpuCard_ShowsOnAsAPassedCheck_AndWarnsOnlyWhenOff()
     {
         var on = new GpuCardViewModel(new GpuHardwareInfo
         {
             IsDedicated = true, VramGigabytes = 16, LargestBarBytes = 16384 * Mb,
             PcieCurrentWidth = 16, PcieMaxWidth = 16, PcieCurrentGeneration = 5, PcieMaxGeneration = 5
         }, new NvidiaDriverService());
-        Assert.Equal("16 GB VRAM · PCIe 5.0 x16 · Resizable BAR on", on.DetailLine);
+        Assert.Equal("16 GB VRAM · PCIe 5.0 x16", on.DetailLine);
+        Assert.Equal("Full PCIe link · Resizable BAR on", on.PassedChecks);
         Assert.False(on.IsResizableBarOff);
 
         var off = new GpuCardViewModel(Dedicated(256 * Mb), new NvidiaDriverService());
         Assert.Equal("16 GB VRAM", off.DetailLine);
+        Assert.False(off.HasPassedChecks);
         Assert.True(off.IsResizableBarOff);
     }
 }

@@ -1,6 +1,6 @@
 # Collections
 
-A collection is a group of games you make yourself: "Co-op", "Kids", "Play with Discord". A game can be in as many collections as you like, and TrayTrigger never fills one for you. Categories are the other kind of label: one per game, set from store data (Action, RPG, Steam) and shown as the category tabs. The two don't mix, and each has its own row in the Library.
+A collection is a group of games you make yourself: "Co-op", "Kids", "Play with Discord". A game can be in as many collections as you like, and TrayTrigger never fills one for you. Categories are the other kind of label: one per game, set from store data (Action, RPG, Steam) and shown as the category tabs. The two don't mix, and each has its own strip in the Library.
 
 ## Making a collection and putting games in it
 
@@ -10,15 +10,17 @@ A collection is a group of games you make yourself: "Co-op", "Kids", "Play with 
 - A collection can't share a name with a category, All, Favorites or Hidden, so two chips never read as one thing. Names can be up to 40 characters.
 - When a collection chip is selected and you add a game by hand, the new game starts in that collection.
 
-## The collections row
+## The collections strip
 
-Once a game is in a collection, a row appears below the category tabs: All Collections, then each collection alphabetically. Pick one to show only its games. It works together with the category tab, the filter and the search box, so Co-op with the RPG tab shows the RPGs in Co-op. All Collections shows every game again.
+Once a game is in a collection, a strip appears on the right of the category tabs, on the same line: All Collections, then each collection alphabetically. Pick one to show only its games. It works together with the category tab, the filter and the search box, so Co-op with the RPG tab shows the RPGs in Co-op. All Collections shows every game again.
+
+Each strip takes the room its tabs need. When the window is too narrow for both, they share the line, and arrows at each end of a strip scroll it (the mouse wheel does too; an arrow dims at its end). Drag the divider between the two strips to give one more room; TrayTrigger remembers where you leave it, and a double-click puts it back. While both fit, the divider has nothing to change.
 
 Right-click a chip to rename the collection (every game in it follows) or delete it. Deleting a collection never deletes games; they are only taken out of it. Hidden games appear only on the Hidden tab, so a collection with only hidden games has no chip.
 
 ## Show category tabs
 
-A library with many categories can crowd the category row. In Settings > Library, turn off **Show category tabs** to keep only All, Favorites and Hidden there. The categories still exist, in Change Category and the search box; collections are unaffected.
+A library with many categories can crowd the category row. In Settings > Launchers, turn off **Show category tabs** to keep only All, Favorites and Hidden there. The categories still exist, in Change Category and the search box; collections are unaffected.
 
 ## Tools for a collection
 

@@ -17,7 +17,6 @@ namespace TrayTrigger.ViewModels;
 
 public enum SystemSubSection
 {
-    All,
     HardwareSpecs,
     PerformanceTweaks,
     GameProfiles,
@@ -61,6 +60,7 @@ public class SystemTweakViewModel : ViewModelBase
                 _isBusy = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ActionButtonText));
+                OnPropertyChanged(nameof(SwitchText));
             }
         }
     }
@@ -99,9 +99,57 @@ public class SystemTweakViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsNotApplied));
                 OnPropertyChanged(nameof(ActionButtonText));
                 OnPropertyChanged(nameof(AccessibleStatus));
+                OnPropertyChanged(nameof(SwitchOn));
+                OnPropertyChanged(nameof(SwitchText));
+                OnPropertyChanged(nameof(ShowStatusBadge));
             }
         }
     }
+
+    /// <summary>
+    /// The row's switch: on when TrayTrigger's value is in place. Flipping it applies or puts back the tweak, the
+    /// same as Optimize and Put Back did. The switch shows what Windows has, not the click: after the change (or a
+    /// declined administrator prompt) it is re-read, so a change that didn't take puts the switch back.
+    /// </summary>
+    public bool SwitchOn
+    {
+        get => IsOptimal;
+        set
+        {
+            if (value != IsOptimal && CanExecuteToggle) _ = FlipAsync();
+        }
+    }
+
+    /// <summary>
+    /// The switch's flip, started from the binding (no command around it), so it does what AsyncRelayCommand
+    /// did for the old button: a failure is logged instead of lost in an unobserved task. Either way the switch
+    /// is re-read afterwards, so it never keeps showing a click Windows didn't take.
+    /// </summary>
+    private async Task FlipAsync()
+    {
+        try
+        {
+            await ExecuteToggleAsync();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("System", $"Switching '{Name}' ({Id}) failed: {ex.Message}", ex);
+            _notifyParent($"Failed to update '{Name}'.");
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(SwitchOn));
+        }
+    }
+
+    /// <summary>The word beside the switch: On, Off, or Working... while the change is applied.</summary>
+    public string SwitchText => IsBusy ? "Working..." : IsOptimal ? "On" : "Off";
+
+    /// <summary>
+    /// With the switch showing on or off, the tag is left for what the switch can't say: a preset tweak that is
+    /// off (NOT APPLIED), one this PC can't use (N/A), and the status-only rows (ON / OFF, no switch).
+    /// </summary>
+    public bool ShowStatusBadge => IsInformational || !IsAvailable || IsNotApplied;
 
     private string _statusText = "";
     public string StatusText
@@ -141,6 +189,21 @@ public class SystemTweakViewModel : ViewModelBase
     /// elements on screen; the row's buttons carry this so each one says what it acts on.
     /// </summary>
     public string AccessibleStatus => ComposeAccessibleStatus(Name, StatusBadgeText, IsOptIn, RequiresReboot, RequiresAdmin);
+
+    /// <summary>
+    /// What applying the row asks of you, as one quiet line under its description ("Asks for administrator
+    /// permission · Needs a restart"), in place of a tag for each: the row's one tag is its state.
+    /// </summary>
+    public string RequirementsText => ComposeRequirements(RequiresAdmin, RequiresReboot);
+    public bool HasRequirements => RequiresAdmin || RequiresReboot;
+
+    internal static string ComposeRequirements(bool requiresAdmin, bool requiresReboot)
+    {
+        var parts = new List<string>();
+        if (requiresAdmin) parts.Add("Asks for administrator permission");
+        if (requiresReboot) parts.Add("Needs a restart");
+        return string.Join(" \u00b7 ", parts);
+    }
 
     internal static string ComposeAccessibleStatus(string name, string badge, bool isOptIn, bool requiresReboot, bool requiresAdmin)
     {
@@ -294,13 +357,20 @@ public class ProfileTweakToggleViewModel : ViewModelBase
         OnPropertyChanged(nameof(StatusBadgeForeground));
     }
 
-    public string StatusBadgeText => IsEnabled ? "ENABLED" : "DISABLED";
+    // The same switch as a Performance Tweaks row. Here it edits the profile; nothing changes on the PC until a
+    // game on this profile starts. StatusBadgeText is no longer drawn; it names the state for a screen reader.
+    public string StatusBadgeText => IsEnabled ? "ON" : "OFF";
     public string StatusBadgeColor => IsEnabled ? AppPalette.Hex("BrushSuccessSolid") : AppPalette.Hex("BrushTextDisabled");
     public string StatusBadgeForeground => IsEnabled ? AppPalette.Hex("BrushTextOnSolid") : AppPalette.Hex("BrushTextPrimary");
-    public string ActionButtonText => IsEnabled ? "Disable" : "Enable";
+    /// <summary>The word beside the switch.</summary>
+    public string SwitchText => IsEnabled ? "On" : "Off";
 
-    /// <summary>The row for a screen reader: "Set power plan, enabled, asks for administrator permission".</summary>
+    /// <summary>The row for a screen reader: "Set power plan, on, asks for administrator permission".</summary>
     public string AccessibleStatus => SystemTweakViewModel.ComposeAccessibleStatus(Name, StatusBadgeText, IsOptIn, requiresReboot: false, RequiresAdmin);
+
+    /// <summary>The quiet line under the description: "Asks for administrator permission", or nothing.</summary>
+    public string RequirementsText => SystemTweakViewModel.ComposeRequirements(RequiresAdmin, requiresReboot: false);
+    public bool HasRequirements => RequiresAdmin;
 
     public ICommand ToggleCommand { get; }
 
@@ -353,7 +423,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
         OnPropertyChanged(nameof(StatusBadgeText));
         OnPropertyChanged(nameof(StatusBadgeColor));
         OnPropertyChanged(nameof(StatusBadgeForeground));
-        OnPropertyChanged(nameof(ActionButtonText));
+        OnPropertyChanged(nameof(SwitchText));
         OnPropertyChanged(nameof(AccessibleStatus));
     }
 }
@@ -367,7 +437,8 @@ public class SystemViewModel : ViewModelBase
     private readonly DispatcherTimer _telemetryTimer;
 
     // Sub-section Navigation
-    private SystemSubSection _currentSubSection = SystemSubSection.All;
+    // Opens on Hardware Specs, the first tab: one tab at a time, not every card on one long page.
+    private SystemSubSection _currentSubSection = SystemSubSection.HardwareSpecs;
     public SystemSubSection CurrentSubSection
     {
         get => _currentSubSection;
@@ -375,7 +446,6 @@ public class SystemViewModel : ViewModelBase
         {
             if (SetProperty(ref _currentSubSection, value))
             {
-                OnPropertyChanged(nameof(IsAllTab));
                 OnPropertyChanged(nameof(IsSpecsTab));
                 OnPropertyChanged(nameof(IsTweaksTab));
                 OnPropertyChanged(nameof(IsGameProfilesTab));
@@ -400,17 +470,16 @@ public class SystemViewModel : ViewModelBase
         set => SetProperty(ref _systemSearchText, value ?? string.Empty);
     }
 
-    public bool IsAllTab => CurrentSubSection == SystemSubSection.All;
     public bool IsSpecsTab => CurrentSubSection == SystemSubSection.HardwareSpecs;
     public bool IsTweaksTab => CurrentSubSection == SystemSubSection.PerformanceTweaks;
     public bool IsGameProfilesTab => CurrentSubSection == SystemSubSection.GameProfiles;
 
     public bool IsStutterTab => CurrentSubSection == SystemSubSection.StutterCheck;
-    public bool ShowStutterSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.StutterCheck;
+    public bool ShowStutterSection => CurrentSubSection == SystemSubSection.StutterCheck;
 
-    public bool ShowSpecsSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.HardwareSpecs;
-    public bool ShowTweaksSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.PerformanceTweaks;
-    public bool ShowGameProfilesSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.GameProfiles;
+    public bool ShowSpecsSection => CurrentSubSection == SystemSubSection.HardwareSpecs;
+    public bool ShowTweaksSection => CurrentSubSection == SystemSubSection.PerformanceTweaks;
+    public bool ShowGameProfilesSection => CurrentSubSection == SystemSubSection.GameProfiles;
 
     // Hardware Report
     private SystemHardwareReport _report = new();
@@ -426,6 +495,8 @@ public class SystemViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(Cpu));
             OnPropertyChanged(nameof(PrimaryGpu));
+            OnPropertyChanged(nameof(HasSeveralGpus));
+            OnPropertyChanged(nameof(PrimaryGpuCard));
             OnPropertyChanged(nameof(Ram));
             OnPropertyChanged(nameof(PrimaryDisplay));
             OnPropertyChanged(nameof(Displays));
@@ -461,6 +532,12 @@ public class SystemViewModel : ViewModelBase
     /// <summary>Every GPU, dedicated first: a laptop's or a desktop with the CPU's own graphics
     /// turned on has two, and which one a game lands on matters.</summary>
     public ObservableCollection<GpuCardViewModel> GpuCards { get; } = new();
+
+    /// <summary>The GPU the tile at the top reads: the first card, dedicated first. Null before detection.</summary>
+    public GpuCardViewModel? PrimaryGpuCard => GpuCards.FirstOrDefault();
+
+    /// <summary>Two GPUs or more: each keeps its own load pill in the Graphics card, as the tile shows only the first.</summary>
+    public bool HasSeveralGpus => GpuCards.Count > 1;
 
     private readonly NvidiaDriverService _nvidiaDrivers = new();
 
@@ -583,6 +660,45 @@ public class SystemViewModel : ViewModelBase
     public IEnumerable<SystemTweakViewModel> NetworkAndBackgroundTweaks => ForCategory(TweakCategory.NetworkAndBackground);
     public IEnumerable<SystemTweakViewModel> SecurityAndAdvancedTweaks => ForCategory(TweakCategory.SecurityAndAdvanced);
 
+    // Each group card lists its rows in two parts, under a sub-heading each: the ones in the Performance
+    // Preset (Apply Performance Preset turns them on), and the opt-ins (a real trade-off, off until you turn
+    // them on). A preset tweak this PC can't use stays in the first part, marked N/A.
+    private static bool InPreset(SystemTweakViewModel t) => !t.IsOptIn && !t.IsInformational;
+    public IEnumerable<SystemTweakViewModel> InputAndDisplayPreset => InputAndDisplayTweaks.Where(InPreset);
+    public IEnumerable<SystemTweakViewModel> InputAndDisplayOptIn => InputAndDisplayTweaks.Where(t => t.IsOptIn);
+    public IEnumerable<SystemTweakViewModel> CpuAndPowerPreset => CpuAndPowerTweaks.Where(InPreset);
+    public IEnumerable<SystemTweakViewModel> CpuAndPowerOptIn => CpuAndPowerTweaks.Where(t => t.IsOptIn);
+    public IEnumerable<SystemTweakViewModel> NetworkAndBackgroundPreset => NetworkAndBackgroundTweaks.Where(InPreset);
+    public IEnumerable<SystemTweakViewModel> NetworkAndBackgroundOptIn => NetworkAndBackgroundTweaks.Where(t => t.IsOptIn);
+    public bool HasInputAndDisplayPreset => InputAndDisplayPreset.Any();
+    public bool HasInputAndDisplayOptIn => InputAndDisplayOptIn.Any();
+    public bool HasCpuAndPowerPreset => CpuAndPowerPreset.Any();
+    public bool HasCpuAndPowerOptIn => CpuAndPowerOptIn.Any();
+    public bool HasNetworkAndBackgroundPreset => NetworkAndBackgroundPreset.Any();
+    public bool HasNetworkAndBackgroundOptIn => NetworkAndBackgroundOptIn.Any();
+
+    // The profile cards split the same way: what the profile includes from the start, and the opt-ins.
+    public IEnumerable<ProfileTweakToggleViewModel> OptimizedProfileDefaults => OptimizedProfileTweaks.Where(t => !t.IsOptIn);
+    public IEnumerable<ProfileTweakToggleViewModel> OptimizedProfileOptIns => OptimizedProfileTweaks.Where(t => t.IsOptIn);
+    public IEnumerable<ProfileTweakToggleViewModel> AggressiveProfileDefaults => AggressiveProfileTweaks.Where(t => !t.IsOptIn);
+    public IEnumerable<ProfileTweakToggleViewModel> AggressiveProfileOptIns => AggressiveProfileTweaks.Where(t => t.IsOptIn);
+    public bool HasOptimizedProfileOptIns => OptimizedProfileOptIns.Any();
+    public bool HasAggressiveProfileOptIns => AggressiveProfileOptIns.Any();
+
+    /// <summary>After the tweak list is loaded or re-read: every group's lists, and the parts under each sub-heading.</summary>
+    private void RaiseTweakLists()
+    {
+        foreach (string name in new[]
+        {
+            nameof(InputAndDisplayTweaks), nameof(CpuAndPowerTweaks), nameof(NetworkAndBackgroundTweaks), nameof(SecurityAndAdvancedTweaks),
+            nameof(InputAndDisplayPreset), nameof(InputAndDisplayOptIn), nameof(CpuAndPowerPreset), nameof(CpuAndPowerOptIn),
+            nameof(NetworkAndBackgroundPreset), nameof(NetworkAndBackgroundOptIn),
+            nameof(HasInputAndDisplayPreset), nameof(HasInputAndDisplayOptIn), nameof(HasCpuAndPowerPreset), nameof(HasCpuAndPowerOptIn),
+            nameof(HasNetworkAndBackgroundPreset), nameof(HasNetworkAndBackgroundOptIn),
+        })
+            OnPropertyChanged(name);
+    }
+
     // The count line under each group heading ("8 tweaks · 6 optimal"), so a group reads as a group
     // rather than as one more card. Kept current by NotifyTweakStateChanged and the profile toggle
     // handlers in the constructor.
@@ -598,8 +714,8 @@ public class SystemViewModel : ViewModelBase
 
     /// <summary>
     /// "1 of 7 preset tweaks not applied · 3 opt-in", or "all 7 preset tweaks applied · 3 opt-in":
-    /// the same word, preset, as the card above and the PRESET tag on each row, so the counts
-    /// visibly add up.
+    /// the same words, preset and opt-in, as the card above and the group's two sub-headings, so the
+    /// counts visibly add up.
     /// </summary>
     internal static string GroupSummaryText(int notApplied, int notAvailable, int recommended, int optIn)
     {
@@ -615,7 +731,7 @@ public class SystemViewModel : ViewModelBase
     }
 
     private static string ProfileSummary(IReadOnlyCollection<ProfileTweakToggleViewModel> toggles) =>
-        $"{Plural(toggles.Count, "tweak")} · {toggles.Count(t => t.IsEnabled)} enabled";
+        $"{Plural(toggles.Count, "tweak")} · {toggles.Count(t => t.IsEnabled)} on";
 
     private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 
@@ -687,10 +803,10 @@ public class SystemViewModel : ViewModelBase
         : applied == total ? $"All {total} preset tweaks applied"
         : $"{applied} of {total} preset tweaks applied";
 
-    /// <summary>The card's lead names the count and the tag, so "which tweaks" is answered by scanning for PRESET.</summary>
+    /// <summary>The card's lead names the count and the sub-heading, so "which tweaks" is answered by each group's first part.</summary>
     public string PresetLeadText => TotalTweakCount == 0
-        ? "The tweaks below marked PRESET, applied together. None applies to this PC."
-        : $"The {TotalTweakCount} tweaks below marked PRESET, applied together. Opt-in tweaks aren't part of it; switch them on below if you want them.";
+        ? "The tweaks under In the Performance Preset in each group below, applied together. None applies to this PC."
+        : $"The {TotalTweakCount} tweaks under In the Performance Preset in each group below, applied together. Opt-in tweaks aren't part of it; switch them on below if you want them.";
 
     /// <summary>
     /// "Not applied: HAGS and Game Bar Captures. Apply turns on both; HAGS asks for administrator
@@ -935,9 +1051,8 @@ public class SystemViewModel : ViewModelBase
     }
 
     // Commands
-    /// <summary>Search results take System to a card's tab (see Views/CardSearch); on All the card is already on screen.</summary>
+    /// <summary>Search results take System to a card's tab (see Views/CardSearch).</summary>
     public ICommand GoToSystemTabCommand { get; }
-    public ICommand SelectAllTabCommand { get; }
     public ICommand SelectSpecsTabCommand { get; }
     public ICommand SelectTweaksTabCommand { get; }
     public ICommand SelectGameProfilesTabCommand { get; }
@@ -1176,6 +1291,8 @@ public class SystemViewModel : ViewModelBase
     // Quick Tools Commands
     public ICommand OpenTaskManagerCommand { get; }
     public ICommand OpenDeviceManagerCommand { get; }
+    /// <summary>Settings > Apps > Startup: what starts with Windows, and its startup impact.</summary>
+    public ICommand OpenStartupAppsCommand { get; }
     public ICommand OpenGraphicsSettingsCommand { get; }
     public ICommand OpenDxDiagCommand { get; }
     /// <summary>Windows Settings > Display > Advanced display, where a screen's refresh rate is chosen.</summary>
@@ -1201,12 +1318,29 @@ public class SystemViewModel : ViewModelBase
         foreach (var t in AggressiveProfileTweaks) t.NotifyStateChanged();
         OnPropertyChanged(nameof(NewGameProfile));
         OnPropertyChanged(nameof(NewGameProfileIsAggressive));
+        OnPropertyChanged(nameof(CreateRestorePointBeforeTweaks));
     }
 
     public IReadOnlyList<PerformanceProfileMode> NewGameProfileOptions { get; } =
         [PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive];
 
     private PerformanceProfileMode _recordedNewGameProfile;
+
+    /// <summary>
+    /// The Performance Preset card's own safety option: a System Restore point before Apply Performance Preset
+    /// or Put Back Preset. It sits beside the buttons it guards (it was under Settings until 2.0.0).
+    /// </summary>
+    public bool CreateRestorePointBeforeTweaks
+    {
+        get => _settings.CreateRestorePointBeforeTweaks;
+        set
+        {
+            if (_settings.CreateRestorePointBeforeTweaks == value) return;
+            _settings.CreateRestorePointBeforeTweaks = value;
+            OnPropertyChanged();
+            _storageService.SaveSettings(_settings);
+        }
+    }
 
     /// <summary>The profile a game gets when it's added to the library. Games already there keep theirs.</summary>
     public PerformanceProfileMode NewGameProfile
@@ -1258,9 +1392,8 @@ public class SystemViewModel : ViewModelBase
 
         GoToSystemTabCommand = new RelayCommand(tab =>
         {
-            if (tab is SystemSubSection target && CurrentSubSection != SystemSubSection.All) CurrentSubSection = target;
+            if (tab is SystemSubSection target) CurrentSubSection = target;
         });
-        SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
         SelectTweaksTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.PerformanceTweaks);
         SelectGameProfilesTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.GameProfiles);
@@ -1273,6 +1406,7 @@ public class SystemViewModel : ViewModelBase
 
         OpenTaskManagerCommand = new RelayCommand(() => SafeLaunchProcess("taskmgr.exe"));
         OpenDeviceManagerCommand = new RelayCommand(() => SafeLaunchProcess("devmgmt.msc"));
+        OpenStartupAppsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:startupapps"));
         OpenGraphicsSettingsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:display-advancedgraphics"));
         OpenDxDiagCommand = new RelayCommand(() => SafeLaunchProcess("dxdiag.exe"));
         OpenAdvancedDisplaySettingsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:display-advanced"));
@@ -1414,10 +1548,7 @@ public class SystemViewModel : ViewModelBase
         }
         OnPropertyChanged(nameof(TotalTweakCount));
         NotifyTweakStateChanged();
-        OnPropertyChanged(nameof(InputAndDisplayTweaks));
-        OnPropertyChanged(nameof(CpuAndPowerTweaks));
-        OnPropertyChanged(nameof(NetworkAndBackgroundTweaks));
-        OnPropertyChanged(nameof(SecurityAndAdvancedTweaks));
+        RaiseTweakLists();
         ReportTweaksResetSinceApplied();
     }
 
@@ -1506,10 +1637,7 @@ public class SystemViewModel : ViewModelBase
         }
         OnPropertyChanged(nameof(TotalTweakCount));
         NotifyTweakStateChanged();
-        OnPropertyChanged(nameof(InputAndDisplayTweaks));
-        OnPropertyChanged(nameof(CpuAndPowerTweaks));
-        OnPropertyChanged(nameof(NetworkAndBackgroundTweaks));
-        OnPropertyChanged(nameof(SecurityAndAdvancedTweaks));
+        RaiseTweakLists();
         if (statusOnDone != null) StatusMessage = statusOnDone;
     }
 

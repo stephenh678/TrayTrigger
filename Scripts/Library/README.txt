@@ -13,7 +13,7 @@ Nothing here runs until you choose it for a game.
 QUICK START
 -----------
 
-  1. Settings > Launch & Performance: turn on "Enable game scripts".
+  1. Settings > Launching: turn on "Enable game scripts".
 
   2. Edit Game > Pre-Launch & Post-Exit Scripts: choose the example as the
      pre-launch script and tick "Use the same script for pre-launch and
@@ -26,7 +26,7 @@ QUICK START
      prints, without launching the game.
 
   To use a script for every game, set it as both default scripts in
-  Settings > Launch & Performance and tick "Run the default scripts".
+  Settings > Launching and tick "Run the default scripts".
 
 
 THE EXAMPLES
@@ -118,7 +118,7 @@ WRITING YOUR OWN
                       recommended "C:\My Tools\x.exe" force
                     arrives as three words.
 
-  A default script (Settings > Launch & Performance) gets the game's own
+  A default script (Settings > Launching) gets the game's own
   Script Arguments when it has some, and the Default Script Arguments
   otherwise.
 

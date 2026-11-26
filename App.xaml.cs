@@ -573,7 +573,7 @@ public partial class App : Application
 
         WireLaunchPopupAndCompanionTools();
 
-        // "Keep game launchers minimized when launching a game" (Settings > Launch & Performance > Launching Games).
+        // "Keep game launchers minimized when launching a game" (Settings > Launching > Launching Games).
         _launcherService.KeepLaunchersMinimized = () => _mainViewModel?.Settings.KeepLaunchersMinimized == true;
         // The pre-launch DLSS reapply can mark a game conflicted, and the in-session observer
         // records what loaded; both must survive a restart. Marshalled to the UI thread because

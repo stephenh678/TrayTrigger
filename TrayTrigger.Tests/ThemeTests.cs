@@ -110,6 +110,14 @@ public class ThemeTests
         Assert.Equal(dark["Highlight"].A, resolved["Highlight"].A);
     }
 
+    [Fact]
+    public void ADerivedHeaderWash_KeepsTheCardsTransparency()
+    {
+        var dark = ThemeCatalog.DarkPalette();
+        var resolved = ThemeDerivation.Resolve(dark, new Dictionary<string, Color> { ["Surface"] = C("#CC1C1C23"), ["Accent"] = C("#238636") });
+        Assert.Equal(0xCC, resolved["HeaderWash"].A);
+    }
+
     // ---- Reading a file ------------------------------------------------------------------------------
 
     [Fact]
@@ -177,7 +185,7 @@ public class ThemeTests
     {
         var dark = ThemeCatalog.DarkPalette();
         Assert.Equal(C("#121214"), dark["Background"]);
-        Assert.Equal(40, dark.Count);
+        Assert.Equal(41, dark.Count);
     }
 
     [Fact]

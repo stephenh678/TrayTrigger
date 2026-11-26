@@ -100,12 +100,11 @@ public sealed class GpuCardViewModel : ViewModelBase
     public bool IsResizableBarOff => Info.ResizableBarEnabled == false;
     public string ResizableBarWarning => Info.ResizableBarWarning;
 
-    /// <summary>"1.3 GB of 15.9 GB VRAM in use · PCIe 5.0 x16 · Resizable BAR on".</summary>
+    /// <summary>"1.3 GB of 15.9 GB VRAM in use · PCIe 5.0 x16". Resizable BAR is in <see cref="PassedChecks"/>.</summary>
     public string DetailLine => string.Join(" · ", new[]
     {
         VramUsageDisplay,
         PcieDisplay,
-        Info.ResizableBarEnabled == true ? "Resizable BAR on" : ""
     }.Where(part => part.Length > 0));
 
     // ---- Live ---------------------------------------------------------------------------------
@@ -118,6 +117,21 @@ public sealed class GpuCardViewModel : ViewModelBase
     public bool IsLive => _loadPercent.HasValue;
     public bool IsNotLive => !IsLive;
     public int LoadPercent => _loadPercent ?? 0;
+
+    /// <summary>The GPU tile at the top of Hardware Specs: "12%", or a dash until the first reading.</summary>
+    public string LoadDisplay => _loadPercent is int load ? $"{load}%" : "\u2013";
+
+    /// <summary>
+    /// The checks this GPU passes, as one line under its details ("Full PCIe link · Resizable BAR on"), shown with a
+    /// tick. A failed check is its own warning line instead (PcieWarning, ResizableBarWarning). Empty when there is
+    /// nothing to report: a built-in GPU has no link of its own.
+    /// </summary>
+    public string PassedChecks => string.Join(" \u00b7 ", new[]
+    {
+        PcieDisplay.Length > 0 && !IsPcieNarrowed ? "Full PCIe link" : "",
+        Info.ResizableBarEnabled == true ? "Resizable BAR on" : "",
+    }.Where(part => part.Length > 0));
+    public bool HasPassedChecks => PassedChecks.Length > 0;
 
     /// <summary>"5.2 GB of 16 GB VRAM in use", once a reading is in.</summary>
     public string VramUsageDisplay => _vramUsedGigabytes is double used && Info.VramGigabytes > 0
@@ -132,6 +146,7 @@ public sealed class GpuCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsLive));
         OnPropertyChanged(nameof(IsNotLive));
         OnPropertyChanged(nameof(LoadPercent));
+        OnPropertyChanged(nameof(LoadDisplay));
         OnPropertyChanged(nameof(VramUsageDisplay));
         OnPropertyChanged(nameof(DetailLine));
     }

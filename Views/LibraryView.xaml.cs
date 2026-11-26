@@ -29,6 +29,7 @@ public partial class LibraryView : UserControl
         // OnCardContextMenuOpening and its highlight cleared here when the menu goes away.
         ((ContextMenu)FindResource("GameItemContextMenu")).Closed += OnCardContextMenuClosed;
         ((ContextMenu)FindResource("GameBatchContextMenu")).Closed += OnCardContextMenuClosed;
+        InitializeTabRow();
     }
 
     private MainViewModel ViewModel => (MainViewModel)DataContext;

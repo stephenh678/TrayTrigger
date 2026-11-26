@@ -180,6 +180,10 @@ public class DisplayHardwareInfo
     /// </summary>
     public bool IsBelowMaxRefresh => RefreshRateHz > 1 && MaxRefreshRateHz - RefreshRateHz >= 3;
 
+    /// <summary>The passed check, shown with a tick: at the fastest rate this screen offers at its resolution.</summary>
+    public bool IsAtFastestRefresh => RefreshRateHz > 1 && MaxRefreshRateHz > 1 && !IsBelowMaxRefresh;
+    public string FastestRefreshNote => IsAtFastestRefresh ? $"{RefreshRateHz} Hz, its fastest at this resolution" : "";
+
     public string RefreshWarning => IsBelowMaxRefresh
         ? $"Set to {RefreshRateHz} Hz, but this screen offers up to {MaxRefreshRateHz} Hz at {Width} × {Height}. Change it in Windows Settings > Display > Advanced display."
         : "";

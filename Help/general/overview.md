@@ -1,6 +1,6 @@
 # The window, the tray icon and hotkeys
 
-TrayTrigger lives in the system tray. The window is for setting things up; day to day, the tray icon and hotkeys are all you need. These options are under Settings > General, apart from the three about launching a game, which are under Settings > Launch & Performance > Launching Games.
+TrayTrigger lives in the system tray. The window is for setting things up; day to day, the tray icon and hotkeys are all you need. These options are under Settings > General, apart from the three about launching a game, which are under Settings > Launching > Launching Games.
 
 ## Closing and exiting
 
@@ -16,7 +16,7 @@ TrayTrigger lives in the system tray. The window is for setting things up; day t
 
 ## Launching a game
 
-These three are under Settings > Launch & Performance > Launching Games.
+These three are under Settings > Launching > Launching Games.
 
 - **Minimize to system tray when launching a game** hides the window as a game starts, so it never covers the game.
 - **Keep game launchers minimized when launching a game** asks Steam, GOG Galaxy and Epic to start quietly, so only the game opens. See How a game is launched.
@@ -45,7 +45,7 @@ Settings, About and System each have a search box beside their tabs. Type a word
 - The list searches the page you are on. When it finds nothing it says so and points to Search everything (Ctrl+K), which looks in every page.
 - A setting your PC can't use (an NVIDIA option without an NVIDIA card, the monitor options with one monitor) is not listed.
 - Press Enter in the box again to bring the list back after choosing. Esc, or the x in the box, clears the search.
-- Leaving the page by the sidebar clears the search, puts the page back on its All tab and scrolls it to the top, so it opens fresh next time. The Library, Tools and Activity do the same for their filter box (the category tab, sort and view you chose stay).
+- Leaving the page by the sidebar clears the search, puts the page back on its first tab and scrolls it to the top, so it opens fresh next time. The Library, Tools and Activity do the same for their filter box (the category tab, sort and view you chose stay).
 
 ## Window sizes
 

@@ -30,19 +30,38 @@
                            <RowDefinition Height="Auto"/> <!-- Status Bar -->
                        </Grid.RowDefinitions>
 
-                       <!-- 1. Header -->
+                       <!-- 1. Header: title and subtitle on the left; the game count and the add buttons on the right, so the
+                            row below can give its whole width to the category and collection strips. -->
                        <DockPanel Grid.Row="0" Margin="0,0,0,14">
-                           <!-- Right: Live Game Count Status (matching Settings & System) -->
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                               <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
+                               <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" 
+                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                           FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
+                               <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
+                                   <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
+                                       <StackPanel Orientation="Horizontal">
+                                           <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                           <TextBlock Text="Add Game" VerticalAlignment="Center"/>
+                                       </StackPanel>
+                                   </Button>
+                                   <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
+                                       <StackPanel Orientation="Horizontal">
+                                           <TextBlock Text="&#xED25;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                           <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
+                                       </StackPanel>
+                                   </Button>
+                                   <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}">
+                                       <StackPanel Orientation="Horizontal">
+                                           <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                           <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
+                                       </StackPanel>
+                                   </Button>
+                               </StackPanel>
                            </StackPanel>
 
-                           <!-- Left: Title & Subtitle matching Settings & System -->
                            <StackPanel VerticalAlignment="Center">
-                               <TextBlock Text="Library" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
+                               <TextBlock Text="Library" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}"
                                           FontFamily="{DynamicResource AppFont}" FontWeight="Normal"/>
                                <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, Rockstar, and local folders"
                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
@@ -50,45 +69,16 @@
                            </StackPanel>
                        </DockPanel>
 
-                       <!-- 2. Category Tabs & Action Buttons -->
-                       <DockPanel Grid.Row="1" Margin="0,0,0,16">
-                           <!-- Right: Action Buttons (+ Add Game, Add Folder, Scan for Games). MDL2 glyphs
-                                instead of emoji so they match the rest of the app on every Windows build.
-                                "Refresh Posters" moved to Settings > Library & Art: a rare maintenance
-                                action that was taking primary toolbar space. -->
-                           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                               <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
-                                   <StackPanel Orientation="Horizontal">
-                                       <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                       <TextBlock Text="Add Game" VerticalAlignment="Center"/>
-                                   </StackPanel>
-                               </Button>
-                               <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
-                                   <StackPanel Orientation="Horizontal">
-                                       <TextBlock Text="&#xED25;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                       <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
-                                   </StackPanel>
-                               </Button>
-                               <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}">
-                                   <StackPanel Orientation="Horizontal">
-                                       <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                       <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
-                                   </StackPanel>
-                               </Button>
-                           </StackPanel>
-
-                           <!-- Left: the category tabs, with the collections row below them. The category strip can be as long as
-                                the library's categories (Settings > Library "Show category tabs" turns the real
-                                categories off, leaving All, Favorites and Hidden); collections are the player's own
-                                groups and stay short. The collections row is hidden until a game is in one. -->
-                           <StackPanel VerticalAlignment="Center">
-                           <!-- Segmented Category Tabs -->
+                       <!-- 2. One row: the category tabs on the left, the collections on the right (hidden until a game is in
+                            one), and a divider between them that can be dragged. TabRowPanel sizes the two strips:
+                            each strip takes the width its tabs need; when both can't fit, they share the row at the dragged
+                            split, and each strip's side arrows reach the tabs past its edge. -->
+                       <views:TabRowPanel x:Name="TabRow" Grid.Row="1" Margin="0,0,0,16">
                            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" Margin="0,0,16,0"
-                                   HorizontalAlignment="Left" VerticalAlignment="Center">
-                               <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource EdgeChevronScrollViewer}"
+                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}">
+                               <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource SideArrowScrollViewer}"
                                              PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
-                                   <ItemsControl ItemsSource="{Binding CategoryTabs}">
+                                   <ItemsControl x:Name="CategoryItems" ItemsSource="{Binding CategoryTabs}">
                                        <ItemsControl.ItemsPanel>
                                            <ItemsPanelTemplate>
                                                <StackPanel Orientation="Horizontal"/>
@@ -114,40 +104,61 @@
                                    </ItemsControl>
                                </ScrollViewer>
                            </Border>
-                           <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
-                                       Visibility="{Binding HasCollections, Converter={StaticResource BoolToVis}}">
-                               <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                                       BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}"
-                                       HorizontalAlignment="Left" VerticalAlignment="Center">
-                                   <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}"
-                                                 PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
-                                       <ItemsControl ItemsSource="{Binding CollectionTabs}">
-                                           <ItemsControl.ItemsPanel>
-                                               <ItemsPanelTemplate>
-                                                   <StackPanel Orientation="Horizontal"/>
-                                               </ItemsPanelTemplate>
-                                           </ItemsControl.ItemsPanel>
-                                           <ItemsControl.ItemTemplate>
-                                               <DataTemplate>
-                                                   <Button AutomationProperties.Name="{Binding DisplayName}" Command="{Binding SelectCommand}"
-                                                           Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
-                                                           Margin="0,0,2,0" ContextMenuOpening="CollectionChip_ContextMenuOpening">
-                                                       <Button.ContextMenu>
-                                                           <ContextMenu>
-                                                               <MenuItem Header="Rename..." Click="CollectionRename_Click"/>
-                                                               <MenuItem Header="Delete Collection..." Click="CollectionDelete_Click"/>
-                                                           </ContextMenu>
-                                                       </Button.ContextMenu>
-                                                       <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
-                                                   </Button>
-                                               </DataTemplate>
-                                           </ItemsControl.ItemTemplate>
-                                       </ItemsControl>
-                                   </ScrollViewer>
-                               </Border>
-                           </StackPanel>
-                           </StackPanel>
-                       </DockPanel>
+
+                           <Thumb x:Name="TabDivider" Width="17" Cursor="SizeWE" Focusable="False"
+                                  ToolTip="When categories and collections don't both fit, drag to give one more room. Double-click to reset."
+                                  AutomationProperties.Name="Divider between categories and collections"
+                                  DragDelta="TabDivider_DragDelta" DragCompleted="TabDivider_DragCompleted" MouseDoubleClick="TabDivider_MouseDoubleClick"
+                                  Visibility="{Binding HasCollections, Converter={StaticResource BoolToVis}}">
+                               <Thumb.Template>
+                                   <ControlTemplate TargetType="Thumb">
+                                       <Border Background="Transparent">
+                                           <Border x:Name="Line" Width="1" Height="26" Background="{DynamicResource BrushBorder}" HorizontalAlignment="Center"/>
+                                       </Border>
+                                       <ControlTemplate.Triggers>
+                                           <Trigger Property="IsMouseOver" Value="True">
+                                               <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushBorderStrong}"/>
+                                               <Setter TargetName="Line" Property="Width" Value="2"/>
+                                           </Trigger>
+                                           <Trigger Property="IsDragging" Value="True">
+                                               <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushAccent}"/>
+                                               <Setter TargetName="Line" Property="Width" Value="2"/>
+                                           </Trigger>
+                                       </ControlTemplate.Triggers>
+                                   </ControlTemplate>
+                               </Thumb.Template>
+                           </Thumb>
+
+                           <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}"
+                                   Visibility="{Binding HasCollections, Converter={StaticResource BoolToVis}}">
+                               <ScrollViewer Style="{StaticResource SideArrowScrollViewer}"
+                                             PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
+                                   <ItemsControl x:Name="CollectionItems" ItemsSource="{Binding CollectionTabs}">
+                                       <ItemsControl.ItemsPanel>
+                                           <ItemsPanelTemplate>
+                                               <StackPanel Orientation="Horizontal"/>
+                                           </ItemsPanelTemplate>
+                                       </ItemsControl.ItemsPanel>
+                                       <ItemsControl.ItemTemplate>
+                                           <DataTemplate>
+                                               <Button AutomationProperties.Name="{Binding DisplayName}" Command="{Binding SelectCommand}"
+                                                       Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
+                                                       Margin="0,0,2,0" ContextMenuOpening="CollectionChip_ContextMenuOpening">
+                                                   <Button.ContextMenu>
+                                                       <ContextMenu>
+                                                           <MenuItem Header="Rename..." Click="CollectionRename_Click"/>
+                                                           <MenuItem Header="Delete Collection..." Click="CollectionDelete_Click"/>
+                                                       </ContextMenu>
+                                                   </Button.ContextMenu>
+                                                   <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                               </Button>
+                                           </DataTemplate>
+                                       </ItemsControl.ItemTemplate>
+                                   </ItemsControl>
+                               </ScrollViewer>
+                           </Border>
+                       </views:TabRowPanel>
 
                        <!-- 3. Search, Sort & View Mode Bar -->
                        <Grid Grid.Row="2" Margin="0,0,0,14">

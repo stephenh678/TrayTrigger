@@ -94,9 +94,13 @@ public partial class App
             Page(NavSection.Library, () => _mainViewModel.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModeDetailsList, " (details list)");
             _mainViewModel.SettingsVM.LibraryViewMode = libraryViewBefore;
             Page(NavSection.Tools);
-            Page(NavSection.System, () => _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All);
-            Page(NavSection.Settings, () => _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.All);
-            Page(NavSection.About, () => _mainViewModel.CurrentAboutSection = AboutSubSection.All);
+            // System, Settings and About show one tab at a time: each tab is audited on its own.
+            foreach (SystemSubSection tab in Enum.GetValues<SystemSubSection>())
+                Page(NavSection.System, () => _mainViewModel.SystemVM.CurrentSubSection = tab, $" ({tab})");
+            foreach (SettingsCategoryTab tab in Enum.GetValues<SettingsCategoryTab>())
+                Page(NavSection.Settings, () => _mainViewModel.SettingsVM.SelectedTab = tab, $" ({tab})");
+            foreach (AboutSubSection tab in Enum.GetValues<AboutSubSection>())
+                Page(NavSection.About, () => _mainViewModel.CurrentAboutSection = tab, $" ({tab})");
             Page(NavSection.Activity);
 
             void Dialog(string label, Window dialog)

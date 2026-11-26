@@ -91,7 +91,7 @@ public partial class ImportCoordinator
     /// toggles via SettingsViewModel.ApplyDetectedLauncherChoices *before* calling this - not
     /// here, because this class mutates the shared AppSettings object directly and has no way to
     /// raise the property-changed notification SettingsViewModel's own bindings need (setting
-    /// _settings.UbisoftIntegrationEnabled directly leaves Settings > Library's checkbox showing
+    /// _settings.UbisoftIntegrationEnabled directly leaves Settings > Launchers' checkbox showing
     /// its stale old value even though the underlying data, and therefore scanning, is correct -
     /// confusing regardless of being cosmetic). This method just re-syncs Steam's scan locations
     /// if Steam was turned on, then runs the real scan.
@@ -103,7 +103,7 @@ public partial class ImportCoordinator
             // "Enable Selected" with nothing ticked is a legitimate choice (the user wants no
             // launcher integrations) - honour it, but say so rather than falling through to a
             // scan that would only pop the "No Scan Locations" dialog at them.
-            _library.AnnounceImportResult("No launcher integrations enabled. Turn them on any time in Settings → Library, or add a scan location.");
+            _library.AnnounceImportResult("No launcher integrations enabled. Turn them on any time in Settings → Launchers, or add a scan location.");
             return;
         }
 
@@ -165,8 +165,8 @@ public partial class ImportCoordinator
                         ? "Steam integration is on, but none of its library folders are enabled."
                         : "No launcher integrations are enabled and no scan locations have been added.",
                     steamOnButNoLibraries
-                        ? "Tick a Steam library under the Steam toggle in Settings → Library (or click Refresh there if none are listed), then try again."
-                        : "Turn on a launcher integration or add a folder under Scan Locations in Settings → Library, then try again.");
+                        ? "Tick a Steam library under the Steam toggle in Settings → Launchers (or click Refresh there if none are listed), then try again."
+                        : "Turn on a launcher integration or add a folder under Scan Locations in Settings → Launchers, then try again.");
             }
             return;
         }

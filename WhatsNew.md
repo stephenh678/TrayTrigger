@@ -4,6 +4,15 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 2.0.0
+
+- **One line for categories and collections** - Collections now sit beside the category tabs. When they don't both fit, drag the divider between them to give either side more room.
+- **Tab arrows** - When the tabs don't fit, arrows at each end scroll them.
+- **Easier System, Settings and About pages** - Each opens on its first tab and shows one tab at a time, and cards that group settings have a clear heading. Settings has a new Launchers tab for launchers and scanning.
+- **On/off switches** - Each tweak and profile tweak has one switch that shows whether it's on. Preset and opt-in tweaks sit under their own headings.
+- **Hardware Specs at a glance** - Live readings sit in tiles at the top, and the specs are two to a row.
+- **Restore point option moved** - It is now on the Performance Preset card, beside the buttons it applies to.
+
 ## 1.8.1
 
 - **Search moved** - The search button is now at the bottom of the left bar, above Activity. Ctrl+K still works.

@@ -301,7 +301,7 @@ public class ThemeEditorTests : IDisposable
         // The note lists every pair the color is part of, in the words of the line at the foot.
         Assert.Contains("• Text on the window background is", vm.Background.ContrastNote);
         Assert.Contains("• Text on a card is", vm.Surface.ContrastNote);
-        Assert.StartsWith("Text on the window background and 3 more pairs may be hard to read.", vm.ContrastLine);
+        Assert.StartsWith("Text on the window background and 5 more pairs may be hard to read.", vm.ContrastLine);
         Assert.EndsWith("Hover a marked color for details.", vm.ContrastLine);
 
         vm.Text.ResetCommand.Execute(null);

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:TrayTrigger.Converters"
              xmlns:theming="clr-namespace:TrayTrigger.Services.Theming"
+             xmlns:services="clr-namespace:TrayTrigger.Services"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
@@ -21,6 +22,7 @@
         <converters:TabBackgroundConverter x:Key="TabBackgroundConverter"/>
         <converters:TabForegroundConverter x:Key="TabForegroundConverter"/>
         <converters:ScrollEdgeConverter x:Key="ScrollEdgeConverter"/>
+        <converters:ScrollArrowConverter x:Key="ScrollArrowConverter"/>
         <converters:RoundedClipConverter x:Key="RoundedClipConverter"/>
         <converters:RatioHeightConverter x:Key="RatioHeightConverter"/>
         <converters:PosterCardRadiusConverter x:Key="PosterCardRadiusConverter"/>
@@ -853,6 +855,58 @@
             </Style.Triggers>
         </Style>
 
+        <!-- An on/off switch, the Windows Settings control: a CheckBox underneath, so the keyboard (Space) and screen
+             readers (a toggle with its state) work as for any check box. The word beside it is the control's Tag:
+             "On" or "Off", or "Working..." while a change is applied (the rows bind it). Off: an outlined track and a
+             grey knob on the left. On: the accent track and a light knob on the right. Pointing at it grows the knob, as in Windows. Used for the tweak and profile
+             rows on System and Performance, where the switch is the row's state. -->
+        <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent" SnapsToDevicePixels="True">
+                            <TextBlock x:Name="State" Text="{TemplateBinding Tag}" Foreground="{TemplateBinding Foreground}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0" MinWidth="24" TextAlignment="Right"/>
+                            <!-- The Windows 11 switch's own shape: a 40 x 20 pill (a Rectangle, whose radius is the pill's half
+                                 height; a Border with a large CornerRadius draws an oval) and a 12 px knob 4 px from each end. -->
+                            <Grid Width="40" Height="20">
+                                <Rectangle x:Name="FocusRing" RadiusX="13" RadiusY="13" StrokeThickness="2" Margin="-3"
+                                           Stroke="{DynamicResource BrushAccentHover}" Visibility="Collapsed"/>
+                                <Rectangle x:Name="Track" RadiusX="10" RadiusY="10" StrokeThickness="1"
+                                           Fill="Transparent" Stroke="{DynamicResource BrushTextSecondary}"/>
+                                <Ellipse x:Name="Knob" Width="12" Height="12" Margin="4,0" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                         Fill="{DynamicResource BrushTextSecondary}"/>
+                            </Grid>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Knob" Property="Width" Value="14"/>
+                                <Setter TargetName="Knob" Property="Height" Value="14"/>
+                                <Setter TargetName="Knob" Property="Margin" Value="3,0"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Fill" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="Track" Property="Stroke" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource BrushTextOnSolid}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- Modern CheckBox -->
         <Style x:Key="ModernCheckBox" TargetType="CheckBox">
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
@@ -1165,6 +1219,81 @@
             </Setter>
         </Style>
 
+        <!-- The Library's category and collection strips: when the tabs run past the strip, an arrow at each end, in
+             space of its own so it covers no tab. An arrow dims at its end. Not tab stops, as above. -->
+        <Style x:Key="SideArrowButton" TargetType="RepeatButton" BasedOn="{StaticResource EdgeChevronButton}">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="{DynamicResource RadiusSmall}">
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}"
+                                       Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextDisabled}"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SideArrowScrollViewer" TargetType="ScrollViewer">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <RepeatButton Grid.Column="0" Style="{StaticResource SideArrowButton}" Content="&#xE76B;" Margin="0,0,2,0"
+                                          Command="{x:Static ScrollBar.LineLeftCommand}" AutomationProperties.Name="Scroll tabs left">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Show">
+                                        <Binding Path="ExtentWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                                <RepeatButton.IsEnabled>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Left">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.IsEnabled>
+                            </RepeatButton>
+                            <ScrollContentPresenter Grid.Column="1" CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                            <RepeatButton Grid.Column="2" Style="{StaticResource SideArrowButton}" Content="&#xE76C;" Margin="2,0,0,0"
+                                          Command="{x:Static ScrollBar.LineRightCommand}" AutomationProperties.Name="Scroll tabs right">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Show">
+                                        <Binding Path="ExtentWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                                <RepeatButton.IsEnabled>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Right">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.IsEnabled>
+                            </RepeatButton>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- The tray menu's search box (UX-16): no chrome of its own, so the row looks like any
              other tray row; the caret and the placeholder behind it say it takes typing. -->
         <Style x:Key="TraySearchBox" TargetType="TextBox">
@@ -1322,6 +1451,68 @@
             <Setter Property="FontSize" Value="{DynamicResource FontSizeSubhead}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        </Style>
+        <!-- The heading of a card that groups rows (tweak groups, profiles, settings cards): a tinted band across
+             the card's top, then a line in the accent color. Inside it, in this order so the card search names the card by its title:
+             an icon (CardHeaderIcon), the title (CardHeaderTitle), the description (CardHeaderDescription), and at
+             the right a count. Buttons go on the row they act on, not in the band. The band stays inside its card: a band of its own in a
+             tab's section would be a search result of its own (CardSearchTitleGuardTests). -->
+        <Style x:Key="CardHeaderBand" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource BrushHeaderWash}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderAccent}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusInnerTop}"/>
+            <Setter Property="Margin" Value="{StaticResource CardHeaderBleed}"/>
+            <Setter Property="Padding" Value="{StaticResource CardHeaderPadding}"/>
+        </Style>
+        <Style x:Key="CardHeaderIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeSubhead}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,2,10,0"/>
+        </Style>
+        <Style x:Key="CardHeaderTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="CardHeaderDescription" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+        <!-- The count at the right of a card heading ("4 of 6 optimal"). -->
+        <Style x:Key="CardHeaderCount" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="12,0,0,0"/>
+        </Style>
+        <!-- A heading inside a card, over a few of its rows ("IN THE PRESET", "WHAT IT LISTS"): small capitals in
+             the secondary color, quieter than the card heading and louder than a row. Written in capitals. -->
+        <Style x:Key="CardSubLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+            <Setter Property="Margin" Value="0,4,0,6"/>
+        </Style>
+        <!-- "Learn more" at the end of a description, in the same line: a Hyperlink in the description's TextBlock. -->
+        <Style x:Key="InlineHelpLink" TargetType="Hyperlink">
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+            <Setter Property="TextDecorations" Value="{x:Null}"/>
+            <Setter Property="Command" Value="{x:Static services:HelpCommands.ShowTopic}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="TextDecorations" Value="Underline"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="TextDecorations" Value="Underline"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
         <Style x:Key="StrongText" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>

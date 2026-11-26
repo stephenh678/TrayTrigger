@@ -26,7 +26,7 @@ How each launcher is started, and how to keep it out of the way, is under How a 
 
 ## Running a scan
 
-- Click "Scan for Games" (Library page or here in Settings) for a single-click scan: it runs immediately, with no extra prompts.
+- Click "Scan for Games" (Library page, or Settings > Launchers) for a single-click scan: it runs immediately, with no extra prompts.
 - If it finds one or more new games, the New Games Found picker opens so you can choose which to add - even a single result goes through that picker, since a scan can just as easily turn up several at once.
 - If nothing new turns up, or no integrations or scan locations are configured, you just get a status message - no dialog.
 - Turn on "Automatically scan on startup" to run this quietly every time TrayTrigger opens. It stays quiet unless it actually finds something new.
