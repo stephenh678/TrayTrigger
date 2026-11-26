@@ -21,6 +21,7 @@
         <converters:TabBackgroundConverter x:Key="TabBackgroundConverter"/>
         <converters:TabForegroundConverter x:Key="TabForegroundConverter"/>
         <converters:ScrollEdgeConverter x:Key="ScrollEdgeConverter"/>
+        <converters:ScrollArrowConverter x:Key="ScrollArrowConverter"/>
         <converters:RoundedClipConverter x:Key="RoundedClipConverter"/>
         <converters:RatioHeightConverter x:Key="RatioHeightConverter"/>
         <converters:PosterCardRadiusConverter x:Key="PosterCardRadiusConverter"/>
@@ -1158,6 +1159,81 @@
                                         <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
                                     </MultiBinding>
                                 </RepeatButton.Visibility>
+                            </RepeatButton>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The Library's category and collection strips: when the tabs run past the strip, an arrow at each end, in
+             space of its own so it covers no tab. An arrow dims at its end. Not tab stops, as above. -->
+        <Style x:Key="SideArrowButton" TargetType="RepeatButton" BasedOn="{StaticResource EdgeChevronButton}">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="{DynamicResource RadiusSmall}">
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}"
+                                       Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextDisabled}"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SideArrowScrollViewer" TargetType="ScrollViewer">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <RepeatButton Grid.Column="0" Style="{StaticResource SideArrowButton}" Content="&#xE76B;" Margin="0,0,2,0"
+                                          Command="{x:Static ScrollBar.LineLeftCommand}" AutomationProperties.Name="Scroll tabs left">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Show">
+                                        <Binding Path="ExtentWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                                <RepeatButton.IsEnabled>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Left">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.IsEnabled>
+                            </RepeatButton>
+                            <ScrollContentPresenter Grid.Column="1" CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                            <RepeatButton Grid.Column="2" Style="{StaticResource SideArrowButton}" Content="&#xE76C;" Margin="2,0,0,0"
+                                          Command="{x:Static ScrollBar.LineRightCommand}" AutomationProperties.Name="Scroll tabs right">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Show">
+                                        <Binding Path="ExtentWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                                <RepeatButton.IsEnabled>
+                                    <MultiBinding Converter="{StaticResource ScrollArrowConverter}" ConverterParameter="Right">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.IsEnabled>
                             </RepeatButton>
                         </Grid>
                     </ControlTemplate>

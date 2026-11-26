@@ -4,6 +4,11 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.8.2
+
+- **One line for categories and collections** - Collections now sit beside the category tabs. When they don't both fit, drag the divider between them to give either side more room.
+- **Tab arrows** - When the tabs don't fit, arrows at each end scroll them.
+
 ## 1.8.1
 
 - **Search moved** - The search button is now at the bottom of the left bar, above Activity. Ctrl+K still works.

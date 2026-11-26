@@ -456,7 +456,7 @@
                             <TextBlock Style="{StaticResource CardTitle}" Text="Tools" Margin="0,0,0,8"/>
                             <CheckBox Content="Enable Tools" IsChecked="{Binding EnableTools}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="Adds a Tools page to the sidebar for programs you use alongside games, like DLSS Swapper, Vortex or MSI Afterburner. Drop a program or its shortcut to add it, sort tools into categories, star favorites and give them hotkeys. Turning it off hides the page and keeps your tools."
+                            <TextBlock Text="Adds a Tools page to the sidebar for programs you use alongside games, like Discord, Vortex or MSI Afterburner. Drop a program or its shortcut to add it, sort tools into categories, star favorites and give them hotkeys. Turning it off hides the page and keeps your tools."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,0" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" Margin="24,4,0,0" HorizontalAlignment="Left"

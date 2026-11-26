@@ -796,6 +796,9 @@ public partial class App
                         if (n % 3 == 0) demo.Add("Co-op");
                         if (n % 4 == 1) demo.Add("With Discord");
                         if (n % 5 == 2) demo.Add("Family");
+                        // "many": more collections than a narrow row holds, to see the strips share it and their arrows.
+                        if (e.Args.Any(a => a.Equals("many", StringComparison.OrdinalIgnoreCase)))
+                            demo.AddRange(["Weekend", "Racing Nights", "Story Games", "Kids", "Old Favorites"]);
                         demoCards[n].Game.Collections = demo;
                     }
                     // Twelve games make two full rows of six.
@@ -804,7 +807,9 @@ public partial class App
                 }
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
-                CaptureVisual(_mainWindow, withCollections ? 1380 : 960, withCollections ? 900 : 700, targetPng);
+                // "narrow": the usual 960 wide even with collections, to see the tab row share a narrow window.
+                bool narrow = e.Args.Any(a => a.Equals("narrow", StringComparison.OrdinalIgnoreCase));
+                CaptureVisual(_mainWindow, withCollections && !narrow ? 1380 : 960, withCollections && !narrow ? 900 : 700, targetPng);
                 _mainViewModel.SettingsVM.LibraryViewMode = previousMode;
                 ExitApplication();
                 return;
@@ -2369,6 +2374,68 @@ public partial class App
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);
                 ExitApplication();
+                return;
+            }
+
+            // --screenshot-full-page <out.png> <system|settings> <tab>: the whole of one page tab, top to bottom, in
+            // one image (the page's scrolled content rendered at its full height), for reviewing a page's layout as a
+            // reader meets it. System waits for hardware detection first, as the other System captures do.
+            if (e.Args[i].Equals("--screenshot-full-page", StringComparison.OrdinalIgnoreCase) && i + 3 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                bool system = e.Args[i + 2].Equals("system", StringComparison.OrdinalIgnoreCase);
+                string tab = e.Args[i + 3];
+                _skipSettingsSaveOnExit = true;
+                if (system)
+                {
+                    _mainViewModel.SystemVM.CurrentSubSection = Enum.Parse<SystemSubSection>(tab, true);
+                    _mainViewModel.CurrentSection = NavSection.System;
+                }
+                else
+                {
+                    _mainViewModel.SettingsVM.SelectedTab = Enum.Parse<SettingsCategoryTab>(tab, true);
+                    _mainViewModel.CurrentSection = NavSection.Settings;
+                }
+                _mainWindow.WindowState = WindowState.Normal;
+                _mainWindow.Width = 1040;
+                _mainWindow.Height = 800;
+                _mainWindow.Show();
+                var started = DateTime.Now;
+                var poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                poll.Tick += (s, args) =>
+                {
+                    if (system && !_mainViewModel.SystemVM.IsSpecsLoaded && DateTime.Now - started < TimeSpan.FromSeconds(15)) return;
+                    if (DateTime.Now - started < TimeSpan.FromSeconds(1.5)) return;
+                    poll.Stop();
+                    _mainWindow.UpdateLayout();
+                    var sv = FindVisualChild<ScrollViewer>(_mainWindow, v => v.IsVisible && v.ScrollableHeight > 0 && v.ActualWidth > 600);
+                    if (sv?.Content is FrameworkElement page)
+                    {
+                        var visual = new DrawingVisual();
+                        using (var dc = visual.RenderOpen())
+                        {
+                            var size = new Rect(0, 0, page.ActualWidth + 32, page.ActualHeight + 32);
+                            dc.DrawRectangle((Brush)FindResource("BrushBackground"), null, size);
+                            dc.DrawRectangle(new VisualBrush(page)
+                            {
+                                // The page's own box, not the bounds of everything under it (which can reach past it).
+                                Stretch = Stretch.None, ViewboxUnits = BrushMappingMode.Absolute,
+                                Viewbox = new Rect(0, 0, page.ActualWidth, page.ActualHeight),
+                            }, null, new Rect(16, 16, page.ActualWidth, page.ActualHeight));
+                        }
+                        var rtb = new RenderTargetBitmap((int)(page.ActualWidth + 32), (int)(page.ActualHeight + 32), 96, 96, PixelFormats.Pbgra32);
+                        rtb.Render(visual);
+                        var encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(rtb));
+                        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(targetPng))!);
+                        using var file = File.Create(targetPng);
+                        encoder.Save(file);
+                        _logger($"[FullPage] {targetPng}: {page.ActualWidth:0}x{page.ActualHeight:0}");
+                    }
+                    else _logger("[FullPage] no scrolling page found");
+                    ExitApplication();
+                };
+                poll.Start();
                 return;
             }
 

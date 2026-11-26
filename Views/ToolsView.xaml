@@ -271,7 +271,7 @@
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Tools" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}"
                            FontFamily="{DynamicResource AppFont}" FontWeight="Normal"/>
-                <TextBlock Text="Launch the programs you use alongside your games, like DLSS Swapper, Vortex or MSI Afterburner"
+                <TextBlock Text="Launch the programs you use alongside your games, like Discord, Vortex or MSI Afterburner"
                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                            FontFamily="{DynamicResource AppFont}" Margin="0,4,0,0"/>
             </StackPanel>

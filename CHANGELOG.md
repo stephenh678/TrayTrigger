@@ -8,6 +8,11 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.8.2
+
+- **Categories and collections on one line** - the Library's collections now sit on the right of the category tabs instead of on a row of their own, with a divider between them; Add Game, Add Folder and Scan for Games move up beside the title. Each side takes the room its tabs need. When the window is too narrow for both, drag the divider to give one more room: TrayTrigger remembers where you leave it, and a double-click puts it back.
+- **Arrows to scroll the tabs** - when the categories or collections don't fit, arrows at each end of that strip scroll it, in space of their own instead of over the tabs. An arrow dims when you reach its end; the mouse wheel still scrolls too.
+
 ## 1.8.1
 
 - **A tool's collection limit is kept** - in Edit Tool > Limit to a collection, a collection picked from the box was dropped unless you pressed Add before Save, so the tool still applied to every game. Save now keeps a picked collection.
