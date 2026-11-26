@@ -586,6 +586,9 @@
                             <WrapPanel>
                                 <Button Content="Task Manager" Command="{Binding OpenTaskManagerCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
+                                <Button Content="Startup Apps" Command="{Binding OpenStartupAppsCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"
+                                        ToolTip="Opens Settings &gt; Apps &gt; Startup: what starts with Windows."/>
                                 <Button Content="Graphics Settings" Command="{Binding OpenGraphicsSettingsCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
                                 <Button Content="Device Manager" Command="{Binding OpenDeviceManagerCommand}"
@@ -756,7 +759,7 @@
                                 </StackPanel>
                             </DockPanel>
 
-                            <!-- The safety option for the two buttons above, beside them (it was under Settings until 1.8.2). -->
+                            <!-- The safety option for the two buttons above, beside them (it was under Settings until 2.0.0). -->
                             <CheckBox Content="Create a System Restore point before Apply Performance Preset or Put Back Preset"
                                       IsChecked="{Binding CreateRestorePointBeforeTweaks}" Margin="0,8,0,0"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>

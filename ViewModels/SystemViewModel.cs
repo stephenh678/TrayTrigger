@@ -1291,6 +1291,8 @@ public class SystemViewModel : ViewModelBase
     // Quick Tools Commands
     public ICommand OpenTaskManagerCommand { get; }
     public ICommand OpenDeviceManagerCommand { get; }
+    /// <summary>Settings > Apps > Startup: what starts with Windows, and its startup impact.</summary>
+    public ICommand OpenStartupAppsCommand { get; }
     public ICommand OpenGraphicsSettingsCommand { get; }
     public ICommand OpenDxDiagCommand { get; }
     /// <summary>Windows Settings > Display > Advanced display, where a screen's refresh rate is chosen.</summary>
@@ -1326,7 +1328,7 @@ public class SystemViewModel : ViewModelBase
 
     /// <summary>
     /// The Performance Preset card's own safety option: a System Restore point before Apply Performance Preset
-    /// or Put Back Preset. It sits beside the buttons it guards (it was under Settings until 1.8.2).
+    /// or Put Back Preset. It sits beside the buttons it guards (it was under Settings until 2.0.0).
     /// </summary>
     public bool CreateRestorePointBeforeTweaks
     {
@@ -1404,6 +1406,7 @@ public class SystemViewModel : ViewModelBase
 
         OpenTaskManagerCommand = new RelayCommand(() => SafeLaunchProcess("taskmgr.exe"));
         OpenDeviceManagerCommand = new RelayCommand(() => SafeLaunchProcess("devmgmt.msc"));
+        OpenStartupAppsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:startupapps"));
         OpenGraphicsSettingsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:display-advancedgraphics"));
         OpenDxDiagCommand = new RelayCommand(() => SafeLaunchProcess("dxdiag.exe"));
         OpenAdvancedDisplaySettingsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:display-advanced"));

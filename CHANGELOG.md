@@ -8,7 +8,7 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
-## 1.8.2
+## 2.0.0
 
 - **Categories and collections on one line** - the Library's collections now sit on the right of the category tabs instead of on a row of their own, with a divider between them; Add Game, Add Folder and Scan for Games move up beside the title. Each side takes the room its tabs need. When the window is too narrow for both, drag the divider to give one more room: TrayTrigger remembers where you leave it, and a double-click puts it back.
 - **Arrows to scroll the tabs** - when the categories or collections don't fit, arrows at each end of that strip scroll it, in space of their own instead of over the tabs. An arrow dims when you reach its end; the mouse wheel still scrolls too.
@@ -19,6 +19,7 @@ stable version they lead to.
 - **A tidier Hardware Specs tab** - the live readings (GPU load, CPU load, memory in use, ping) sit together in tiles across the top, and the spec cards are two to a row (one to a row in a narrow window), so the page is about half as tall. Checks that pass show a tick (a full PCIe link, Resizable BAR on, a screen at its fastest refresh rate) beside the warnings for those that don't, and the Windows tools card runs across the bottom. A PC with two graphics cards keeps each one's load in the Graphics card.
 - **The restore-point option moved to the Performance Preset card** - "Create a System Restore point before Apply Performance Preset or Put Back Preset" now sits under the two buttons it guards, and the Settings tab that held it is renamed Launching. Your choice is kept.
 - **About matches** - About also opens on its first tab, Overview, and shows one tab at a time (its All tab is gone too). Its cards have the same tinted headings, with their buttons on a row below: the shortcuts, Help Topics, the System Environment Report, Diagnostics & Storage, Community and Online. App Hotkeys... sits beside the app hotkeys it changes, and game and tool hotkeys are a card of their own. The Key Features tab is folded into Overview, below the version and install details: three tabs instead of four. The features are two to a row (one in a narrow window), and About's search finds each feature on its own. The Online card's link to the GitHub releases page is now **Release Notes**, so it isn't confused with **What's New**, which opens the in-app window.
+- **Startup Apps in Windows Tools** - the Windows Tools card on Hardware Specs has a Startup Apps button that opens Settings > Apps > Startup, to see and turn off what starts with Windows.
 - **Tidier Settings** - Scan Locations and Ignored Games are sections of the Scan for Games card rather than boxes inside it; the other launchers sit under their own heading below Steam; help links follow the description they belong to; the two notes under "Always show icon in tray" are one; and a search no longer names the Displays, Processor, Memory, Network, Stutter Check, Performance Preset and Backup cards by a reading or a button.
 
 ## 1.8.1
