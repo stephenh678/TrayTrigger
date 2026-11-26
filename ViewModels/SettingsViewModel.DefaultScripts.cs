@@ -16,10 +16,10 @@ using TrayTrigger.Views;
 
 namespace TrayTrigger.ViewModels;
 
-/// <summary>Settings > Launch & Performance: the default pre-launch and post-exit scripts.</summary>
+/// <summary>Settings > Launching: the default pre-launch and post-exit scripts.</summary>
 public partial class SettingsViewModel
 {
-    // --- Default scripts (Settings > Launch & Performance) ---
+    // --- Default scripts (Settings > Launching) ---
     // Always read through _settings.ScriptDefaults: "Reset to defaults" swaps that object.
 
     /// <summary>"Run the default scripts": pauses the defaults without clearing anything.</summary>

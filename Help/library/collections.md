@@ -20,7 +20,7 @@ Right-click a chip to rename the collection (every game in it follows) or delete
 
 ## Show category tabs
 
-A library with many categories can crowd the category row. In Settings > Library, turn off **Show category tabs** to keep only All, Favorites and Hidden there. The categories still exist, in Change Category and the search box; collections are unaffected.
+A library with many categories can crowd the category row. In Settings > Finding Games, turn off **Show category tabs** to keep only All, Favorites and Hidden there. The categories still exist, in Change Category and the search box; collections are unaffected.
 
 ## Tools for a collection
 

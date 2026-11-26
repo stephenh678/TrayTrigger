@@ -20,17 +20,20 @@ public class LinksLandOnTheSettingTests
     public void ASettingsCardAJumpLooksFor_IsHeadedWithThatTitle(string title)
     {
         string heading = title.Replace("&", "&amp;");
-        Assert.Contains($"<TextBlock Style=\"{{StaticResource CardTitle}}\" Text=\"{heading}\"", Read("Views/SettingsView.xaml"));
+        Assert.Contains($"<TextBlock Style=\"{{StaticResource CardHeaderTitle}}\" Text=\"{heading}\"", Read("Views/SettingsView.xaml"));
     }
 
     [Fact]
     public void EveryJumpToASettingsTab_AlsoShowsACard()
     {
         string source = Read("ViewModels/MainViewModel.cs");
-        // The tab-strip buttons and the page reset use the All tab; any other tab set from code is a jump.
-        int jumps = Regex.Matches(source, @"SettingsVM\.SelectedTab = SettingsCategoryTab\.(?!All\b)\w+;").Count;
+        // The page reset puts Settings back on its first tab; any other tab set from code is a jump.
+        int reset = source.IndexOf("private void ResetPageOnLeave", StringComparison.Ordinal);
+        Assert.True(reset >= 0, "ResetPageOnLeave moved: update this test.");
+        source = source.Remove(reset, source.IndexOf("\n    }", reset, StringComparison.Ordinal) - reset);
+        int jumps = Regex.Matches(source, @"SettingsVM\.SelectedTab = SettingsCategoryTab\.\w+;").Count;
         int jumpsThatShowACard = Regex.Matches(source,
-            @"SettingsVM\.SelectedTab = SettingsCategoryTab\.(?!All\b)\w+;[^}]*?ShowSettingsCardRequested\?\.Invoke\(\w+CardTitle\)").Count;
+            @"SettingsVM\.SelectedTab = SettingsCategoryTab\.\w+;[^}]*?ShowSettingsCardRequested\?\.Invoke\(\w+CardTitle\)").Count;
 
         Assert.True(jumps > 0);
         Assert.Equal(jumps, jumpsThatShowACard);

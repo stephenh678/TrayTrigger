@@ -109,6 +109,10 @@
     <SolidColorBrush x:Key="BrushInfoText" Color="{StaticResource ColorInfoText}"/>
     <Color x:Key="ColorAccentWash">#FF1C2E3D</Color>
     <SolidColorBrush x:Key="BrushAccentWash" Color="{StaticResource ColorAccentWash}"/>
+    <!-- The band at the top of a card that groups rows (CardHeaderBand): the card color with 16% of the accent, so it
+         reads as a heading in every theme (a theme's AccentWash can be nearly its card color) without being a selected row. -->
+    <Color x:Key="ColorHeaderWash">#FF182B3E</Color>
+    <SolidColorBrush x:Key="BrushHeaderWash" Color="{StaticResource ColorHeaderWash}"/>
     <Color x:Key="ColorBadgePurple">#FFB9A6F0</Color>
     <SolidColorBrush x:Key="BrushBadgePurple" Color="{StaticResource ColorBadgePurple}"/>
     <Color x:Key="ColorBadgePurpleWash">#FF2B2340</Color>

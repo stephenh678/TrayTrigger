@@ -55,7 +55,7 @@ The filter box above the list narrows it by name, category or path, the tabs spl
 ## Launching
 
 - Double-click a tool, press Enter (or Ctrl+Enter, as for a game) on it, use its hotkey, or pick it from the tray menu.
-- A tool gets the same launch notice and launch popup as a game, and starts after the same short delay. The popup settings under Settings > Launch & Performance > Launching Games cover games and tools together.
+- A tool gets the same launch notice and launch popup as a game, and starts after the same short delay. The popup settings under Settings > Launching > Launching Games cover games and tools together.
 - If the tool is already running, its window comes to the front instead of a second copy starting. A tool that only lives in the system tray has no window to show, so you get a short "already running" notice instead.
 - For a tool with arguments, "already running" means the copy TrayTrigger started for that tool. Two tools that share a program, like Command Prompt running two different scripts, each start their own copy.
 - If the program has moved or been uninstalled, the tool shows MISSING and launching it offers to locate the program.

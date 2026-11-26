@@ -4,7 +4,7 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 
 This page covers using scripts. Writing your own script covers the arguments a script receives and the PowerShell details.
 
-Scripts are off until you turn them on. Tick **Enable scripts** under Settings > Launch & Performance, or in Edit Game's Scripts tab, where the notice has the same switch. It is one setting for every game and takes effect at once, even if you cancel Edit Game.
+Scripts are off until you turn them on. Tick **Enable scripts** under Settings > Launching, or in Edit Game's Scripts tab, where the notice has the same switch. It is one setting for every game and takes effect at once, even if you cancel Edit Game.
 
 ## Supported file types
 
@@ -50,7 +50,7 @@ Work on your own file: "New script..." next to each path box creates one from a 
 
 ## Default scripts for every game
 
-Settings > Launch & Performance can hold a default pre-launch script and a default post-exit script. They run for any game that has no script of its own for that phase, so one "close Discord, restart it afterwards" pair covers the whole library without touching each game.
+Settings > Launching can hold a default pre-launch script and a default post-exit script. They run for any game that has no script of its own for that phase, so one "close Discord, restart it afterwards" pair covers the whole library without touching each game.
 
 - Resolution is per phase. A game with its own pre-launch script but no post-exit script runs its own pre-launch and the default post-exit.
 - Any game can opt out of both defaults with "Don't run the default scripts for this game" in Edit Game.

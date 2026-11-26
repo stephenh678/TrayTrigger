@@ -125,6 +125,7 @@ To do it by hand, put the picture in the same folder as the theme file and name 
 | AccentHover, AccentPressed | The same buttons under the mouse, and pressed |
 | AccentText | Links, section headings and icons in the accent color |
 | AccentWash | A faint accent background (a selected row, an info badge) |
+| HeaderWash | The tinted band at the top of a card that groups settings or tweaks: the card color with a little of the accent |
 | Brand | The "Trigger" half of the name in the sidebar |
 | InfoText | Text on an AccentWash |
 | TextPrimary | Main text |

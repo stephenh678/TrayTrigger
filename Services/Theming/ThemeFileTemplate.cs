@@ -41,6 +41,7 @@ internal static class ThemeFileTemplate
         new("AccentPressed", "Accent buttons while clicked."),
         new("AccentText", "Links, icons and captions in the accent color."),
         new("AccentWash", "Faint accent tint behind selected rows and notes."),
+        new("HeaderWash", "The tinted band at the top of a card that groups rows."),
         new("Brand", "The \"Trigger\" half of the TrayTrigger name."),
         new("InfoText", "Information messages."),
         new("TextOnSolid", "Text on solid accent, danger and success buttons."),

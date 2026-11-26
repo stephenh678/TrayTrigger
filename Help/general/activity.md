@@ -50,7 +50,7 @@ Games you add and changes to performance settings - Performance Profiles, CPU Co
 ## Notifications
 
 - Nothing interrupts a game. After the last game exits, one notification sums up anything that went wrong, such as "Elden Ring's post-exit script failed". Clicking it opens Activity & History.
-- **Notify me when a scan finds new games**, in Settings > Library & Art, adds a notification when the startup scan finds games. It's off by default and is the only notification setting.
+- **Notify me when a scan finds new games**, in Settings > Finding Games, adds a notification when the startup scan finds games. It's off by default and is the only notification setting.
 
 ## For bug reports
 

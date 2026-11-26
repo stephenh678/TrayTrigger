@@ -1683,7 +1683,7 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.All;
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.General;
                 _mainViewModel.CurrentSection = NavSection.Settings;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
@@ -1824,7 +1824,7 @@ public partial class App
                 return;
             }
 
-            // --screenshot-settings-performance <out.png> [offset]: the Launch & Performance tab,
+            // --screenshot-settings-performance <out.png> [offset]: the Launching tab,
             // scrolled to its end (where the default scripts block sits) or to a given offset.
             if ((e.Args[i].Equals("--screenshot-settings-performance", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-performance", StringComparison.OrdinalIgnoreCase)) &&
@@ -1853,7 +1853,7 @@ public partial class App
             {
                 string targetTxt = e.Args[i + 1];
                 string query = e.Args[i + 2];
-                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.All;
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.General;
                 _mainViewModel.CurrentSection = NavSection.Settings;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
@@ -1899,7 +1899,7 @@ public partial class App
             }
 
             // --screenshot-settings-search <out.png> <query> [tab]: the card search typed on the General tab
-            // (or the named one, e.g. Library or All), with its best match chosen: the page shows that card
+            // (or the named one, e.g. Library), with its best match chosen: the page shows that card
             // on its own tab, outlined, with the words marked.
             if ((e.Args[i].Equals("--screenshot-settings-search", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-search", StringComparison.OrdinalIgnoreCase)) &&
@@ -2352,7 +2352,7 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.CurrentSection = NavSection.System;
-                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All;
+                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.HardwareSpecs;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);
@@ -2366,7 +2366,7 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.CurrentSection = NavSection.System;
-                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All;
+                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.PerformanceTweaks;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 var sv = FindVisualChild<ScrollViewer>(_mainWindow, s => s.ScrollableHeight > 0);
@@ -2377,7 +2377,7 @@ public partial class App
                 return;
             }
 
-            // --screenshot-full-page <out.png> <system|settings> <tab>: the whole of one page tab, top to bottom, in
+            // --screenshot-full-page <out.png> <system|settings> <tab> [window width]: the whole of one page tab, top to bottom, in
             // one image (the page's scrolled content rendered at its full height), for reviewing a page's layout as a
             // reader meets it. System waits for hardware detection first, as the other System captures do.
             if (e.Args[i].Equals("--screenshot-full-page", StringComparison.OrdinalIgnoreCase) && i + 3 < e.Args.Length)
@@ -2397,7 +2397,7 @@ public partial class App
                     _mainViewModel.CurrentSection = NavSection.Settings;
                 }
                 _mainWindow.WindowState = WindowState.Normal;
-                _mainWindow.Width = 1040;
+                _mainWindow.Width = i + 4 < e.Args.Length && double.TryParse(e.Args[i + 4], out double fullPageWidth) ? fullPageWidth : 1040;
                 _mainWindow.Height = 800;
                 _mainWindow.Show();
                 var started = DateTime.Now;
@@ -2439,7 +2439,7 @@ public partial class App
                 return;
             }
 
-            // --screenshot-system-search <out.png> <query>: System's card search on its All tab, typed
+            // --screenshot-system-search <out.png> <query>: System's card search from its first tab, typed
             // once hardware detection has finished (up to 15 s) so the spec cards are there to search.
             if ((e.Args[i].Equals("--screenshot-system-search", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-system-search", StringComparison.OrdinalIgnoreCase)) &&
@@ -2455,7 +2455,7 @@ public partial class App
                 return;
             }
 
-            // --screenshot-system-ready <out.png>: the System "All" tab captured only once hardware
+            // --screenshot-system-ready <out.png>: the System page (Hardware Specs) captured only once hardware
             // detection has finished (up to 15 s), so the README shot shows real specs rather than
             // "Detecting hardware...".
             if ((e.Args[i].Equals("--screenshot-system-ready", StringComparison.OrdinalIgnoreCase) ||
@@ -2738,7 +2738,7 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _skipSettingsSaveOnExit = true;
-                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.Library;
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.FindingGames;
                 _mainViewModel.CurrentSection = NavSection.Settings;
                 typeof(SettingsViewModel).GetMethod("OfferUndo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                     .Invoke(_mainViewModel.SettingsVM, new object[] { @"Removed scan location D:\Games", new Action(() => { }) });
@@ -3727,12 +3727,10 @@ public partial class App
                 if (!_mainViewModel.SettingsVM.ShowGeneralSection) throw new Exception("Expected ShowGeneralSection to be true on General tab");
                 if (_mainViewModel.SettingsVM.ShowDiagnosticsSection) throw new Exception("Expected ShowDiagnosticsSection to be false on General tab");
 
-                _mainViewModel.SettingsVM.SelectAllTabCommand.Execute(null);
-                if (!_mainViewModel.SettingsVM.ShowGeneralSection ||
-                    !_mainViewModel.SettingsVM.ShowLibrarySection ||
-                    !_mainViewModel.SettingsVM.ShowTrayMenuSection ||
-                    !_mainViewModel.SettingsVM.ShowDiagnosticsSection)
-                    throw new Exception("Expected all sections visible on All tab");
+                _mainViewModel.SettingsVM.SelectTrayMenuTabCommand.Execute(null);
+                if (!_mainViewModel.SettingsVM.ShowTrayMenuSection) throw new Exception("Expected ShowTrayMenuSection to be true on Tray Menu tab");
+                if (_mainViewModel.SettingsVM.ShowGeneralSection || _mainViewModel.SettingsVM.ShowFindingGamesSection || _mainViewModel.SettingsVM.ShowLibrarySection || _mainViewModel.SettingsVM.ShowDiagnosticsSection)
+                    throw new Exception("Expected only the Tray Menu section on Tray Menu tab");
 
                 Console.WriteLine("TEST_SETTINGS_NAVIGATION_PASSED");
                 ExitApplication();
@@ -3747,7 +3745,6 @@ public partial class App
                 _mainViewModel.SystemVM.SelectSpecsTabCommand.Execute(null);
                 if (_mainViewModel.SystemVM.CurrentSubSection != SystemSubSection.HardwareSpecs) throw new Exception("Expected HardwareSpecs sub-section");
                 if (!_mainViewModel.SystemVM.IsSpecsTab) throw new Exception("Expected IsSpecsTab=true");
-                if (_mainViewModel.SystemVM.IsAllTab) throw new Exception("Expected IsAllTab=false");
                 if (_mainViewModel.SystemVM.IsTweaksTab) throw new Exception("Expected IsTweaksTab=false");
                 if (!_mainViewModel.SystemVM.ShowSpecsSection) throw new Exception("Expected ShowSpecsSection=true on Specs tab");
                 if (_mainViewModel.SystemVM.ShowTweaksSection) throw new Exception("Expected ShowTweaksSection=false on Specs tab");
@@ -3756,17 +3753,13 @@ public partial class App
                 if (_mainViewModel.SystemVM.CurrentSubSection != SystemSubSection.PerformanceTweaks) throw new Exception("Expected PerformanceTweaks sub-section");
                 if (!_mainViewModel.SystemVM.IsTweaksTab) throw new Exception("Expected IsTweaksTab=true");
                 if (_mainViewModel.SystemVM.IsSpecsTab) throw new Exception("Expected IsSpecsTab=false");
-                if (_mainViewModel.SystemVM.IsAllTab) throw new Exception("Expected IsAllTab=false");
                 if (!_mainViewModel.SystemVM.ShowTweaksSection) throw new Exception("Expected ShowTweaksSection=true on Tweaks tab");
                 if (_mainViewModel.SystemVM.ShowSpecsSection) throw new Exception("Expected ShowSpecsSection=false on Tweaks tab");
 
-                _mainViewModel.SystemVM.SelectAllTabCommand.Execute(null);
-                if (_mainViewModel.SystemVM.CurrentSubSection != SystemSubSection.All) throw new Exception("Expected All sub-section");
-                if (!_mainViewModel.SystemVM.IsAllTab) throw new Exception("Expected IsAllTab=true");
-                if (_mainViewModel.SystemVM.IsSpecsTab) throw new Exception("Expected IsSpecsTab=false");
-                if (_mainViewModel.SystemVM.IsTweaksTab) throw new Exception("Expected IsTweaksTab=false");
-                if (!_mainViewModel.SystemVM.ShowSpecsSection) throw new Exception("Expected ShowSpecsSection=true on All tab");
-                if (!_mainViewModel.SystemVM.ShowTweaksSection) throw new Exception("Expected ShowTweaksSection=true on All tab");
+                _mainViewModel.SystemVM.SelectGameProfilesTabCommand.Execute(null);
+                if (_mainViewModel.SystemVM.CurrentSubSection != SystemSubSection.GameProfiles) throw new Exception("Expected GameProfiles sub-section");
+                if (!_mainViewModel.SystemVM.ShowGameProfilesSection) throw new Exception("Expected ShowGameProfilesSection=true on Profiles tab");
+                if (_mainViewModel.SystemVM.ShowSpecsSection || _mainViewModel.SystemVM.ShowTweaksSection) throw new Exception("Expected only the Profiles section on Profiles tab");
 
                 Console.WriteLine("TEST_SYSTEM_NAVIGATION_PASSED");
                 ExitApplication();
@@ -5048,7 +5041,7 @@ public partial class App
     /// captures <paramref name="targetPng"/> and exits. Shared by --screenshot-system-ready, -specs
     /// and -search.
     /// </summary>
-    private void CaptureSystemOnceSpecsLoad(string targetPng, Action? beforeCapture = null, SystemSubSection tab = SystemSubSection.All)
+    private void CaptureSystemOnceSpecsLoad(string targetPng, Action? beforeCapture = null, SystemSubSection tab = SystemSubSection.HardwareSpecs)
     {
         _mainViewModel.CurrentSection = NavSection.System;
         _mainViewModel.SystemVM.CurrentSubSection = tab;

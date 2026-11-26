@@ -121,6 +121,9 @@ public partial class SettingsViewModel
             nameof(AppSettings.GameDetailsWidth),
             nameof(AppSettings.GameDetailsHeight),
             nameof(AppSettings.WindowSizes),
+            // The Library's tab divider: the view keeps showing the dragged split, so a reset of the stored one
+            // would only disagree with the screen (and a click on the divider would write it back).
+            nameof(AppSettings.LibraryTabSplit),
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),
@@ -238,7 +241,6 @@ public partial class SettingsViewModel
         // "Reset to defaults" swaps the ScriptDefaults object, so re-derive the mirrored-path tick.
         _defaultUseSameScriptForBoth = null;
         NotifyDefaultScriptsChanged();
-        OnPropertyChanged(nameof(CreateRestorePointBeforeTweaks));
         OnPropertyChanged(nameof(VerboseLoggingEnabled));
         OnPropertyChanged(nameof(LibraryViewMode));
         OnPropertyChanged(nameof(IsGridView));

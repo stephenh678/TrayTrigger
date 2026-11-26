@@ -23,7 +23,10 @@
 
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- Reusable Settings-Style Tweak Row Item Template -->
+        <!-- One tweak row: its name, a tag only for what the switch can't say (NOT APPLIED, N/A, or ON/OFF on a
+             status-only row), the description with Learn more at its end, what applying it asks of you as a quiet
+             line, and at the right any extra button and the on/off switch. Which set it belongs to (preset or
+             opt-in) is the sub-heading it sits under. -->
         <DataTemplate x:Key="TweakItemTemplate" DataType="{x:Type vm:SystemTweakViewModel}">
             <Border BorderBrush="{DynamicResource BrushSurfaceHover}" BorderThickness="0,0,0,1" Padding="0,6,0,10" Margin="0,0,0,6">
                 <Grid>
@@ -33,47 +36,27 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}" 
+                            <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}"
                                        AutomationProperties.Name="{Binding AccessibleStatus}" VerticalAlignment="Center"/>
-                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding ShowStatusBadge, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Style="{StaticResource BadgeText}" Text="{Binding StatusBadgeText}" Foreground="{Binding StatusBadgeForeground}"/>
                             </Border>
-                            <!-- Every row says which set it is in: PRESET or OPT-IN. A muted blue, so it
-                                 doesn't compete with the green and amber status badges. -->
-                            <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Part of the Performance Preset: Apply Performance Preset turns it on, Put Back Preset puts it back.">
-                                <TextBlock Style="{StaticResource BadgeText}" Text="PRESET" Foreground="{DynamicResource BrushInfoText}"/>
-                            </Border>
-                            <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Has a real trade-off, so it stays off until you turn it on yourself.">
-                                <TextBlock Style="{StaticResource BadgeText}" Text="OPT-IN" Foreground="{DynamicResource BrushTextSoft}"/>
-                            </Border>
-                            <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Windows only picks up the new value after a restart.">
-                                <TextBlock Style="{StaticResource BadgeText}" Text="⟳ RESTART" Foreground="{DynamicResource BrushWarning}"/>
-                            </Border>
-                            <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Writes a machine-wide value, so Windows asks for administrator permission.">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                    <TextBlock Style="{StaticResource BadgeText}" Text="ADMIN" Foreground="{DynamicResource BrushBadgePurple}" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding ShortDescription}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
-                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <!-- The "why" and trade-offs live in Help/tweaks/<id>.md, opened by the link at the end. -->
+                        <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap">
+                            <Run Text="{Binding ShortDescription, Mode=OneWay}"/>
+                            <Hyperlink Style="{StaticResource InlineHelpLink}" CommandParameter="{Binding HelpTopicId}"
+                                       AutomationProperties.Name="{Binding Name, StringFormat='Learn more about {0}'}">Learn more</Hyperlink>
+                        </TextBlock>
+                        <TextBlock Text="{Binding RequirementsText}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding HasRequirements, Converter={StaticResource BoolToVis}}"
+                                   ToolTip="Administrator permission: it writes a machine-wide value, so Windows asks first. Restart: Windows only picks up the new value after one."/>
                         <TextBlock Text="{Binding UnavailableReason}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding ShowUnavailableReason, Converter={StaticResource BoolToVis}}"/>
-                        <!-- The "why" and trade-offs live in Help/tweaks/<id>.md, opened here. -->
-                        <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
-                                Command="{x:Static services:HelpCommands.ShowTopic}"
-                                CommandParameter="{Binding HelpTopicId}"
-                                AutomationProperties.Name="{Binding Name, StringFormat='Learn more about {0}'}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Content="{Binding CustomActionLabel}" Command="{Binding CustomActionCommand}"
@@ -86,17 +69,11 @@
                                 </MultiBinding>
                             </AutomationProperties.Name>
                         </Button>
-                        <Button Content="{Binding ActionButtonText}" Command="{Binding ToggleCommand}"
-                                Visibility="{Binding CanToggle, Converter={StaticResource BoolToVis}}"
-                                IsEnabled="{Binding CanExecuteToggle}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="10,4" FontSize="{DynamicResource FontSizeBody}">
-                            <AutomationProperties.Name>
-                                <MultiBinding StringFormat="{}{0}: {1}">
-                                    <Binding Path="ActionButtonText"/>
-                                    <Binding Path="AccessibleStatus"/>
-                                </MultiBinding>
-                            </AutomationProperties.Name>
-                        </Button>
+                        <!-- The switch is the row's state: on = TrayTrigger's value, off = what it found. -->
+                        <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding SwitchOn, Mode=TwoWay}" Tag="{Binding SwitchText}"
+                                  Visibility="{Binding CanToggle, Converter={StaticResource BoolToVis}}"
+                                  IsEnabled="{Binding CanExecuteToggle}" VerticalAlignment="Center" Margin="4,0,0,0"
+                                  AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RequirementsText}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -134,6 +111,9 @@
             </Border>
         </DataTemplate>
 
+        <!-- One profile tweak, laid out as a Performance Tweaks row: its name, the description with Learn more at its
+             end, what it asks of you, and at the right the same switch (on = the profile applies it). It edits the
+             profile only: nothing changes on the PC until a game on this profile starts. -->
         <DataTemplate x:Key="ProfileTweakToggleTemplate" DataType="{x:Type vm:ProfileTweakToggleViewModel}">
             <Border BorderBrush="{DynamicResource BrushSurfaceHover}" BorderThickness="0,0,0,1" Padding="0,6,0,10" Margin="0,0,0,6">
                 <Grid>
@@ -142,46 +122,24 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <!-- The longer rationale lives in the Learn more topic. -->
-                            <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}"
-                                       AutomationProperties.Name="{Binding AccessibleStatus}" VerticalAlignment="Center"/>
-                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource BadgeText}" Text="{Binding StatusBadgeText}" Foreground="{Binding StatusBadgeForeground}"/>
-                            </Border>
-                            <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Has a real trade-off, so it stays off until you turn it on yourself.">
-                                <TextBlock Style="{StaticResource BadgeText}" Text="OPT-IN" Foreground="{DynamicResource BrushTextSoft}"/>
-                            </Border>
-                            <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Writes a machine-wide value, so Windows asks for administrator permission.">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                    <TextBlock Style="{StaticResource BadgeText}" Text="ADMIN" Foreground="{DynamicResource BrushBadgePurple}" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                        <TextBlock Text="{Binding ShortDescription}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
-                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}"
+                                   AutomationProperties.Name="{Binding AccessibleStatus}"/>
+                        <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap">
+                            <Run Text="{Binding ShortDescription, Mode=OneWay}"/>
+                            <Hyperlink Style="{StaticResource InlineHelpLink}" CommandParameter="{Binding HelpTopicId}"
+                                       AutomationProperties.Name="{Binding Name, StringFormat='Learn more about {0}'}">Learn more</Hyperlink>
+                        </TextBlock>
+                        <TextBlock Text="{Binding RequirementsText}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding HasRequirements, Converter={StaticResource BoolToVis}}"
+                                   ToolTip="It writes a machine-wide value, so Windows asks for administrator permission when the game starts and when it closes."/>
                         <TextBlock Text="{Binding Note}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
-                        <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
-                                Command="{x:Static services:HelpCommands.ShowTopic}"
-                                CommandParameter="{Binding HelpTopicId}"
-                                AutomationProperties.Name="{Binding Name, StringFormat='Learn more about {0}'}"/>
                     </StackPanel>
-                    <Button Grid.Column="1" Content="{Binding ActionButtonText}" Command="{Binding ToggleCommand}"
-                            Style="{StaticResource ModernOutlineButton}" Padding="10,4" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center">
-                            <AutomationProperties.Name>
-                                <MultiBinding StringFormat="{}{0}: {1}">
-                                    <Binding Path="ActionButtonText"/>
-                                    <Binding Path="AccessibleStatus"/>
-                                </MultiBinding>
-                            </AutomationProperties.Name>
-                        </Button>
+                    <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsEnabled, Mode=TwoWay}" Tag="{Binding SwitchText}"
+                              VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RequirementsText}"/>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -197,7 +155,7 @@
 
         <!-- 1. HEADER -->
         <DockPanel Grid.Row="0" Margin="0,0,0,14">
-            <!-- Right: Live Telemetry Indicator - only where the live readings are (All, Hardware Specs) -->
+            <!-- Right: Live Telemetry Indicator - only where the live readings are (Hardware Specs) -->
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
                         Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
@@ -226,9 +184,7 @@
                 BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" HorizontalAlignment="Left" VerticalAlignment="Center"
                 views:ScrollToTop.Target="{Binding ElementName=ContentScroll}">
             <StackPanel Orientation="Horizontal">
-                <Button Content="All" Command="{Binding SelectAllTabCommand}"
-                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}"/>
-                <Button Content="Hardware Specs" Command="{Binding SelectSpecsTabCommand}" Margin="2,0,0,0"
+                <Button Content="Hardware Specs" Command="{Binding SelectSpecsTabCommand}"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSpecsTab}"/>
                 <Button Content="Stutter Check" Command="{Binding SelectStutterTabCommand}" Margin="2,0,0,0"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsStutterTab}"/>
@@ -256,10 +212,13 @@
                 <!-- ========================================================== -->
                 <!-- CATEGORY 1: HARDWARE SPECS                                 -->
                 <!-- ========================================================== -->
-                <StackPanel Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
+                <!-- Hardware Specs: live readings in tiles across the top, then the spec cards two to a row (one to a row in a
+                     narrow window), Storage and the Windows tools across the whole width. SpecGridPanel lays it out; the
+                     cards stay its direct children, so the card search still sees each one. -->
+                <views:SpecGridPanel Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
                             views:CardSearch.Tab="{x:Static vm:SystemSubSection.HardwareSpecs}" views:CardSearch.TabLabel="Hardware Specs">
                     <!-- Section header, on every tab: the section's own Refresh lives at its right end. -->
-                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True" views:SpecGridPanel.IsWide="True">
                         <DockPanel LastChildFill="True">
                             <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="&#x21BB; Refresh"
                                     Command="{Binding RefreshSpecsCommand}" IsEnabled="{Binding CanRefreshSpecs}"
@@ -276,14 +235,69 @@
                     </Border>
 
                     <!-- Loading placeholder: shown instead of the spec cards, which would otherwise
-                         paint "Unknown GPU / 0 GB / 0 x 0 @ 0Hz" for the first second or two. -->
-                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsLoadingSpecs, Converter={StaticResource BoolToVis}}">
+                         paint "Unknown GPU / 0 GB / 0 x 0 @ 0Hz" for the first second or two. Marked as a
+                         header so the card search skips it: it has nothing to find. -->
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsLoadingSpecs, Converter={StaticResource BoolToVis}}"
+                            views:CardSearch.IsHeader="True" views:SpecGridPanel.IsWide="True">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
                                        Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                             <TextBlock Text="Detecting hardware..." FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
+
+
+                    <!-- The live readings, together where they're easy to compare: the first GPU's load, the CPU's, memory in
+                         use and ping. The cards below hold the details. Not a search result: the cards say the same. -->
+                    <Grid Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}" Margin="{StaticResource CardGap}"
+                          views:CardSearch.IsHeader="True" views:SpecGridPanel.IsWide="True">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource CardPadding}" Margin="0,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="GPU load" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding PrimaryGpuCard.LoadDisplay, Mode=OneWay, FallbackValue=–}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0"/>
+                                    <ProgressBar Value="{Binding PrimaryGpuCard.LoadPercent, Mode=OneWay, FallbackValue=0}" Maximum="100" Height="5" Margin="0,6,0,0"
+                                                 Background="{DynamicResource BrushDialogCard}" Foreground="{DynamicResource BrushAccent}" BorderThickness="0"/>
+                                    <TextBlock Text="{Binding PrimaryGpuCard.Name, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource CardPadding}" Margin="5,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="CPU load" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding Cpu.CurrentUsagePercent, Mode=OneWay, StringFormat='{}{0}%'}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0"/>
+                                    <ProgressBar Value="{Binding Cpu.CurrentUsagePercent, Mode=OneWay}" Maximum="100" Height="5" Margin="0,6,0,0"
+                                                 Background="{DynamicResource BrushDialogCard}" Foreground="{DynamicResource BrushAccent}" BorderThickness="0"/>
+                                    <TextBlock Text="{Binding Cpu.ModelName, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource CardPadding}" Margin="5,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="Memory in use" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding Ram.UsagePercent, Mode=OneWay, StringFormat='{}{0}%'}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0"/>
+                                    <ProgressBar Value="{Binding Ram.UsagePercent, Mode=OneWay}" Maximum="100" Height="5" Margin="0,6,0,0"
+                                                 Background="{DynamicResource BrushDialogCard}" Foreground="{DynamicResource BrushAccent}" BorderThickness="0"/>
+                                    <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
+                                        <Run Text="{Binding Ram.UsedGigabytes, Mode=OneWay, StringFormat='{}{0:0.#}'}"/><Run Text="{Binding Ram.TotalGigabytes, Mode=OneWay, StringFormat=' of {0:0.#} GB'}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="3" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusCard}" Padding="{StaticResource CardPadding}" Margin="5,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Ping" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding Network.PingDisplay, Mode=OneWay}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding Network.ConnectionType, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+                    </Grid>
 
                     <!-- Each spec card carries its own IsSpecsLoaded rule instead of sharing a wrapper
                          panel, so the card search sees them as separate cards. -->
@@ -295,14 +309,19 @@
                          Intel publish nothing to ask, so theirs opens their driver page. -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Graphics (GPU)" Margin="0,0,0,6"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Graphics" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <ItemsControl ItemsSource="{Binding GpuCards}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Margin="0,0,0,12">
                                             <DockPanel LastChildFill="True" Margin="0,0,0,3">
-                                                <!-- Live load in the CPU card's live style; the VRAM size, static, until the first reading. -->
-                                                <Grid DockPanel.Dock="Right" VerticalAlignment="Center">
+                                                <!-- Each GPU's own load, only with two or more: the tile at the top shows the first. -->
+                                                <Grid DockPanel.Dock="Right" VerticalAlignment="Center"
+                                                      Visibility="{Binding DataContext.HasSeveralGpus, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}">
                                                     <Border Style="{StaticResource SpecLivePill}"
                                                             Visibility="{Binding IsLive, Converter={StaticResource BoolToVis}}">
                                                         <TextBlock Text="{Binding PillText}"/>
@@ -319,7 +338,12 @@
                                                     <TextBlock Text="{Binding KindLabel}" FontSize="{DynamicResource FontSizeBadge}"/>
                                                 </Border>
                                             </DockPanel>
-                                            <TextBlock Text="{Binding DetailLine}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,2"/>
+                                            <TextBlock Text="{Binding DetailLine}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                                            <!-- The checks it passes, with a tick; a failed one is the amber line below instead. -->
+                                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2" TextWrapping="Wrap"
+                                                       Visibility="{Binding HasPassedChecks, Converter={StaticResource BoolToVis}}">
+                                                <Run Text="&#x2713; " Foreground="{DynamicResource BrushSuccessText}"/><Run Text="{Binding PassedChecks, Mode=OneWay}"/>
+                                            </TextBlock>
                                             <!-- Fewer PCIe lanes than the card supports: the wrong slot, or one sharing
                                                  its lanes with an M.2 drive. Width only - the speed drops at idle. -->
                                             <TextBlock Text="{Binding PcieWarning}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
@@ -361,9 +385,6 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <ProgressBar Value="{Binding LoadPercent, Mode=OneWay}" Maximum="100" Height="6" Margin="0,8,0,0"
-                                                         Background="{DynamicResource BrushDialogCard}" Foreground="{DynamicResource BrushAccent}" BorderThickness="0"
-                                                         Visibility="{Binding IsLive, Converter={StaticResource BoolToVis}}"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -376,12 +397,11 @@
                          display's counterpart of the XMP/EXPO note on the memory card. -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,6">
-                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecStaticPill}">
-                                    <TextBlock Text="{Binding PrimaryDisplay.RefreshRateHz, Mode=OneWay, StringFormat='{}{0} Hz'}"/>
-                                </Border>
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Displays &amp; Refresh Rate" VerticalAlignment="Center"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xE7F8;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Displays" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <ItemsControl ItemsSource="{Binding Displays}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -396,6 +416,10 @@
                                                 </Border>
                                             </StackPanel>
                                             <TextBlock Text="{Binding DeviceName}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,1,0,0"/>
+                                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                                       Visibility="{Binding IsAtFastestRefresh, Converter={StaticResource BoolToVis}}">
+                                                <Run Text="&#x2713; " Foreground="{DynamicResource BrushSuccessText}"/><Run Text="{Binding FastestRefreshNote, Mode=OneWay}"/>
+                                            </TextBlock>
                                             <DockPanel Margin="0,4,0,0" LastChildFill="True"
                                                        Visibility="{Binding IsBelowMaxRefresh, Converter={StaticResource BoolToVis}}">
                                                 <Button DockPanel.Dock="Right" Content="Display Settings..."
@@ -414,15 +438,14 @@
                     <!-- 3. Processor (CPU) -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecLivePill}">
-                                    <TextBlock Text="{Binding Cpu.CurrentUsagePercent, Mode=OneWay, StringFormat='Load: {0}%'}"/>
-                                </Border>
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Processor (CPU)" VerticalAlignment="Center"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xE950;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Processor" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Text="{Binding Cpu.ModelName}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <DockPanel Margin="0,0,0,8">
-                                <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
+                                <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap">
                                     <Run Text="{Binding Cpu.PhysicalCores, Mode=OneWay, StringFormat='{}{0} Cores,'}"/>
                                     <Run Text="{Binding Cpu.LogicalProcessors, Mode=OneWay, StringFormat='{}{0} Threads,'}"/>
                                     <Run Text="{Binding Cpu.ClockSpeedDisplay, Mode=OneWay}"/>
@@ -435,22 +458,19 @@
                             <Button Style="{StaticResource HelpLinkButton}" Content="About CPU Cores" Margin="0,0,0,8" HorizontalAlignment="Left"
                                     Visibility="{Binding HasCpuCoreLayout, Converter={StaticResource BoolToVis}}"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
-                            <ProgressBar Value="{Binding Cpu.CurrentUsagePercent, Mode=OneWay}" Maximum="100" Height="6" 
-                                         Background="{DynamicResource BrushDialogCard}" Foreground="{DynamicResource BrushAccent}" BorderThickness="0"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 4. System Memory (RAM) -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecLivePill}">
-                                    <TextBlock Text="{Binding Ram.UsagePercent, Mode=OneWay, StringFormat='Used: {0}%'}"/>
-                                </Border>
-                                <TextBlock Style="{StaticResource CardTitle}" Text="System Memory (RAM)" VerticalAlignment="Center"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xE964;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Memory" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <DockPanel Margin="0,0,0,4">
-                                <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}">
+                                <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap">
                                     <Run Text="{Binding Ram.UsedGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB in use'}"/>
                                     <Run Text="{Binding Ram.AvailableGigabytes, Mode=OneWay, StringFormat='({0:0.#} GB free of'}"/>
                                     <Run Text="{Binding Ram.TotalGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB)'}"/>
@@ -458,17 +478,18 @@
                             </DockPanel>
                             <TextBlock Text="{Binding Ram.SpeedDisplay, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                        Visibility="{Binding Ram.HasSpeedInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8"/>
-                            <ProgressBar Value="{Binding Ram.UsagePercent, Mode=OneWay}" Maximum="100" Height="6"
-                                         Background="{DynamicResource BrushDialogCard}" Foreground="{DynamicResource BrushAccent}" BorderThickness="0"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- 5. Storage & Gaming Drives -->
-                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
+                    <!-- 5. Storage, across the whole width: its per-drive bars need the room. -->
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}"
+                            views:SpecGridPanel.IsWide="True">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Storage &amp; Gaming Drives" Margin="0,0,0,4"/>
-                            <TextBlock Text="Fixed drive volumes, available storage capacity, and disk usage." 
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xEDA2;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Storage" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <ItemsControl ItemsSource="{Binding Drives}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -517,12 +538,11 @@
                     <!-- 6. Network & Latency -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecLivePill}">
-                                    <TextBlock Text="{Binding Network.PingDisplay, Mode=OneWay, StringFormat='Ping: {0}'}"/>
-                                </Border>
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Network &amp; Latency" VerticalAlignment="Center"/>
-                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Network" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Text="{Binding Network.ConnectionType, Mode=OneWay, StringFormat='Connection: {0}'}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,2"/>
                             <TextBlock Text="{Binding Network.AdapterName, Mode=OneWay, StringFormat='Adapter: {0}'}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
                         </StackPanel>
@@ -531,14 +551,18 @@
                     <!-- 7. Operating System & Power -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Operating System &amp; Power" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding Os.FullOsTitle}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xE770;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Windows &amp; Power" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Os.FullOsTitle}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Os.MotherboardDisplay, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                        Visibility="{Binding Os.HasMotherboardInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,2"/>
                             <TextBlock Text="{Binding Os.UptimeDisplay, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                        Visibility="{Binding Os.HasUptimeInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,2"/>
                             <DockPanel Margin="0,0,0,2">
-                                <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
+                                <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap">
                                     <Run Text="{Binding Os.ActivePowerPlan, Mode=OneWay, StringFormat='Power Plan: {0} • '}"/>
                                     <Run Text="{Binding Power.StatusText, Mode=OneWay, StringFormat='Power Status: {0}'}"/>
                                 </TextBlock>
@@ -547,31 +571,34 @@
                     </Border>
 
 
-                    <!-- 8. Windows Gaming Utilities. Hidden with the spec cards while they load: alone
-                         under the "Detecting hardware..." card it read as one more spec. -->
-                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
+                    <!-- 8. Windows tools, across the whole width. Hidden with the spec cards while they load: alone under
+                         "Detecting hardware..." it read as one more spec. -->
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}"
+                            views:SpecGridPanel.IsWide="True">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <TextBlock Style="{StaticResource CardTitle}" Text="Windows Gaming Utilities" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Text="Quick access to native Windows diagnostic and hardware management tools." 
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Windows Tools" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="Windows' own diagnostic and hardware tools, one click away."
                                        FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <WrapPanel>
-                                <Button Content="Task Manager" Command="{Binding OpenTaskManagerCommand}" 
+                                <Button Content="Task Manager" Command="{Binding OpenTaskManagerCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
-                                <Button Content="Graphics Settings" Command="{Binding OpenGraphicsSettingsCommand}" 
+                                <Button Content="Graphics Settings" Command="{Binding OpenGraphicsSettingsCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
-                                <Button Content="Device Manager" Command="{Binding OpenDeviceManagerCommand}" 
+                                <Button Content="Device Manager" Command="{Binding OpenDeviceManagerCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
-                                <Button Content="DirectX Diagnostic (DxDiag)" Command="{Binding OpenDxDiagCommand}" 
+                                <Button Content="DirectX Diagnostic (DxDiag)" Command="{Binding OpenDxDiagCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
                             </WrapPanel>
                         </StackPanel>
                     </Border>
 
-                </StackPanel>
+                </views:SpecGridPanel>
 
-                <!-- Stutter Check has its own tab, and on All its own header, between Hardware Specs and the tweaks. -->
+                <!-- Stutter Check has its own tab, between Hardware Specs and the tweaks. -->
                 <StackPanel Visibility="{Binding ShowStutterSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12"
                             views:CardSearch.Tab="{x:Static vm:SystemSubSection.StutterCheck}" views:CardSearch.TabLabel="Stutter Check">
                     <!-- Section header, on every tab, like the others. It only reports, so it says so. -->
@@ -587,8 +614,17 @@
                     <!-- Stutter Check: the verdict. It only reports; Fix it applies a tweak from the Performance Tweaks tab. -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="Stutter Check"/>
+                                    <TextBlock Text="The things stutter threads tell you to check, checked for you: overlays, other apps' use of the GPU, your display, memory and drives, Windows services, and the tweaks that matter for stutter."
+                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
                                     <Button Content="{Binding StutterRunButtonText}" Command="{Binding RunStutterCheckCommand}"
                                             Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"
                                             AutomationProperties.Name="Run Stutter Check"/>
@@ -596,12 +632,7 @@
                                             Visibility="{Binding HasStutterReport, Converter={StaticResource BoolToVis}}"
                                             Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                 </StackPanel>
-                                <StackPanel VerticalAlignment="Top">
-                                    <TextBlock Style="{StaticResource CardTitle}" Text="Stutter Check"/>
-                                    <TextBlock Text="The things stutter threads tell you to check, checked for you: overlays, other apps' use of the GPU, your display, memory and drives, Windows services, and the tweaks that matter for stutter."
-                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
-                                </StackPanel>
-                            </DockPanel>
+                            </Grid>
 
                             <!-- Before the first result: the same ring-and-heading row the result uses, so
                                  the result lands in the same space instead of pushing the cards below down. -->
@@ -690,23 +721,26 @@
                     <!-- Performance Preset: the recommended tweaks below, applied and undone together -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top" Margin="12,0,0,0">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
-                                                IsEnabled="{Binding CanRunBulkAction}"
-                                                Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
-                                        <Button Content="Put Back Preset" Command="{Binding ResetDefaultsCommand}"
-                                                IsEnabled="{Binding CanRunBulkAction}"
-                                                Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
-                                    </StackPanel>
-                                </StackPanel>
+                            <!-- The heading first and the buttons after it, so the card search names the card by its heading. -->
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
                                 <StackPanel VerticalAlignment="Top">
                                     <TextBlock Style="{StaticResource CardTitle}" Text="Performance Preset"/>
                                     <TextBlock Text="{Binding PresetLeadText}"
                                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                 </StackPanel>
-                            </DockPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                                    <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
+                                            IsEnabled="{Binding CanRunBulkAction}"
+                                            Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
+                                    <Button Content="Put Back Preset" Command="{Binding ResetDefaultsCommand}"
+                                            IsEnabled="{Binding CanRunBulkAction}"
+                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                                </StackPanel>
+                            </Grid>
                             <DockPanel Margin="0,10,0,6" LastChildFill="True">
                                 <Grid DockPanel.Dock="Left" Width="46" Height="46" Margin="0,0,12,0" VerticalAlignment="Center">
                                     <Ellipse Stroke="{Binding PresetRingColor}" StrokeThickness="3"/>
@@ -722,8 +756,17 @@
                                 </StackPanel>
                             </DockPanel>
 
-                            <!-- No badge legend here on purpose: the badges (OPTIMAL, OPT-IN, RESTART, ADMIN,
-                                 restore point) are defined in the "How tweaks work" help topic this links to. -->
+                            <!-- The safety option for the two buttons above, beside them (it was under Settings until 1.8.2). -->
+                            <CheckBox Content="Create a System Restore point before Apply Performance Preset or Put Back Preset"
+                                      IsChecked="{Binding CreateRestorePointBeforeTweaks}" Margin="0,8,0,0"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
+                            <TextBlock Margin="24,3,0,8" TextWrapping="Wrap" Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}">
+                                <Run Text="A Windows rollback point in case a bulk change causes problems. Recommended on."/>
+                                <Hyperlink Style="{StaticResource InlineHelpLink}" CommandParameter="tweaks/restore_point">About restore points</Hyperlink>
+                            </TextBlock>
+
+                            <!-- No legend here on purpose: the switches, the tags (NOT APPLIED, N/A) and the two
+                                 sub-headings each group has are defined in the "How tweaks work" help topic this links to. -->
                             <!-- The link follows the sentence it belongs to, like the other cards' Learn more links. -->
                             <views:NoteBar Kind="Tip" Background="{DynamicResource BrushDialogCard}" Margin="0,4,0,0"
                                            Text="System-wide, always on until you put them back. Documented Windows settings only - no registry cleaners.">
@@ -739,45 +782,113 @@
                     <!-- 1. Display & Input -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Display &amp; Input" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding InputAndDisplaySummary}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,4"/>
-                            <TextBlock Text="How Windows presents games and reads the mouse."
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                            <ItemsControl ItemsSource="{Binding InputAndDisplayTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                            <Border Style="{StaticResource CardHeaderBand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource CardHeaderIcon}" Text="&#xE7F4;"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource CardHeaderTitle}" Text="Display &amp; Input"/>
+                                        <TextBlock Style="{StaticResource CardHeaderDescription}" Text="How Windows presents games and reads the mouse."/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource CardHeaderCount}" Text="{Binding InputAndDisplaySummary}"/>
+                                </Grid>
+                            </Border>
+                            <WrapPanel Visibility="{Binding HasInputAndDisplayPreset, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="IN THE PERFORMANCE PRESET"/>
+                                <TextBlock Text="·  Apply Performance Preset turns these on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding InputAndDisplayPreset}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                            <WrapPanel Visibility="{Binding HasInputAndDisplayOptIn, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="OPT-IN"/>
+                                <TextBlock Text="·  A real trade-off, so off until you turn it on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding InputAndDisplayOptIn}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 2. CPU & Scheduling Priority -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="CPU &amp; Scheduling Priority" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding CpuAndPowerSummary}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,4"/>
-                            <TextBlock Text="How much CPU the game gets."
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                            <ItemsControl ItemsSource="{Binding CpuAndPowerTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                            <Border Style="{StaticResource CardHeaderBand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource CardHeaderIcon}" Text="&#xE950;"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource CardHeaderTitle}" Text="CPU &amp; Scheduling Priority"/>
+                                        <TextBlock Style="{StaticResource CardHeaderDescription}" Text="How much CPU the game gets."/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource CardHeaderCount}" Text="{Binding CpuAndPowerSummary}"/>
+                                </Grid>
+                            </Border>
+                            <WrapPanel Visibility="{Binding HasCpuAndPowerPreset, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="IN THE PERFORMANCE PRESET"/>
+                                <TextBlock Text="·  Apply Performance Preset turns these on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding CpuAndPowerPreset}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                            <WrapPanel Visibility="{Binding HasCpuAndPowerOptIn, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="OPT-IN"/>
+                                <TextBlock Text="·  A real trade-off, so off until you turn it on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding CpuAndPowerOptIn}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 3. Network & Background Activity -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Network &amp; Background Activity" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding NetworkAndBackgroundSummary}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,4"/>
-                            <TextBlock Text="What runs behind the game."
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                            <ItemsControl ItemsSource="{Binding NetworkAndBackgroundTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                            <Border Style="{StaticResource CardHeaderBand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource CardHeaderIcon}" Text="&#xE774;"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource CardHeaderTitle}" Text="Network &amp; Background Activity"/>
+                                        <TextBlock Style="{StaticResource CardHeaderDescription}" Text="What runs behind the game."/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource CardHeaderCount}" Text="{Binding NetworkAndBackgroundSummary}"/>
+                                </Grid>
+                            </Border>
+                            <WrapPanel Visibility="{Binding HasNetworkAndBackgroundPreset, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="IN THE PERFORMANCE PRESET"/>
+                                <TextBlock Text="·  Apply Performance Preset turns these on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding NetworkAndBackgroundPreset}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                            <WrapPanel Visibility="{Binding HasNetworkAndBackgroundOptIn, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="OPT-IN"/>
+                                <TextBlock Text="·  A real trade-off, so off until you turn it on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding NetworkAndBackgroundOptIn}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 4. Security (status only) -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Security (status only)" Margin="0,0,0,2"/>
-                            <TextBlock Text="Memory Integrity is a real security boundary with a documented cost in some games - the switch stays in Windows Security."
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <Border Style="{StaticResource CardHeaderBand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource CardHeaderIcon}" Text="&#xEA18;"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource CardHeaderTitle}" Text="Security (status only)"/>
+                                        <TextBlock Style="{StaticResource CardHeaderDescription}" Text="Memory Integrity is a real security boundary with a documented cost in some games - the switch stays in Windows Security."/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                             <ItemsControl ItemsSource="{Binding SecurityAndAdvancedTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
@@ -804,10 +915,10 @@
                          says Performance Profiles. -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Assigned per game in Edit Game. Applied at launch, reverted at exit. Changing a tweak here affects every game on that profile."
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                            <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work"
-                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
+                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4" TextWrapping="Wrap">
+                                <Run Text="Assigned per game in Edit Game. Applied at launch, reverted at exit. Changing a tweak here affects every game on that profile."/>
+                                <Hyperlink Style="{StaticResource InlineHelpLink}" CommandParameter="profiles/overview">How profiles work</Hyperlink>
+                            </TextBlock>
 
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions>
@@ -832,24 +943,53 @@
                     <!-- Optimized Profile -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Optimized Profile" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding OptimizedProfileSummary}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Balanced tweaks that are safe to apply to any game."
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                            <ItemsControl ItemsSource="{Binding OptimizedProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
+                            <Border Style="{StaticResource CardHeaderBand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource CardHeaderIcon}" Text="&#xE7FC;"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource CardHeaderTitle}" Text="Optimized Profile"/>
+                                        <TextBlock Style="{StaticResource CardHeaderDescription}" Text="Balanced tweaks that are safe to apply to any game."/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource CardHeaderCount}" Text="{Binding OptimizedProfileSummary}"/>
+                                </Grid>
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding OptimizedProfileDefaults}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
+                            <WrapPanel Visibility="{Binding HasOptimizedProfileOptIns, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="OPT-IN"/>
+                                <TextBlock Text="·  A real trade-off, so off until you turn it on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding OptimizedProfileOptIns}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
                         </StackPanel>
                     </Border>
-
                     <!-- Aggressive Profile -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardTitle}" Text="Aggressive Profile (adds to Optimized)" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding AggressiveProfileSummary}" FontSize="{DynamicResource FontSizeBody}"
-                                       Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Everything in Optimized, plus the tweaks below."
-                                       FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                            <ItemsControl ItemsSource="{Binding AggressiveProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
+                            <Border Style="{StaticResource CardHeaderBand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource CardHeaderIcon}" Text="&#xE945;"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource CardHeaderTitle}" Text="Aggressive Profile (adds to Optimized)"/>
+                                        <TextBlock Style="{StaticResource CardHeaderDescription}" Text="Everything in Optimized, plus the tweaks below."/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource CardHeaderCount}" Text="{Binding AggressiveProfileSummary}"/>
+                                </Grid>
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding AggressiveProfileDefaults}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
+                            <WrapPanel Visibility="{Binding HasAggressiveProfileOptIns, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource CardSubLabel}" Text="OPT-IN"/>
+                                <TextBlock Text="·  A real trade-off, so off until you turn it on" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="8,4,0,6"/>
+                            </WrapPanel>
+                            <ItemsControl ItemsSource="{Binding AggressiveProfileOptIns}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

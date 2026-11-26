@@ -241,7 +241,7 @@ public partial class MainWindow : Window
         if (shown == true && dialog.Confirmed)
         {
             // Applied through SettingsVM (not ImportCoordinator) so the toggles' own setters
-            // fire property-changed and Settings > Library's checkboxes don't show a stale
+            // fire property-changed and Settings > Finding Games' checkboxes don't show a stale
             // value - see ImportCoordinator.CompleteFirstTimeLauncherDetection's doc comment.
             // Confirming with nothing ticked is honoured too (every probed launcher off), and
             // reported, instead of being treated as a silent skip.

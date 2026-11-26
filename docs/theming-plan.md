@@ -57,7 +57,9 @@ Most themes should name a handful of colors. A color that is not written is work
 
 | Anchor | Derives |
 |---|---|
-| `Accent` | AccentHover, AccentText, AccentPressed, AccentWash, BorderAccent, Brand, InfoText |
+| `Accent` | AccentHover, AccentText, AccentPressed, AccentWash, HeaderWash, BorderAccent, Brand, InfoText |
+
+HeaderWash (the band at the top of a card that groups rows) is the one exception to stepping with its anchor: unless a theme sets it, it is worked out last as the resolved Surface with 16% of the Accent (8% on a light card), so it stays a tint of the card whichever of them moved.
 | `Background` | Surface, SurfaceHover, DialogCard, Border, BorderStrong |
 | `TextPrimary` | TextSecondary, TextMuted, TextSoft, TextDisabled |
 | `Danger` | DangerWash, DangerBorder, DangerSolid, DangerSolidHover |

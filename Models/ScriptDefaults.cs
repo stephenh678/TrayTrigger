@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace TrayTrigger.Models;
 
 /// <summary>
-/// Settings › Launch &amp; Performance: scripts that run for every game that has no script of its
+/// Settings › Launching: scripts that run for every game that has no script of its
 /// own for that phase. Resolution is per phase (see <see cref="Services.GameScriptService.ResolvePreLaunch"/>):
 /// a game with its own pre-launch script but no post-exit script still gets the default post-exit.
 /// A game opts out of both with <see cref="GameEntry.SkipDefaultScripts"/>. The options here apply

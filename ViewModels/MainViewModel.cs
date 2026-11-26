@@ -269,7 +269,7 @@ public class MainViewModel : ViewModelBase
             {
                 OnToolsEnabledChanged();
             }
-            // Settings > Library "Show category tabs" (and Reset to Defaults): the tab row follows.
+            // Settings > Finding Games "Show category tabs" (and Reset to Defaults): the tab row follows.
             if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(SettingsViewModel.ShowCategoryTabs))
             {
                 Library.RebuildCategories();
@@ -522,7 +522,7 @@ public class MainViewModel : ViewModelBase
 
     /// <summary>
     /// A page with a search or filter is left as a clean one: no text in the box. Settings, About and System
-    /// (the pages with tabs) also go back on All and, the window's part, scroll to the top. A search or filter
+    /// (the pages with tabs) also go back to their first tab (About: All) and, the window's part, scroll to the top. A search or filter
     /// is a quick lookup, so it doesn't wait for you; coming back by the sidebar opens the page afresh. A link
     /// that sends you to a page sets its text after this, as it comes in. The category tab, sort and view
     /// mode are settings you chose, not a lookup, and stay.
@@ -533,7 +533,7 @@ public class MainViewModel : ViewModelBase
         {
             case NavSection.Settings:
                 SettingsVM.SettingsSearchText = string.Empty;
-                SettingsVM.SelectedTab = SettingsCategoryTab.All;
+                SettingsVM.SelectedTab = SettingsCategoryTab.General;
                 break;
             case NavSection.About:
                 AboutSearchText = string.Empty;
@@ -541,7 +541,7 @@ public class MainViewModel : ViewModelBase
                 break;
             case NavSection.System:
                 SystemVM.SystemSearchText = string.Empty;
-                SystemVM.CurrentSubSection = SystemSubSection.All;
+                SystemVM.CurrentSubSection = SystemSubSection.HardwareSpecs;
                 break;
             case NavSection.Library:
                 if (SearchText.Length > 0) SearchText = string.Empty;
@@ -610,7 +610,6 @@ public class MainViewModel : ViewModelBase
     public ICommand SelectLibraryCommand { get; }
     public ICommand SelectSettingsCommand { get; }
     public ICommand OpenDiagnosticsSettingsCommand { get; }
-    /// <summary>System page's restore-point badge -> Settings > Launch &amp; Performance.</summary>
     /// <summary>Settings › Library &amp; Art, where the SteamGridDB and RAWG keys are entered.</summary>
     public ICommand OpenLibrarySettingsCommand { get; }
     public ICommand SelectAboutCommand { get; }

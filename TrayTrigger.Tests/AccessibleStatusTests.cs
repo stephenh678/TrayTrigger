@@ -28,8 +28,10 @@ public class AccessibleStatusTests
     {
         bool enabled = false;
         var vm = new ProfileTweakToggleViewModel("Enable HDR", "d", "w", "profiles/hdr", () => enabled, v => enabled = v, isOptIn: true, requiresAdmin: false);
-        Assert.Equal("Enable HDR, disabled, opt-in", vm.AccessibleStatus);
+        Assert.Equal("Enable HDR, off, opt-in", vm.AccessibleStatus);
+        Assert.Equal("Off", vm.SwitchText);
         vm.ToggleCommand.Execute(null);
-        Assert.Equal("Enable HDR, enabled, opt-in", vm.AccessibleStatus);
+        Assert.Equal("Enable HDR, on, opt-in", vm.AccessibleStatus);
+        Assert.Equal("On", vm.SwitchText);
     }
 }

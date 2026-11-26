@@ -18,10 +18,12 @@ internal sealed class ThemePalette : Dictionary<string, Color>
 /// </summary>
 internal static class ThemeDerivation
 {
+    private const string HeaderWash = "HeaderWash";
+
     /// <summary>The colors that stand for a group. Setting the anchor moves every member of its group that the theme does not set itself.</summary>
     public static readonly IReadOnlyDictionary<string, string[]> Anchors = new Dictionary<string, string[]>
     {
-        ["Accent"] = ["AccentHover", "AccentText", "AccentPressed", "AccentWash", "BorderAccent", "Brand", "InfoText"],
+        ["Accent"] = ["AccentHover", "AccentText", "AccentPressed", "AccentWash", "HeaderWash", "BorderAccent", "Brand", "InfoText"],
         ["Background"] = ["Surface", "SurfaceHover", "DialogCard", "Border", "BorderStrong"],
         ["TextPrimary"] = ["TextSecondary", "TextMuted", "TextSoft", "TextDisabled"],
         ["Danger"] = ["DangerWash", "DangerBorder", "DangerSolid", "DangerSolidHover"],
@@ -51,6 +53,18 @@ internal static class ThemeDerivation
         foreach (var (name, color) in overrides)
         {
             if (baseTheme.ContainsKey(name)) result[name] = color;
+        }
+
+        // A card heading's band is the card with a share of the accent, whichever of them moved, so it stays a tint of
+        // the card: moved with the accent alone, a light accent would make a light band under light text. A light card
+        // takes less, as a little color shows more on white.
+        if (!overrides.ContainsKey(HeaderWash) && baseTheme.ContainsKey(HeaderWash)
+            && result.TryGetValue("Surface", out var surface) && result.TryGetValue("Accent", out var accent)
+            && (surface != baseTheme["Surface"] || accent != baseTheme["Accent"]))
+        {
+            // Mix gives an opaque color; a see-through card (#AARRGGBB) keeps its see-through band.
+            var band = ThemeColor.Mix(surface, accent, ThemeColor.Luminance(surface) > 0.5 ? 0.08 : 0.16);
+            result[HeaderWash] = Color.FromArgb(surface.A, band.R, band.G, band.B);
         }
         return result;
     }

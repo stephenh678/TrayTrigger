@@ -102,7 +102,7 @@ public partial class GameDetailsViewModel : ViewModelBase
 
             return _rawgStatus switch
             {
-                RawgLookupStatus.Unauthorized => "RAWG rejected the API key. Check the key in Settings › Library.",
+                RawgLookupStatus.Unauthorized => "RAWG rejected the API key. Check the key in Settings › Library & Art.",
                 RawgLookupStatus.Failed => "Could not reach RAWG. Check your internet connection and try again.",
                 _ => $"RAWG has no entry matching \"{RawgSearchName}\". Use Change Match to search RAWG yourself, or switch back to Steam.",
             };
@@ -201,7 +201,7 @@ public partial class GameDetailsViewModel : ViewModelBase
     // ------------------------------------------------------------------ freshness
 
     /// <summary>How long a cached entry is trusted before the window re-fetches it behind the
-    /// cached copy (Settings › Library › Refresh game info).</summary>
+    /// cached copy (Settings › Library &amp; Art › Refresh game info).</summary>
     private readonly MetadataRefreshInterval _refreshInterval;
 
     /// <summary>Set by "Refresh now" so the next Steam / RAWG load bypasses the cache and the
@@ -751,7 +751,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                 var (status, hits) = await _rawgService.SearchAsync(query, key, ct);
                 string? empty = status switch
                 {
-                    RawgLookupStatus.Unauthorized => "RAWG rejected the API key. Check it in Settings › Library.",
+                    RawgLookupStatus.Unauthorized => "RAWG rejected the API key. Check it in Settings › Library & Art.",
                     RawgLookupStatus.Failed => "Could not reach RAWG. Check your internet connection and try again.",
                     _ => null,
                 };
@@ -1083,7 +1083,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                 {
                     ErrorMessage = CanToggleSource
                         ? "This game has no Steam store entry. Select RAWG above to show its info, or set a Steam App ID in Edit Properties."
-                        : "This game has no Steam store entry. Enable RAWG in Settings › Library to show info for non-Steam games, or set a Steam App ID in Edit Properties.";
+                        : "This game has no Steam store entry. Enable RAWG in Settings › Library & Art to show info for non-Steam games, or set a Steam App ID in Edit Properties.";
                 }
                 IsLoading = false;
                 return;

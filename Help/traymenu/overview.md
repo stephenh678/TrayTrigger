@@ -42,7 +42,7 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 - With the window hidden, a game started from the tray menu or its own hotkey shows a small popup near the tray clock: the game's icon and name, and what it's waiting for (Battle.net signing in, for example).
 - The popup never takes focus, and clicks pass through it to whatever is underneath. It closes once the game starts, or after 100 seconds if the game never does.
 - If the launch fails, the popup shows why and stays until you close it. Its link opens TrayTrigger, or lets you locate a game whose executable is missing.
-- Turn it off with "Show a launch popup by the tray icon" under Settings > Launch & Performance > Launching Games.
+- Turn it off with "Show a launch popup by the tray icon" under Settings > Launching > Launching Games.
 - Launches from the open window use the popup too when "Minimize to system tray when launching a game" is on, since the window hides as soon as the game is launched. Otherwise they keep the notice inside the window, unless you tick "Show it on every game launch" under the same setting. A launch error still opens a dialog while the window is in front.
 
 ## Tools

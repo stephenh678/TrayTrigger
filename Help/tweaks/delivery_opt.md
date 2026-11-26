@@ -13,7 +13,7 @@ Stops Windows from uploading Windows Update and Store downloads to other PCs, on
 
 - Updates on other PCs in your home no longer pull from this one. On a fast connection you will not notice.
 - Downloads to this PC still work normally. Only the sharing is turned off.
-- If you already turned off "Allow downloads from other PCs" in Windows Settings, the badge shows OPTIMAL and there is nothing to apply.
+- If you already turned off "Allow downloads from other PCs" in Windows Settings, its switch already shows On and there is nothing to apply.
 
 > Requires administrator rights. No restart needed.
 

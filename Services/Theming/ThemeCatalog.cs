@@ -94,7 +94,7 @@ internal static class ThemeCatalog
             ["Border"] = text, ["BorderStrong"] = text, ["BorderAccent"] = link,
             ["Accent"] = highlight, ["AccentHover"] = highlight, ["AccentPressed"] = highlight,
             ["TextOnSolid"] = onHighlight,
-            ["AccentText"] = link, ["InfoText"] = link, ["Brand"] = link, ["AccentWash"] = window,
+            ["AccentText"] = link, ["InfoText"] = link, ["Brand"] = link, ["AccentWash"] = window, ["HeaderWash"] = window,
             ["TextPrimary"] = text, ["TextSecondary"] = text, ["TextMuted"] = text, ["TextSoft"] = text,
             ["TextDisabled"] = gray,
         };
@@ -252,6 +252,8 @@ internal static class ThemeCatalog
         Check("TextSecondary", "Surface", "Secondary text on a card", "TextPrimary", "Surface");
         Check("TextMuted", "Surface", "Muted text on a card", "TextPrimary", "Surface");
         Check("AccentText", "Surface", "Link text on a card", "Accent", "Surface");
+        Check("TextPrimary", "HeaderWash", "A card heading", "Accent", "Surface");
+        Check("TextSecondary", "HeaderWash", "A card heading's description", "Accent", "Surface");
         Check("TextOnSolid", "Accent", "Button text on the accent color", "Accent");
         return issues;
     }

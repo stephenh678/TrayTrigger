@@ -838,7 +838,7 @@
                                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="10,6" Margin="0,0,0,12"
                                     Visibility="{Binding ShowScriptsDisabledNotice, Converter={StaticResource BoolToVis}}">
                                 <StackPanel>
-                                    <TextBlock Text="Scripts are turned off in Settings › Launch &amp; Performance (Enable scripts), so these will NOT run until that switch is back on."
+                                    <TextBlock Text="Scripts are turned off in Settings › Launching (Enable scripts), so these will NOT run until that switch is back on."
                                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
                                     <CheckBox Content="Enable scripts (every game, at once)" IsChecked="{Binding ScriptsEnabled}" Margin="0,6,0,0"
                                               Style="{StaticResource ModernCheckBox}"
@@ -1013,7 +1013,7 @@
                             <CheckBox Content="Enable scripts" IsChecked="{Binding ScriptsEnabled}" Margin="0,8,0,0"
                                       Style="{StaticResource ModernCheckBox}"
                                       AutomationProperties.Name="Enable scripts"/>
-                            <TextBlock Text="The same switch as Settings › Launch &amp; Performance: one setting for every game, and it takes effect at once, even if you cancel your changes."
+                            <TextBlock Text="The same switch as Settings › Launching: one setting for every game, and it takes effect at once, even if you cancel your changes."
                                        FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                         </StackPanel>
                     </Border>

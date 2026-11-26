@@ -18,8 +18,10 @@ namespace TrayTrigger.ViewModels;
 
 public enum SettingsCategoryTab
 {
-    All,
     General,
+    /// <summary>Finding Games: launcher integrations, Scan for Games, and how added games are named and filed.</summary>
+    FindingGames,
+    /// <summary>Library &amp; Art: where art and game info come from, and how the library looks.</summary>
     Library,
     TrayMenu,
     PerformanceTweaks,
@@ -58,7 +60,8 @@ public partial class SettingsViewModel : ViewModelBase
 
     public AppSettings Settings => _settings;
 
-    private SettingsCategoryTab _selectedTab = SettingsCategoryTab.All;
+    // Opens on General: one tab at a time, not every card on one long page.
+    private SettingsCategoryTab _selectedTab = SettingsCategoryTab.General;
     public SettingsCategoryTab SelectedTab
     {
         get => _selectedTab;
@@ -66,13 +69,14 @@ public partial class SettingsViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedTab, value))
             {
-                OnPropertyChanged(nameof(IsAllTab));
                 OnPropertyChanged(nameof(IsGeneralTab));
+                OnPropertyChanged(nameof(IsFindingGamesTab));
                 OnPropertyChanged(nameof(IsLibraryTab));
                 OnPropertyChanged(nameof(IsTrayMenuTab));
                 OnPropertyChanged(nameof(IsPerformanceTweaksTab));
                 OnPropertyChanged(nameof(IsDiagnosticsTab));
                 OnPropertyChanged(nameof(ShowGeneralSection));
+                OnPropertyChanged(nameof(ShowFindingGamesSection));
                 OnPropertyChanged(nameof(ShowLibrarySection));
                 OnPropertyChanged(nameof(ShowTrayMenuSection));
                 OnPropertyChanged(nameof(ShowPerformanceTweaksSection));
@@ -92,18 +96,19 @@ public partial class SettingsViewModel : ViewModelBase
         set => SetProperty(ref _settingsSearchText, value ?? string.Empty);
     }
 
-    public bool IsAllTab => SelectedTab == SettingsCategoryTab.All;
     public bool IsGeneralTab => SelectedTab == SettingsCategoryTab.General;
+    public bool IsFindingGamesTab => SelectedTab == SettingsCategoryTab.FindingGames;
     public bool IsLibraryTab => SelectedTab == SettingsCategoryTab.Library;
     public bool IsTrayMenuTab => SelectedTab == SettingsCategoryTab.TrayMenu;
     public bool IsPerformanceTweaksTab => SelectedTab == SettingsCategoryTab.PerformanceTweaks;
     public bool IsDiagnosticsTab => SelectedTab == SettingsCategoryTab.Diagnostics;
 
-    public bool ShowGeneralSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.General;
-    public bool ShowLibrarySection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.Library;
-    public bool ShowTrayMenuSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.TrayMenu;
-    public bool ShowPerformanceTweaksSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.PerformanceTweaks;
-    public bool ShowDiagnosticsSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.Diagnostics;
+    public bool ShowGeneralSection => SelectedTab == SettingsCategoryTab.General;
+    public bool ShowFindingGamesSection => SelectedTab == SettingsCategoryTab.FindingGames;
+    public bool ShowLibrarySection => SelectedTab == SettingsCategoryTab.Library;
+    public bool ShowTrayMenuSection => SelectedTab == SettingsCategoryTab.TrayMenu;
+    public bool ShowPerformanceTweaksSection => SelectedTab == SettingsCategoryTab.PerformanceTweaks;
+    public bool ShowDiagnosticsSection => SelectedTab == SettingsCategoryTab.Diagnostics;
 
     private string _statusMessage = string.Empty;
     public string StatusMessage
@@ -196,10 +201,10 @@ public partial class SettingsViewModel : ViewModelBase
     public ICommand ClearMetadataCacheCommand { get; }
 
     // Category Tab Commands
-    /// <summary>Search results take the page to a card's tab (see Views/CardSearch). On All the card is already on screen.</summary>
+    /// <summary>Search results take the page to a card's tab (see Views/CardSearch).</summary>
     public ICommand GoToTabCommand { get; }
-    public ICommand SelectAllTabCommand { get; }
     public ICommand SelectGeneralTabCommand { get; }
+    public ICommand SelectFindingGamesTabCommand { get; }
     public ICommand SelectLibraryTabCommand { get; }
     public ICommand SelectTrayMenuTabCommand { get; }
     public ICommand SelectPerformanceTweaksTabCommand { get; }
@@ -293,10 +298,10 @@ public partial class SettingsViewModel : ViewModelBase
         // Initialize Tab Commands
         GoToTabCommand = new RelayCommand(tab =>
         {
-            if (tab is SettingsCategoryTab target && SelectedTab != SettingsCategoryTab.All) SelectedTab = target;
+            if (tab is SettingsCategoryTab target) SelectedTab = target;
         });
-        SelectAllTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.All);
         SelectGeneralTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.General);
+        SelectFindingGamesTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.FindingGames);
         SelectLibraryTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.Library);
         SelectTrayMenuTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.TrayMenu);
         SelectPerformanceTweaksTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.PerformanceTweaks);
@@ -453,10 +458,25 @@ public partial class SettingsViewModel : ViewModelBase
         {
             if (!SetProperty(ref _trayPromotionStatus, value)) return;
             OnPropertyChanged(nameof(HasTrayPromotionStatus));
+            OnPropertyChanged(nameof(TrayIconNote));
         }
     }
     private string _trayPromotionStatus = string.Empty;
     public bool HasTrayPromotionStatus => !string.IsNullOrEmpty(_trayPromotionStatus);
+
+    /// <summary>
+    /// The one note under "Always show icon in tray": what Windows did with the last request, when one was
+    /// made, then the drag onto the taskbar, the one method Windows always honors.
+    /// </summary>
+    public string TrayIconNote => ComposeTrayIconNote(_trayPromotionStatus);
+
+    internal const string TrayIconDragTip = "You can also drag the TrayTrigger icon from the taskbar ^ overflow chevron directly onto your taskbar to pin it permanently.";
+
+    /// <summary>Most of Windows' answers already say to drag the icon; those don't get the drag tip twice.</summary>
+    internal static string ComposeTrayIconNote(string? status) =>
+        string.IsNullOrWhiteSpace(status) ? TrayIconDragTip
+        : status.Contains("drag", StringComparison.OrdinalIgnoreCase) ? status.Trim()
+        : status.Trim() + " " + TrayIconDragTip;
 
     public bool MinimizeOnGameLaunch
     {
@@ -783,7 +803,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Settings > Library: the Library shows its category tabs (Action, RPG...). Off keeps All, Favorites and Hidden.</summary>
+    /// <summary>Settings > Finding Games: the Library shows its category tabs (Action, RPG...). Off keeps All, Favorites and Hidden.</summary>
     public bool ShowCategoryTabs
     {
         get => _settings.ShowCategoryTabs;
@@ -1055,22 +1075,6 @@ public partial class SettingsViewModel : ViewModelBase
     private ScriptLibraryService? _scriptLibrary;
     /// <summary>The scripts folder helper, rooted at the same %AppData% folder as games.json.</summary>
     public ScriptLibraryService ScriptLibrary => _scriptLibrary ??= new ScriptLibraryService(_storageService.BaseDirectory);
-
-    // --- Performance Tweaks ---
-
-    public bool CreateRestorePointBeforeTweaks
-    {
-        get => _settings.CreateRestorePointBeforeTweaks;
-        set
-        {
-            if (_settings.CreateRestorePointBeforeTweaks != value)
-            {
-                _settings.CreateRestorePointBeforeTweaks = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
-            }
-        }
-    }
 
     // --- Troubleshooting & Diagnostics ---
 

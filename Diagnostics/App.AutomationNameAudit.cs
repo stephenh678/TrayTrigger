@@ -61,20 +61,23 @@ public partial class App
             foreach (var m in missing.Distinct()) report.AppendLine(m);
         }
 
-        void Page(NavSection section, Action? prepare = null)
+        void Page(NavSection section, Action? prepare = null, string? note = null)
         {
             _mainViewModel.CurrentSection = section;
             prepare?.Invoke();
             _mainWindow.UpdateLayout();
             Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
-            AuditWindow($"Page {section}", _mainWindow);
+            AuditWindow($"Page {section}{note}", _mainWindow);
         }
 
         Page(NavSection.Library);
         Page(NavSection.Library, () => _mainViewModel.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModeDetailsList);
         Page(NavSection.Tools);
-        Page(NavSection.System, () => _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All);
-        Page(NavSection.Settings, () => _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.All);
+        // System and Settings show one tab at a time: each tab is a page of its own here.
+        foreach (SystemSubSection tab in Enum.GetValues<SystemSubSection>())
+            Page(NavSection.System, () => _mainViewModel.SystemVM.CurrentSubSection = tab, $" ({tab})");
+        foreach (SettingsCategoryTab tab in Enum.GetValues<SettingsCategoryTab>())
+            Page(NavSection.Settings, () => _mainViewModel.SettingsVM.SelectedTab = tab, $" ({tab})");
         Page(NavSection.About, () => _mainViewModel.CurrentAboutSection = AboutSubSection.All);
 
         void Dialog(string label, Window dialog)
