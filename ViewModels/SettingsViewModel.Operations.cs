@@ -75,8 +75,10 @@ public partial class SettingsViewModel
             nameof(AppSettings.LastCategoryFilter),
             nameof(AppSettings.LastCollectionFilter),
             nameof(AppSettings.LastSortOption),
+            nameof(AppSettings.LastSortReversed),
             // Tools page view state, the same bucket as the Library's two above.
             nameof(AppSettings.ToolsSortOption),
+            nameof(AppSettings.ToolsSortReversed),
             nameof(AppSettings.ToolsViewMode),
             nameof(AppSettings.LastToolsCategoryTab),
             // Same bucket: which slice of the library is on screen, not a preference. Also the
@@ -111,6 +113,8 @@ public partial class SettingsViewModel
             nameof(AppSettings.XboxIntegrationEnabled),
             nameof(AppSettings.BattleNetIntegrationEnabled),
             nameof(AppSettings.RockstarIntegrationEnabled),
+            nameof(AppSettings.AmazonIntegrationEnabled),
+            nameof(AppSettings.ItchIntegrationEnabled),
             // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
             nameof(AppSettings.MainWindowLeft),

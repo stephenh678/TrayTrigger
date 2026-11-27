@@ -22,6 +22,8 @@ public static class LauncherLogos
         if (game.IsXboxGame) return Folder + "xbox.png";
         if (game.IsBattleNetGame) return Folder + "battlenet.png";
         if (game.IsRockstarGame) return Folder + "rockstar_games.png";
+        if (game.IsAmazonGame) return Folder + "amazon_games.png";
+        if (game.IsItchGame) return Folder + "itchio.png";
         return null;
     }
 }

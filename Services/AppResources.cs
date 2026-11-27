@@ -31,8 +31,12 @@ internal static class AppResources
 
     private static ResourceDictionary Load(string file)
     {
-        // A pack:// URI is read through a web request handler that WPF registers when an Application is
-        // created. The running app has one, and the unit tests make one with WpfTestHost.
+        // A pack:// URI only parses once WPF has registered the pack scheme and the application's resources,
+        // which Application's static constructor does. The running app has long since run it; a unit test that
+        // reaches here before anything touched Application (ThemeCatalog.DarkPalette() on its own, say) has
+        // not, and the URI fails as "Invalid port specified". Running it here makes the load not depend on
+        // which test ran first.
+        System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(Application).TypeHandle);
         return new ResourceDictionary
         {
             Source = new Uri($"pack://application:,,,/TrayTrigger;component/Resources/{file}", UriKind.Absolute)

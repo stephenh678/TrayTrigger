@@ -205,7 +205,7 @@ public partial class GameEditViewModel
         if (UpdatePosterFromMatch) ApplyFetchedCover(details.CoverImagePath);
         // The same placeholder rule as the library's enrichment: a platform's default category
         // ("Steam", "GOG") is replaced like Uncategorized; a category the user chose is kept.
-        if (UpdateGenreFromMatch && LibraryConstants.IsEnrichableCategory(Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+        if (UpdateGenreFromMatch && LibraryConstants.IsEnrichableCategory(Category, SourceGame) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
         {
             Category = details.PrimaryGenre;
         }

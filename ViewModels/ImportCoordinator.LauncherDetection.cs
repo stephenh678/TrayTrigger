@@ -40,6 +40,8 @@ public partial class ImportCoordinator
         Probe(Views.DetectedLauncher.Xbox, "Xbox / PC Game Pass", () => _xboxScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
         Probe(Views.DetectedLauncher.BattleNet, "Battle.net", () => _battleNetScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
         Probe(Views.DetectedLauncher.Rockstar, "Rockstar Games Launcher", () => _rockstarScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Amazon, "Amazon Games", () => _amazonScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Itch, "itch.io", () => _itchScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
 
         LastProbedLaunchers = probed;
         LoggingService.Info("ImportCoordinator", detected.Count == 0
@@ -82,6 +84,8 @@ public partial class ImportCoordinator
         Views.DetectedLauncher.Xbox => _settings.XboxIntegrationEnabled,
         Views.DetectedLauncher.BattleNet => _settings.BattleNetIntegrationEnabled,
         Views.DetectedLauncher.Rockstar => _settings.RockstarIntegrationEnabled,
+        Views.DetectedLauncher.Amazon => _settings.AmazonIntegrationEnabled,
+        Views.DetectedLauncher.Itch => _settings.ItchIntegrationEnabled,
         _ => false
     };
 
@@ -152,7 +156,7 @@ public partial class ImportCoordinator
         // and skipped, not deleted), so they must not count towards "something to scan".
         bool anySteamLibrary = _settings.SteamIntegrationEnabled && enabledLocations.Any(l => l.Source == ScanLocationSource.Steam);
         bool anyManualFolder = enabledLocations.Any(l => l.Source != ScanLocationSource.Steam);
-        if (!anySteamLibrary && !anyManualFolder && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled && !_settings.XboxIntegrationEnabled && !_settings.BattleNetIntegrationEnabled && !_settings.RockstarIntegrationEnabled)
+        if (!anySteamLibrary && !anyManualFolder && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled && !_settings.XboxIntegrationEnabled && !_settings.BattleNetIntegrationEnabled && !_settings.RockstarIntegrationEnabled && !_settings.AmazonIntegrationEnabled && !_settings.ItchIntegrationEnabled)
         {
             if (!silent)
             {
@@ -176,13 +180,12 @@ public partial class ImportCoordinator
         {
             _library.StatusMessage = "Scanning for games...";
 
-            // Any entry carrying the App ID, not only Steam-launched ones: ImportSteamGamesAsync
-            // dedupes on the ID alone, so a Local entry linked by online matching was offered as
-            // new on every scan and then silently skipped when imported.
-            var existingAppIds = _library.Games
-                .Where(g => !string.IsNullOrEmpty(g.Game.SteamAppId))
-                .Select(g => g.Game.SteamAppId!)
-                .ToList();
+            // Only Steam entries: every launcher game, and many Local ones, carry an App ID too, matched online
+            // for their metadata, and a GOG or itch.io copy of a game must not hide its Steam install. Such a
+            // Steam copy is offered with a note naming the other copy (AlsoInLibraryAs); ImportSteamGamesAsync
+            // dedupes on Steam entries alone, so it is really added when ticked.
+            var existingAppIds = SteamEntryAppIds(_library.Games.Select(g => g.Game));
+            var otherCopies = OtherCopiesByAppId(_library.Games.Select(g => g.Game));
             var existingGogGameIds = _library.Games
                 .Where(g => g.Game.IsGogGame && !string.IsNullOrEmpty(g.Game.GogGameId))
                 .Select(g => g.Game.GogGameId!)
@@ -210,6 +213,14 @@ public partial class ImportCoordinator
             var existingRockstarGameIds = _library.Games
                 .Where(g => g.Game.IsRockstarGame && !string.IsNullOrEmpty(g.Game.RockstarGameId))
                 .Select(g => g.Game.RockstarGameId!)
+                .ToList();
+            var existingAmazonGameIds = _library.Games
+                .Where(g => g.Game.IsAmazonGame && !string.IsNullOrEmpty(g.Game.AmazonGameId))
+                .Select(g => g.Game.AmazonGameId!)
+                .ToList();
+            var existingItchGameIds = _library.Games
+                .Where(g => g.Game.IsItchGame && !string.IsNullOrEmpty(g.Game.ItchGameId))
+                .Select(g => g.Game.ItchGameId!)
                 .ToList();
             var existingExePaths = new HashSet<string>(_library.Games.Select(g => g.Game.ExecutablePath), StringComparer.OrdinalIgnoreCase);
             // Which entry holds each App ID, for the log only: "already in library" is no answer when
@@ -247,6 +258,12 @@ public partial class ImportCoordinator
             var ignoredRockstarGameIds = new HashSet<string>(
                 _settings.IgnoredGamePaths.Where(p => p.RockstarGameId != null).Select(p => p.RockstarGameId!),
                 StringComparer.OrdinalIgnoreCase);
+            var ignoredAmazonGameIds = new HashSet<string>(
+                _settings.IgnoredGamePaths.Where(p => p.AmazonGameId != null).Select(p => p.AmazonGameId!),
+                StringComparer.OrdinalIgnoreCase);
+            var ignoredItchGameIds = new HashSet<string>(
+                _settings.IgnoredGamePaths.Where(p => p.ItchGameId != null).Select(p => p.ItchGameId!),
+                StringComparer.OrdinalIgnoreCase);
 
             var steamLocations = _settings.SteamIntegrationEnabled
                 ? enabledLocations.Where(l => l.Source == ScanLocationSource.Steam).ToList()
@@ -259,6 +276,8 @@ public partial class ImportCoordinator
             bool xboxEnabled = _settings.XboxIntegrationEnabled;
             bool battleNetEnabled = _settings.BattleNetIntegrationEnabled;
             bool rockstarEnabled = _settings.RockstarIntegrationEnabled;
+            bool amazonEnabled = _settings.AmazonIntegrationEnabled;
+            bool itchEnabled = _settings.ItchIntegrationEnabled;
 
             // Each platform's scan hits its own independent registry/filesystem locations, so
             // they run concurrently rather than one after another.
@@ -290,6 +309,8 @@ public partial class ImportCoordinator
                             string verdict = g.IsAlreadyImported ? $"already in library as {appIdHolders.GetValueOrDefault(g.AppId, "(unknown entry)")}"
                                 : ignoredAppIds.Contains(g.AppId) ? "on the ignore list"
                                 : g.ExePath != null && existingExePaths.Contains(g.ExePath) ? $"already in library (exe '{g.ExePath}')"
+                                : HasEntryInside(existingExePaths, g.InstallDir) ? $"already in library (an entry runs a program in '{g.InstallDir}')"
+                                : otherCopies.TryGetValue(g.AppId, out var other) ? $"offered (a {other} copy has the same App ID)"
                                 : "offered";
                             LoggingService.Verbose("SteamScanner", $"'{g.Name}' [{g.AppId}]: {verdict}");
                         }
@@ -300,7 +321,9 @@ public partial class ImportCoordinator
                         // again as "new" - selecting it would create a second row for the same exe.
                         steamResults = found
                             .Where(g => !g.IsAlreadyImported && !ignoredAppIds.Contains(g.AppId) &&
-                                        (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
+                                        (g.ExePath == null || !existingExePaths.Contains(g.ExePath)) &&
+                                        !HasEntryInside(existingExePaths, g.InstallDir))
+                            .Select(g => otherCopies.TryGetValue(g.AppId, out var other) ? g with { AlsoInLibraryAs = other } : g)
                             .ToList();
                     }
                 }
@@ -347,6 +370,16 @@ public partial class ImportCoordinator
                 () => _rockstarScannerService.ScanInstalledGames(existingRockstarGameIds),
                 g => g.Name, g => g.GameId, g => g.IsAlreadyImported, g => ignoredRockstarGameIds.Contains(g.GameId), g => g.ExePath, existingExePaths));
 
+            // Same again - Amazon's per-user uninstall entries pin each game's folder and product id.
+            var amazonTask = Task.Run(() => OfferedBy("Amazon", amazonEnabled,
+                () => _amazonScannerService.ScanInstalledGames(existingAmazonGameIds),
+                g => g.Name, g => g.GameId, g => g.IsAlreadyImported, g => ignoredAmazonGameIds.Contains(g.GameId), g => g.ExePath, existingExePaths));
+
+            // Same again - the receipt in each itch install folder pins its game id and title.
+            var itchTask = Task.Run(() => OfferedBy("itch.io", itchEnabled,
+                () => _itchScannerService.ScanInstalledGames(existingItchGameIds),
+                g => g.Name, g => g.GameId, g => g.IsAlreadyImported, g => ignoredItchGameIds.Contains(g.GameId), g => g.ExePath, existingExePaths));
+
             // "Platform|ID" of every platform-tagged game already in the library, so a folder
             // candidate that resolves to one of them (e.g. a GOG game found under a manual
             // "C:\GOG Games" scan location) isn't offered as new just because its exe path
@@ -354,7 +387,8 @@ public partial class ImportCoordinator
             var existingPlatformKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var g in _library.Games.Select(c => c.Game))
             {
-                if (!string.IsNullOrEmpty(g.SteamAppId)) existingPlatformKeys.Add($"Steam|{g.SteamAppId}");
+                // Steam entries only, for the reason given at existingAppIds.
+                if (g.IsSteamGame && !string.IsNullOrEmpty(g.SteamAppId)) existingPlatformKeys.Add($"Steam|{g.SteamAppId}");
                 if (!string.IsNullOrEmpty(g.GogGameId)) existingPlatformKeys.Add($"GOG|{g.GogGameId}");
                 if (!string.IsNullOrEmpty(g.EaContentId)) existingPlatformKeys.Add($"EA|{g.EaContentId}");
                 if (!string.IsNullOrEmpty(g.EpicAppName)) existingPlatformKeys.Add($"Epic|{g.EpicAppName}");
@@ -362,6 +396,8 @@ public partial class ImportCoordinator
                 if (!string.IsNullOrEmpty(g.XboxAumid)) existingPlatformKeys.Add($"Xbox|{g.XboxAumid}");
                 if (!string.IsNullOrEmpty(g.BattleNetUid)) existingPlatformKeys.Add($"Battle.net|{g.BattleNetUid}");
                 if (!string.IsNullOrEmpty(g.RockstarGameId)) existingPlatformKeys.Add($"Rockstar|{g.RockstarGameId}");
+                if (!string.IsNullOrEmpty(g.AmazonGameId)) existingPlatformKeys.Add($"Amazon|{g.AmazonGameId}");
+                if (!string.IsNullOrEmpty(g.ItchGameId)) existingPlatformKeys.Add($"itch.io|{g.ItchGameId}");
             }
 
             var folderTask = Task.Run(() =>
@@ -390,7 +426,8 @@ public partial class ImportCoordinator
                     foreach (var c in candidates)
                     {
                         bool inLibrary = existingExePaths.Contains(c.ExePath) ||
-                                         (c.Platform != null && existingPlatformKeys.Contains(PlatformKey(c.Platform)));
+                                         (c.Platform != null && existingPlatformKeys.Contains(PlatformKey(c.Platform))) ||
+                                         (c.Platform?.Steam is { } steamCopy && HasEntryInside(existingExePaths, steamCopy.InstallDir));
                         LoggingService.Verbose("ScanForGames", $"Folders: '{c.Name}' ({c.ExePath}): {(inLibrary ? "already in library" : "offered")}");
                         if (!inLibrary) folderResults.Add(c);
                     }
@@ -398,9 +435,9 @@ public partial class ImportCoordinator
                 return folderResults;
             });
 
-            await Task.WhenAll(steamTask, gogTask, eaTask, epicTask, ubisoftTask, xboxTask, battleNetTask, rockstarTask, folderTask).ConfigureAwait(true);
-            var (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, folderCandidates) =
-                (steamTask.Result, gogTask.Result, eaTask.Result, epicTask.Result, ubisoftTask.Result, xboxTask.Result, battleNetTask.Result, rockstarTask.Result, folderTask.Result);
+            await Task.WhenAll(steamTask, gogTask, eaTask, epicTask, ubisoftTask, xboxTask, battleNetTask, rockstarTask, amazonTask, itchTask, folderTask).ConfigureAwait(true);
+            var (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates) =
+                (steamTask.Result, gogTask.Result, eaTask.Result, epicTask.Result, ubisoftTask.Result, xboxTask.Result, battleNetTask.Result, rockstarTask.Result, amazonTask.Result, itchTask.Result, folderTask.Result);
 
             // A game a platform scan already found in this run must not be listed a second time
             // as a folder candidate (a manual scan location that overlaps a launcher's install
@@ -414,20 +451,22 @@ public partial class ImportCoordinator
             runPlatformKeys.UnionWith(xboxGames.Select(g => $"Xbox|{g.Aumid}"));
             runPlatformKeys.UnionWith(battleNetGames.Select(g => $"Battle.net|{g.Uid}"));
             runPlatformKeys.UnionWith(rockstarGames.Select(g => $"Rockstar|{g.GameId}"));
+            runPlatformKeys.UnionWith(amazonGames.Select(g => $"Amazon|{g.GameId}"));
+            runPlatformKeys.UnionWith(itchGames.Select(g => $"itch.io|{g.GameId}"));
             folderCandidates = folderCandidates
                 .Where(c => c.Platform == null || !runPlatformKeys.Contains(PlatformKey(c.Platform)))
                 .DistinctBy(c => c.Platform != null ? PlatformKey(c.Platform) : c.ExePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            LoggingService.Verbose("ImportCoordinator", $"Scan found new games - Steam {steamGames.Count}, GOG {gogGames.Count}, EA {eaGames.Count}, Epic {epicGames.Count}, Ubisoft {ubisoftGames.Count}, Xbox {xboxGames.Count}, Battle.net {battleNetGames.Count}, Rockstar {rockstarGames.Count}, folders {folderCandidates.Count}.");
+            LoggingService.Verbose("ImportCoordinator", $"Scan found new games - Steam {steamGames.Count}, GOG {gogGames.Count}, EA {eaGames.Count}, Epic {epicGames.Count}, Ubisoft {ubisoftGames.Count}, Xbox {xboxGames.Count}, Battle.net {battleNetGames.Count}, Rockstar {rockstarGames.Count}, Amazon {amazonGames.Count}, itch.io {itchGames.Count}, folders {folderCandidates.Count}.");
 
-            if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && xboxGames.Count == 0 && battleNetGames.Count == 0 && rockstarGames.Count == 0 && folderCandidates.Count == 0)
+            if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && xboxGames.Count == 0 && battleNetGames.Count == 0 && rockstarGames.Count == 0 && amazonGames.Count == 0 && itchGames.Count == 0 && folderCandidates.Count == 0)
             {
                 _library.AnnounceImportResult("No new games found.");
                 return;
             }
 
-            int foundCount = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + rockstarGames.Count + folderCandidates.Count;
+            int foundCount = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + rockstarGames.Count + amazonGames.Count + itchGames.Count + folderCandidates.Count;
             _library.StatusMessage = $"Found {foundCount} new game(s).";
             // Only the scan TrayTrigger ran by itself: a scan the user started shows its results.
             if (silent)
@@ -436,7 +475,7 @@ public partial class ImportCoordinator
                     $"The startup scan found {foundCount} new {(foundCount == 1 ? "game" : "games")}",
                     detail: "Add them with Scan for Games on the Library page.", groupKey: ScanFoundActivityKey);
             }
-            RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, folderCandidates);
+            RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates);
         }
         finally
         {
@@ -448,6 +487,28 @@ public partial class ImportCoordinator
             // cards re-mark themselves when it lands.
             _ = _library.RefreshAvailabilityInBackground();
         }
+    }
+
+    /// <summary>The App IDs of the library's Steam entries: the ones a Steam install already in the library has.</summary>
+    internal static List<string> SteamEntryAppIds(IEnumerable<GameEntry> games) =>
+        games.Where(g => g.IsSteamGame && !string.IsNullOrEmpty(g.SteamAppId)).Select(g => g.SteamAppId!).ToList();
+
+    /// <summary>App ID -> the store of a copy that isn't Steam's ("GOG", "itch.io", "Local"), for the entries matched
+    /// to an App ID for their metadata: a Steam install of the same game is offered beside it, with that note.</summary>
+    internal static Dictionary<string, string> OtherCopiesByAppId(IEnumerable<GameEntry> games) =>
+        games.Where(g => !g.IsSteamGame && !string.IsNullOrEmpty(g.SteamAppId))
+            .GroupBy(g => g.SteamAppId!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().PlatformLabel, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// True when a library entry already runs a program inside <paramref name="installDir"/>: that Steam install
+    /// is in the library already, as a Local entry added before it was linked, whatever program it starts.
+    /// </summary>
+    internal static bool HasEntryInside(IEnumerable<string> exePaths, string? installDir)
+    {
+        if (string.IsNullOrWhiteSpace(installDir)) return false;
+        string folder = installDir.TrimEnd('\\', '/') + "\\";
+        return exePaths.Any(p => !string.IsNullOrEmpty(p) && p.StartsWith(folder, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

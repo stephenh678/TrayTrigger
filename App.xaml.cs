@@ -44,6 +44,7 @@ public partial class App : Application
     private XboxScannerService _xboxScannerService = null!;
     private BattleNetScannerService _battleNetScannerService = null!;
     private RockstarScannerService _rockstarScannerService = null!;
+    private AmazonScannerService _amazonScannerService = null!;
     private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
     private GameScriptService? _gameScriptService;
@@ -254,6 +255,7 @@ public partial class App : Application
         // A pre-launch script's "TT:" line, in the popup while the game waits. Queued: the script's
         // output thread mustn't wait on the UI, and a line a moment late is no loss.
         _gameScriptService!.Said += (game, text) => Dispatcher.BeginInvoke(() => _launchPopup?.OnScriptSaid(game.Id, text));
+        companionTools.Started += tool => Dispatcher.BeginInvoke(() => _mainViewModel?.Tools.RecordUsed(tool.Id));
         companionTools.StartFailed += message => Dispatcher.BeginInvoke(() =>
         {
             if (_mainViewModel != null) _mainViewModel.Library.StatusMessage = message;
@@ -443,6 +445,7 @@ public partial class App : Application
         _xboxScannerService = new XboxScannerService();
         _battleNetScannerService = new BattleNetScannerService();
         _rockstarScannerService = new RockstarScannerService();
+        _amazonScannerService = new AmazonScannerService();
         // Same live-settings provider as _gameScriptService below, rather than the convenience
         // constructor's () => storageService.LoadSettings(): that re-read and re-decrypted
         // settings.json from disk on every profile apply and restore - twice per game launch, on
@@ -473,7 +476,7 @@ public partial class App : Application
         _gameScriptService = new GameScriptService(
             () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
             () => (_mainViewModel?.Settings ?? startupSettings).ScriptDefaults);
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService, _rockstarScannerService);
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService, _rockstarScannerService, _amazonScannerService);
         // A game left frozen by Suspend when TrayTrigger last stopped without exiting has nothing
         // else that will ever resume it. Same screenshot-run exception as the profile recovery.
         if (!isScreenshot)
@@ -514,7 +517,8 @@ public partial class App : Application
             _hotkeyManager,
             _startupManager,
             _trayPromotionService,
-            rockstarScannerService: _rockstarScannerService);
+            rockstarScannerService: _rockstarScannerService,
+            amazonScannerService: _amazonScannerService);
 
         // The Run key is the truth for "Start with Windows" - the installer writes it when the
         // user ticks the task, Task Manager's Startup tab can disable it, and a fresh install

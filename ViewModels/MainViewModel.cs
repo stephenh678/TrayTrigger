@@ -52,6 +52,7 @@ public class MainViewModel : ViewModelBase
     private readonly XboxScannerService _xboxScannerService;
     private readonly BattleNetScannerService _battleNetScannerService;
     private readonly RockstarScannerService _rockstarScannerService;
+    private readonly AmazonScannerService _amazonScannerService;
     private readonly ProcessLauncherService _launcherService;
     private readonly HotkeyManager _hotkeyManager;
     private readonly StartupManager _startupManager;
@@ -96,7 +97,7 @@ public class MainViewModel : ViewModelBase
     public AppSettings Settings => _settings;
     public IconExtractorService IconExtractorService => _iconExtractorService;
     public StorageService StorageService => _storageService;
-    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<DiscoveredBattleNetGame>, List<DiscoveredRockstarGame>, List<GameCandidate>>? RequestScanResultsPicker;
+    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<DiscoveredBattleNetGame>, List<DiscoveredRockstarGame>, List<DiscoveredAmazonGame>, List<DiscoveredItchGame>, List<GameCandidate>>? RequestScanResultsPicker;
     /// <summary>
     /// Forwarded from <see cref="ImportCoordinator.RequestLauncherDetectionPrompt"/>: raised the
     /// first time the user ever presses "Scan for Games", if at least one platform's own scanner
@@ -137,9 +138,11 @@ public class MainViewModel : ViewModelBase
         StartupManager startupManager,
         TrayPromotionService trayPromotionService,
         FolderScannerService? folderScannerService = null,
-        RockstarScannerService? rockstarScannerService = null)
+        RockstarScannerService? rockstarScannerService = null,
+        AmazonScannerService? amazonScannerService = null)
     {
         _rockstarScannerService = rockstarScannerService ?? new RockstarScannerService();
+        _amazonScannerService = amazonScannerService ?? new AmazonScannerService();
         _storageService = storageService;
         _shortcutService = shortcutService;
         _iconExtractorService = iconExtractorService;
@@ -200,7 +203,8 @@ public class MainViewModel : ViewModelBase
             _storageService,
             _settings,
             getSteamGridDbApiKeyOrNull: () => SettingsVM?.SteamGridDbApiKeyOrNull,
-            rockstarScannerService: _rockstarScannerService
+            rockstarScannerService: _rockstarScannerService,
+            amazonScannerService: _amazonScannerService
         );
 
         // Runs before SettingsVM is constructed so its initial Scan Locations list already
@@ -274,7 +278,7 @@ public class MainViewModel : ViewModelBase
             }
         };
 
-        Import.RequestScanResultsPicker += (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, folderCandidates);
+        Import.RequestScanResultsPicker += (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates);
         Import.RequestLauncherDetectionPrompt += detected => RequestLauncherDetectionPrompt?.Invoke(detected);
         Import.RequestCandidatePicker += (path, candidates) => RequestCandidatePicker?.Invoke(path, candidates);
         Import.RequestFolderBatchImport += (path, candidates) => RequestFolderBatchImport?.Invoke(path, candidates);
@@ -686,6 +690,8 @@ public class MainViewModel : ViewModelBase
             new("Xbox / PC Game Pass", _settings.XboxIntegrationEnabled, null),
             new("Battle.net", _settings.BattleNetIntegrationEnabled, Try(() => _battleNetScannerService.IsClientInstalled())),
             new("Rockstar Games Launcher", _settings.RockstarIntegrationEnabled, Try(() => _rockstarScannerService.IsRockstarLauncherInstalled())),
+            new("Amazon Games", _settings.AmazonIntegrationEnabled, Try(() => _amazonScannerService.IsAmazonGamesInstalled())),
+            new("itch.io", _settings.ItchIntegrationEnabled, Try(() => ItchScannerService.IsItchAppInstalled())),
         };
 
         var sessions = _launcherService.GetActiveSessions()
@@ -961,7 +967,7 @@ public class MainViewModel : ViewModelBase
     public void ImportXboxGames(List<DiscoveredXboxGame> discoveredGames) => Import.ImportXboxGames(discoveredGames);
     public Task ImportXboxGamesAsync(List<DiscoveredXboxGame> discoveredGames) => Import.ImportXboxGamesAsync(discoveredGames);
     public void ImportBattleNetGames(List<DiscoveredBattleNetGame> discoveredGames) => Import.ImportBattleNetGames(discoveredGames);
-    public Task ImportBattleNetGamesAsync(List<DiscoveredBattleNetGame> discoveredGames) => Import.ImportBattleNetGamesAsync(discoveredGames);    public Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<GameCandidate> folderCandidates) => Import.ImportScanResultsAsync(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, folderCandidates);
+    public Task ImportBattleNetGamesAsync(List<DiscoveredBattleNetGame> discoveredGames) => Import.ImportBattleNetGamesAsync(discoveredGames);    public Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<DiscoveredAmazonGame> amazonGames, List<DiscoveredItchGame> itchGames, List<GameCandidate> folderCandidates) => Import.ImportScanResultsAsync(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates);
     public bool IsScanLocation(string path) => Import.IsScanLocation(path);
 
     public void IgnoreGamePath(string exePath, string name)
@@ -1025,6 +1031,18 @@ public class MainViewModel : ViewModelBase
     public void IgnoreRockstarGame(string gameId, string name)
     {
         Import.IgnoreRockstarGame(gameId, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreAmazonGame(string gameId, string name)
+    {
+        Import.IgnoreAmazonGame(gameId, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreItchGame(string gameId, string name)
+    {
+        Import.IgnoreItchGame(gameId, name);
         SettingsVM.RefreshIgnoredGamePaths();
     }
 
@@ -1094,6 +1112,7 @@ public class MainViewModel : ViewModelBase
             lastPlayedHotkeyStr: _settings.LaunchLastPlayedHotkey);
 
         var failedTools = failed.Where(b => b.Kind == HotkeyOwnerKind.Tool).ToList();
+        Tools.SetInactiveHotkeys(failedTools.Select(b => b.OwnerId).ToHashSet());
         string? warning = failedTools.Count switch
         {
             0 => null,

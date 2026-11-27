@@ -22,7 +22,7 @@ public static class UrlProtocolHelper
     /// </summary>
     private static readonly string[] AllowedLaunchSchemes =
     [
-        "steam", "com.epicgames.launcher", "origin2", "uplay", "goggalaxy", "http", "https"
+        "steam", "com.epicgames.launcher", "origin2", "uplay", "goggalaxy", "amazon-games", "http", "https"
     ];
 
     /// <summary>True if <paramref name="url"/> is an absolute non-file URL whose scheme is in the

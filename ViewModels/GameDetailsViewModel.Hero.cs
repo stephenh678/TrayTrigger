@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using TrayTrigger.Models;
 using TrayTrigger.Services;
 
@@ -114,6 +115,8 @@ public partial class GameDetailsViewModel
 
         InvalidateCoverImageCache();
         _editHost?.Saved(Game);
+        // Convert to Local Game, or a new link, changes which launcher the ... menu offers to open.
+        OpenInLauncherLabel = LauncherPages.OpenLabel(Game);
         // The banner may have been chosen, or put back to automatic, in Settings.
         _ = LoadHeroAsync(replace: true);
         // Everything the page shows can have changed: the title, the category, the poster, the figures.
@@ -128,6 +131,28 @@ public partial class GameDetailsViewModel
     private DateTime _heroStamp;
     private int _heroLookups;
     private string? _heroLookupAppId;
+
+    /// <summary>The widest the banner is kept in memory: Steam's own banner size, about 19 MB decoded.</summary>
+    internal const int MaxHeroDecodeWidth = 3840;
+
+    /// <summary>
+    /// The width to decode a banner at: 0 (its own size) up to <see cref="MaxHeroDecodeWidth"/>, so it is never enlarged
+    /// before it is drawn, and a 3840 banner stays sharp on a wide or high-DPI window.
+    /// </summary>
+    internal static int HeroDecodeWidth(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
+            return decoder.Frames[0].PixelWidth > MaxHeroDecodeWidth ? MaxHeroDecodeWidth : 0;
+        }
+        catch (Exception)
+        {
+            // Nothing to say here: the load that follows reads the same file and logs if it can't.
+            return MaxHeroDecodeWidth;
+        }
+    }
 
     /// <summary>The wide banner behind the game's name, once found; the page shows the blurred poster until then (and if there is none).</summary>
     public ImageSource? HeroImage => _heroImage;
@@ -161,7 +186,7 @@ public partial class GameDetailsViewModel
             }
             else
             {
-                var image = await Task.Run(() => IconExtractorService.LoadBitmapSafely(path, decodePixelWidth: 1920)).ConfigureAwait(true);
+                var image = await Task.Run(() => IconExtractorService.LoadBitmapSafely(path, decodePixelWidth: HeroDecodeWidth(path))).ConfigureAwait(true);
                 if (image == null) return;
                 _heroPath = path;
                 _heroStamp = stamp;

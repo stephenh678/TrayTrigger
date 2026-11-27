@@ -85,6 +85,20 @@ public partial class SettingsViewModel
         set => SetIntegrationEnabled(DetectedLauncher.Rockstar, "Rockstar", _settings.RockstarIntegrationEnabled, value, v => _settings.RockstarIntegrationEnabled = v);
     }
 
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool AmazonIntegrationEnabled
+    {
+        get => _settings.AmazonIntegrationEnabled;
+        set => SetIntegrationEnabled(DetectedLauncher.Amazon, "Amazon", _settings.AmazonIntegrationEnabled, value, v => _settings.AmazonIntegrationEnabled = v);
+    }
+
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool ItchIntegrationEnabled
+    {
+        get => _settings.ItchIntegrationEnabled;
+        set => SetIntegrationEnabled(DetectedLauncher.Itch, "itch.io", _settings.ItchIntegrationEnabled, value, v => _settings.ItchIntegrationEnabled = v);
+    }
+
     // True while ApplyDetectedLauncherChoices runs: the first-launch picker is choosing initial
     // defaults on an (effectively) empty library, so the "also remove its games?" prompt and the
     // "run Scan for Games" hint would both be noise there.
@@ -119,7 +133,10 @@ public partial class SettingsViewModel
                     $"Turn Off {platformName} Integration?",
                     $"You have {count} {platformName} game{plural}{hiddenNote} in your library. Remove {(count == 1 ? "it" : "them")} too?",
                     $"Turning off {platformName} integration only stops new {platformName} games from being detected. " +
-                    $"Games already in your library stay and keep launching through {platformName} unless you remove them here.\n\n" +
+                    // itch.io games start from their own exe, never through the itch app.
+                    (launcher == DetectedLauncher.Itch
+                        ? "Games already in your library stay and keep launching as they do now unless you remove them here.\n\n"
+                        : $"Games already in your library stay and keep launching through {platformName} unless you remove them here.\n\n") +
                     "Removing can't be undone: playtime, hotkeys, categories and custom artwork for those games are lost. " +
                     "Installed game files are never deleted either way.",
                     primaryText: "Remove Games",
@@ -203,6 +220,8 @@ public partial class SettingsViewModel
             if (Probed(DetectedLauncher.Xbox)) XboxIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Xbox);
             if (Probed(DetectedLauncher.BattleNet)) BattleNetIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.BattleNet);
             if (Probed(DetectedLauncher.Rockstar)) RockstarIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Rockstar);
+            if (Probed(DetectedLauncher.Amazon)) AmazonIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Amazon);
+            if (Probed(DetectedLauncher.Itch)) ItchIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Itch);
         }
         finally
         {

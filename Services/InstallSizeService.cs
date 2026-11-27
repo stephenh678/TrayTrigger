@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using TrayTrigger.Models;
 
@@ -11,8 +12,52 @@ namespace TrayTrigger.Services;
 /// How much room a game takes on disk, counted from the game's own folder: a read of what is there, on this PC,
 /// with nothing sent anywhere. A folder that is too big to be one game, or one that cannot be read, gives no size.
 /// </summary>
-public static class InstallSizeService
+public static partial class InstallSizeService
 {
+    /// <summary>A saved size older than this is counted again, so an update the launcher installed shows up.</summary>
+    public static readonly TimeSpan RecountAfter = TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// True when <paramref name="game"/>'s saved size should be counted (again): it has never been, it was before the
+    /// game was last played (a game grows while it runs: saves, shader caches, a patch it fetched), or it is older than
+    /// <see cref="RecountAfter"/>. A game with no folder to count is remembered as counted too, so it isn't tried each time.
+    /// </summary>
+    public static bool NeedsCount(GameEntry game, DateTime nowUtc)
+    {
+        if (game.InstallSizeCountedUtc is not DateTime counted) return true;
+        if (game.LastPlayed is DateTime played && played.ToUniversalTime() > counted) return true;
+        return nowUtc - counted > RecountAfter;
+    }
+
+    [LibraryImport("kernel32.dll")]
+    private static partial IntPtr GetCurrentThread();
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetThreadPriority(IntPtr thread, int priority);
+
+    private const int ThreadModeBackgroundBegin = 0x00010000;
+    private const int ThreadModeBackgroundEnd = 0x00020000;
+
+    /// <summary>
+    /// Puts the calling thread in Windows' background mode until disposed: its disk reads (and CPU) give way to
+    /// everything else, so counting the library's folders doesn't slow a game or the PC. Only for a thread of its own.
+    /// </summary>
+    public static IDisposable BackgroundIo()
+    {
+        bool entered = SetThreadPriority(GetCurrentThread(), ThreadModeBackgroundBegin);
+        if (!entered) LoggingService.Verbose("InstallSize", $"Background mode wasn't available (error {Marshal.GetLastPInvokeError()}); counting at low priority instead.");
+        return new BackgroundMode(entered);
+    }
+
+    private sealed class BackgroundMode(bool entered) : IDisposable
+    {
+        public void Dispose()
+        {
+            if (entered) SetThreadPriority(GetCurrentThread(), ThreadModeBackgroundEnd);
+        }
+    }
+
     /// <summary>A folder with more files than this is not counted: it is probably not one game's, and counting it would take long.</summary>
     public const int MaxFiles = 400_000;
 

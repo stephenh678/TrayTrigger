@@ -162,7 +162,7 @@ public partial class GameEditViewModel : ViewModelBase
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
         _launchDirectly = game.LaunchDirectly;
-        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || game.IsRockstarGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
+        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || game.IsRockstarGame || game.IsAmazonGame || game.IsItchGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
         _cpuAffinity = game.CpuAffinity;
         _initialCpuAffinity = game.CpuAffinity;
@@ -290,7 +290,7 @@ public partial class GameEditViewModel : ViewModelBase
 
     /// <summary>Under a link target: what it is, and how to run a program instead where that is possible.</summary>
     public string LinkTargetHint => !IsLinkTarget ? string.Empty
-        : !HasPlatform ? "Windows opens this link to start the game, with whatever program handles it."
+        : !HasPlatform || SourceGame.IsItchGame ? "Windows opens this link to start the game, with whatever program handles it."
         : !CanOfferLaunchDirectly ? $"{PlatformName} opens this link to start the game."
         : LaunchDirectly ? "Launching directly needs a program: Browse to the game's .exe."
         : $"{PlatformName} opens this link to start the game. To run a program instead, tick \"{LaunchDirectlyLabel}\" and Browse to its .exe.";
@@ -575,6 +575,10 @@ public partial class GameEditViewModel : ViewModelBase
             SourceGame.BattleNetProgramId = null;
             SourceGame.IsRockstarGame = false;
             SourceGame.RockstarGameId = null;
+            SourceGame.IsAmazonGame = false;
+            SourceGame.AmazonGameId = null;
+            SourceGame.IsItchGame = false;
+            SourceGame.ItchGameId = null;
             SourceGame.ImportedFrom = null;
             SourceGame.LaunchDirectly = false;
         }

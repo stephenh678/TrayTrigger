@@ -105,6 +105,22 @@ public class GameEntry
     /// <summary>The game's key under Rockstar's registry ("Grand Theft Auto V") - the name Rockstar
     /// records the install under, and the game's identity for re-scans and ignores.</summary>
     public string? RockstarGameId { get; set; }
+    /// <summary>True for a game imported via Amazon Games scanning. Same semantics as
+    /// IsGogGame/IsEaGame/IsEpicGame: launched through the Amazon Games app
+    /// (<c>amazon-games://play/&lt;AmazonGameId&gt;</c>) when it is installed, otherwise from its exe.</summary>
+    public bool IsAmazonGame { get; set; }
+    /// <summary>Amazon's product id ("amzn1.adg.product.790f3b07-..."), from the game's uninstall entry -
+    /// the game's identity for re-scans and ignores, and what the launch link names.</summary>
+    public string? AmazonGameId { get; set; }
+    /// <summary>True for a game imported via itch.io scanning. Always started from its exe: itch games are
+    /// DRM-free, and the itch app's only launch link asks for confirmation first.</summary>
+    public bool IsItchGame { get; set; }
+    /// <summary>itch.io's numeric game id ("1495405"), from the install's <c>.itch\receipt.json.gz</c> - the game's
+    /// identity for re-scans and ignores.</summary>
+    public string? ItchGameId { get; set; }
+    /// <summary>The game's itch.io page ("https://creator.itch.io/game"), from the same receipt: itch has no page
+    /// address built from the id alone.</summary>
+    public string? ItchUrl { get; set; }
     /// <summary>Which source the Game Details window shows text metadata from (a per-game view
     /// preference; never affects the library category, art, or sorting). Auto by default - Steam
     /// when there's a Steam App ID, otherwise RAWG. See <see cref="MetadataSource"/>.</summary>
@@ -118,6 +134,12 @@ public class GameEntry
     public int RawgId { get; set; }
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
+    /// <summary>The bytes in the game's folder when it was last counted (<see cref="Services.InstallSizeService"/>), or null
+    /// before it has been, or when it has no folder to count. For the Largest First sort and Game Details.</summary>
+    public long? InstallSizeBytes { get; set; }
+    /// <summary>When <see cref="InstallSizeBytes"/> was counted. Older than the last time the game was played, or than
+    /// <see cref="Services.InstallSizeService.RecountAfter"/>, and it is counted again.</summary>
+    public DateTime? InstallSizeCountedUtc { get; set; }
     public DateTime? LastEnrichmentAttemptUtc { get; set; }
     public PerformanceProfileMode PerformanceProfile { get; set; } = PerformanceProfileMode.Off;
 
@@ -280,6 +302,8 @@ public class GameEntry
         : IsXboxGame ? "Xbox"
         : IsBattleNetGame ? "Battle.net"
         : IsRockstarGame ? "Rockstar"
+        : IsAmazonGame ? "Amazon"
+        : IsItchGame ? "itch.io"
         : "Local";
 
     /// <summary>A playtime as the library and Game Details write it: "45m" under an hour, then hours to one decimal ("2.5h").</summary>

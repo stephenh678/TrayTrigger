@@ -272,6 +272,8 @@ public class GameCardViewModel : ViewModelBase
     public bool IsXboxGame => Game.IsXboxGame;
     public bool IsBattleNetGame => Game.IsBattleNetGame;
     public bool IsRockstarGame => Game.IsRockstarGame;
+    public bool IsAmazonGame => Game.IsAmazonGame;
+    public bool IsItchGame => Game.IsItchGame;
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
@@ -436,6 +438,11 @@ public class GameCardViewModel : ViewModelBase
     /// <summary>The list view's Playtime column: a dash rather than a blank cell.</summary>
     public string ListPlaytimeDisplay => Game.CumulativePlaytimeMinutes > 0 ? Game.PlaytimeDisplay : "—";
     public string LastPlayedDisplay => Game.LastPlayedDisplay;
+    /// <summary>Details List's Size column: the saved size on disk, or a dash before it is counted (or with no folder).</summary>
+    public string ListSizeDisplay => Game.InstallSizeBytes is long bytes and > 0 ? InstallSizeService.Format(bytes) : "—";
+
+    /// <summary>The background count saved a new size for this game.</summary>
+    internal void NotifyInstallSizeChanged() => OnPropertyChanged(nameof(ListSizeDisplay));
 
     public BitmapImage? IconImage
     {
@@ -652,6 +659,8 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsXboxGame));
         OnPropertyChanged(nameof(IsBattleNetGame));
         OnPropertyChanged(nameof(IsRockstarGame));
+        OnPropertyChanged(nameof(IsAmazonGame));
+        OnPropertyChanged(nameof(IsItchGame));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));
@@ -670,38 +679,7 @@ public class GameCardViewModel : ViewModelBase
         ReloadCover();
     }
 
-    private void OpenContainingFolder()
-    {
-        try
-        {
-            string? targetPath = Game.ExecutablePath;
-            if (File.Exists(targetPath))
-            {
-                ShellOpen.Reveal(targetPath, "GameCard", $"the folder for '{Game.Name}'");
-            }
-            else if (Directory.Exists(Game.WorkingDirectory))
-            {
-                // Follow a junction to the real folder (an Xbox game's is a WindowsApps package
-                // folder linked to D:\XboxGames\<Game>\Content). A junction whose target is gone
-                // still passes Directory.Exists, and Explorer shows Documents for it instead.
-                if (LinkedDirectory.Resolve(Game.WorkingDirectory, out string folder) == LinkedDirectoryState.BrokenLink)
-                {
-                    LoggingService.Warn("GameCard", $"Cannot open the folder for '{Game.Name}': '{Game.WorkingDirectory}' links to a folder or drive that no longer exists.");
-                    Views.ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "Folder Not Found",
-                        $"The folder for \"{Game.Name}\" no longer exists.",
-                        $"{Game.WorkingDirectory} points to a folder or drive that has been removed or isn't connected.");
-                }
-                else
-                {
-                    ShellOpen.OpenFolder(folder, "GameCard", $"the folder for '{Game.Name}'");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("GameCard", $"Error opening folder: {ex.Message}");
-        }
-    }
+    private void OpenContainingFolder() => GameFolder.Open(Game, "GameCard");
 
     private void OpenStorePage()
     {

@@ -48,6 +48,8 @@ public class BatchGameItemViewModel : ViewModelBase
         "Xbox" => "pack://application:,,,/Assets/LauncherLogos/xbox.png",
         "Battle.net" => "pack://application:,,,/Assets/LauncherLogos/battlenet.png",
         "Rockstar" => "pack://application:,,,/Assets/LauncherLogos/rockstar_games.png",
+        "Amazon" => "pack://application:,,,/Assets/LauncherLogos/amazon_games.png",
+        "itch.io" => "pack://application:,,,/Assets/LauncherLogos/itchio.png",
         _ => "pack://application:,,,/Assets/LauncherLogos/local_games.png"
     };
 

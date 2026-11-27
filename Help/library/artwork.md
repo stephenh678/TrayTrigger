@@ -6,7 +6,7 @@ A game has three pictures, and each has its own card on Edit Game's **Artwork** 
 - **Poster**: the vertical picture on library cards. Tall, 2 by 3.
 - **Icon**: the small square one in the tray menu and the list view.
 
-Each card says whether the picture is **Automatic** (found for the game) or **Custom** (a file you chose). **Choose Image...** makes it Custom; so does dropping a picture file on the card. **Use Automatic** puts the automatic one back, and **Find again** (Automatic pictures only) looks for it again. The Hero banner card marks the part Game Details crops. The icon can also be an exe, which gives its icon.
+Each card says whether the picture is **Automatic** (found for the game) or **Custom** (a file you chose). **Choose Image...** makes it Custom; so does dropping a picture file on the card. **Use Automatic** puts the automatic one back, and **Find again** (Automatic pictures only) looks for it again. Game Details shows the whole hero banner at the size it opens at; widen the window and it trims the bottom of the banner, as the Hero banner card's bottom strip shows. Banners are shown at their full resolution, up to Steam's 3840 by 1240, so they stay sharp on large and high-DPI screens. The icon can also be an exe, which gives its icon.
 
 A poster or icon you chose yourself before 1.7.6 shows as Automatic, because nothing marked it as yours then. It stays as it is until you press **Use Automatic** or **Find again**, or run Refresh All Game Posters, which replace it with the automatic picture. Choose the picture again and it is marked Custom from then on.
 

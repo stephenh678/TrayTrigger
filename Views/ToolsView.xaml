@@ -328,7 +328,7 @@
         <Grid Grid.Row="2" Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="190"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
@@ -337,10 +337,23 @@
             <views:SearchBox x:Name="ToolsSearchBox" Grid.Column="0" Width="Auto" Margin="0,0,10,0"
                              Text="{Binding SearchText}" Placeholder="Filter tools by name, category, or path..." ClearText="Clear filter"/>
 
-            <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
-                      ItemsSource="{Binding SortOptions}"
-                      SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
-                      Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
+            <!-- The sort, and beside it which way it runs: the Library's pair. -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0">
+                <ComboBox AutomationProperties.Name="Sort order" Width="190"
+                          ItemsSource="{Binding SortOptions}"
+                          SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
+                          Style="{StaticResource ModernComboBox}" Margin="0,0,6,0"/>
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                        BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
+                    <Button Command="{Binding ReverseSortCommand}" Style="{StaticResource SegmentedTabButton}"
+                            Width="32" Height="30" Padding="0" Cursor="Hand"
+                            ToolTip="{Binding SortDirectionToolTip}" AutomationProperties.Name="Reverse the sort order">
+                        <TextBlock Text="{Binding SortDirectionGlyph}" FontFamily="{StaticResource IconFont}"
+                                   FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </Border>
+            </StackPanel>
 
             <!-- The library's filter flyout (Views/FilterFlyout), with the options that are true of a tool. -->
             <views:FilterFlyout x:Name="FilterFlyoutControl" Grid.Column="2" Margin="0,0,10,0"

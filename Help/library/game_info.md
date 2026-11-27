@@ -1,6 +1,6 @@
 # Where game info comes from
 
-The Game Details window (click a game card) is the page for one game. It opens on a header with the game's hero banner behind its name (Steam's wide hero banner art, or SteamGridDB's when you have given TrayTrigger a key and Steam has none; a blurred poster until it arrives or if there is none), its store and genres on one quiet line (with a small tag for how Steam's players rated it, such as 91% positive, and a Playing tag while the game runs), how long you have played, when you last played and its performance profile, with a **Play** button, the favorite star and a **...** menu (the store pages, and Remove from library). Under it are two tabs, **Overview** and **Settings**.
+The Game Details window (click a game card) is the page for one game. It opens on a header with the game's hero banner behind its name, running the width of the window and fading into the page under the tabs (Steam's wide hero banner art, or SteamGridDB's when you have given TrayTrigger a key and Steam has none; a blurred poster until it arrives or if there is none), its store and genres on one quiet line (with a small tag for how Steam's players rated it, such as 91% positive, and a Playing tag while the game runs), with a **Play** button and a **...** menu (the store pages, an itch.io game's page on itch.io, Add to Favorites or Remove from Favorites, and Remove from library). Under it are two tabs, **Overview** and **Settings**, with how long you have played, when you last played and the game's performance profile on the right of the same line.
 
 - **Overview** is what the game is and what TrayTrigger does for it; see The Overview below.
 - **Settings** is where you edit the game: its artwork, title, category, launch options, profile, display and scripts. Everything under "Edit Game" in this help is on this tab. Right-click a game and choose Edit Game Properties, or press Settings, to open it. **Save Changes** writes your edits and keeps the page open; **Discard Changes**, shown only while there are edits, throws them away and starts again from what is saved. Closing the window, Play, or Remove while edits are still open asks whether to save them: **Save** (or Enter) saves and goes on, **Don't Save** throws them away, and **Cancel** (or Esc) takes you back to the page. If a value can't be saved, the page stays open on Settings with the reason under that field.
@@ -11,7 +11,7 @@ On the left: the synopsis, the three newest Steam news posts (with a PATCH tag o
 
 On the right, in this order:
 
-- **Details** is the developer and publisher (one row when they are the same company), release date, the drive the game is installed on and **Size on disk**, then the scores, the play modes and the links: the store page, PCGamingWiki, SteamDB and the developer's website, each only when the game has one. Size on disk is counted on this PC from the game's own folder when the page opens, and left out when the folder cannot be found or is too big to be one game; nothing is sent anywhere. The links open in your browser.
+- **Details** is the developer and publisher (one row when they are the same company), release date, the drive the game is installed on and **Size on disk**, then the scores, the play modes and the links: the store page, PCGamingWiki, SteamDB and the developer's website, each only when the game has one. Size on disk is counted on this PC from the game's own folder, once in the background for the Library's Size on Disk sort or when the page opens, and counted again after you play the game or once a week. It is left out when the folder cannot be found or is too big to be one game; nothing is sent anywhere. The links open in your browser.
 - **Your setup** is one card with a row for each area TrayTrigger changes for the game: Performance (always), DLSS while TrayTrigger holds an override, and Display and sound, Scripts and Launch when something is set for the game. Each row says what it is doing now and has a link that opens the settings for it, scrolled to the right card and outlined. Anything not listed is at its default: an area left alone has no row, and its tab on Settings is still there. The rows read the game as it is saved.
 - **Last session** is the game's most recent session as Activity & History wrote it, kept to three lines (when it ran, the profile, and that everything was put back). **See this game in Activity** closes the page and opens Activity & History with the game's name in the filter box, so the list shows just this game. It is left out for a game with no session on record.
 
@@ -19,7 +19,7 @@ The text on the Overview can come from one of two sources. Which one, and how fr
 
 ## Steam
 
-Used for any game linked to a Steam App ID. Steam is the richer source: it alone has the review summary, PC requirements and patch notes. Games from GOG, EA, Epic, Ubisoft, Battle.net and Rockstar are often on Steam too, so they get Steam info even though they launch through their own client.
+Used for any game linked to a Steam App ID. Steam is the richer source: it alone has the review summary, PC requirements and patch notes. Games from GOG, EA, Epic, Ubisoft, Battle.net, Rockstar and Amazon are often on Steam too, so they get Steam info even though they launch through their own client.
 
 ## RAWG
 
@@ -40,6 +40,10 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 ## PCGamingWiki
 
 The **PCGamingWiki** link in the Details card (and the ... menu) opens the game's page on pcgamingwiki.com, where the PC fixes are: ultrawide and FOV support, frame cap and save game location. A Steam game opens its page directly; any other game opens the wiki's search for its name, which lands on the page when the title matches. It shows for every game and does not follow the Steam | RAWG switch. The button itself downloads nothing: the link opens in your browser.
+
+## The HDR available tag
+
+When Steam lists a game as **HDR available**, its details show that tag after the play modes. It helps with the game's HDR choice in its Performance settings: a game with HDR of its own wants HDR on, and Auto HDR is for games without it. The tag comes from the developer's Steam store page, so a game without it may still have HDR; RAWG has no such flag, so games shown from RAWG never have it. Details downloaded before this tag existed show it after their next refresh.
 
 ## The anti-cheat tag
 

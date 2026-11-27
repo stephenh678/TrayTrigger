@@ -944,14 +944,19 @@ public partial class SteamMetadataService
         return blurred;
     }
 
-    private static bool IsRelevantPlayMode(string? categoryName)
+    /// <summary>The Steam categories shown as tags in Game Details: how the game is played, and "HDR available",
+    /// which helps with the game's HDR and Auto HDR choice (Auto HDR is for games without HDR of their own).</summary>
+    internal static bool IsRelevantPlayMode(string? categoryName)
     {
         if (string.IsNullOrWhiteSpace(categoryName)) return false;
         string lower = categoryName.ToLowerInvariant();
         return lower is "single-player" or "multi-player" or "co-op" or "online co-op" or "lan co-op"
             or "pvp" or "online pvp" or "cross-platform multiplayer" or "full controller support"
-            or "steam achievements" or "steam cloud";
+            or "steam achievements" or "steam cloud" or "hdr available";
     }
+
+    /// <summary>Steam's category for a game with HDR of its own.</summary>
+    internal const string HdrAvailableTag = "HDR available";
 
     [GeneratedRegex(@"<[^>]+>")]
     private static partial Regex HtmlTagsRegex();

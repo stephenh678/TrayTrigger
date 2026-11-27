@@ -115,6 +115,10 @@
                                 <TextBlock Text="{Binding PathDisplay}" FontSize="{DynamicResource FontSizeBody}"
                                            Foreground="{DynamicResource BrushTextMuted}"
                                            TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding AlsoInLibraryNote}" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextMuted}" FontStyle="Italic"
+                                           TextTrimming="CharacterEllipsis" Margin="0,1,0,0"
+                                           Visibility="{Binding HasAlsoInLibraryNote, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
                         </DockPanel>
                     </DataTemplate>

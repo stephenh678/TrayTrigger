@@ -23,25 +23,22 @@ public static class LibraryConstants
     public const string XboxCategory = "Xbox";
     public const string BattleNetCategory = "Battle.net";
     public const string RockstarCategory = "Rockstar";
+    public const string AmazonCategory = "Amazon";
+    public const string ItchCategory = "itch.io";
+
+    /// <summary>True when metadata enrichment may overwrite <paramref name="game"/>'s category with a genre.</summary>
+    public static bool IsEnrichableCategory(GameEntry game) => IsEnrichableCategory(game.Category, game);
 
     /// <summary>
-    /// Every platform's default category name. The single source of truth for "is this category
-    /// just the platform's placeholder" - used by Steam-genre enrichment (a placeholder may be
-    /// replaced by a real genre; a user-chosen category never is) and by the card's category
-    /// badge (a placeholder is redundant next to the platform badge). Previously three separate
-    /// hard-coded lists that each had to grow by one clause per platform.
+    /// True when metadata enrichment may overwrite <paramref name="category"/> with a genre: it's still
+    /// Uncategorized, or the placeholder of <paramref name="game"/>'s own platform ("GOG" on a GOG game) - not
+    /// something the user picked. Only the game's own platform counts: a Local game filed under "Amazon" by hand,
+    /// before Amazon Games had an integration, keeps the category, though "Amazon" is a placeholder for Amazon games.
     /// </summary>
-    public static readonly IReadOnlySet<string> PlatformCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        SteamCategory, GogCategory, EaCategory, EpicCategory, UbisoftCategory, XboxCategory, BattleNetCategory, RockstarCategory
-    };
-
-    /// <summary>True when Steam metadata enrichment may overwrite <paramref name="category"/> with
-    /// a genre: it's still Uncategorized or a platform placeholder, not something the user picked.</summary>
-    public static bool IsEnrichableCategory(string? category)
+    public static bool IsEnrichableCategory(string? category, GameEntry game)
         => string.IsNullOrWhiteSpace(category)
            || string.Equals(category, Uncategorized, StringComparison.OrdinalIgnoreCase)
-           || PlatformCategories.Contains(category);
+           || string.Equals(category, PlatformCategoryFor(game), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The category to store for what a user typed or picked: trimmed, and <see cref="Uncategorized"/>
@@ -70,6 +67,8 @@ public static class LibraryConstants
          : game.IsXboxGame ? XboxCategory
          : game.IsBattleNetGame ? BattleNetCategory
          : game.IsRockstarGame ? RockstarCategory
+         : game.IsAmazonGame ? AmazonCategory
+         : game.IsItchGame ? ItchCategory
          : game.HasSteamOverlay ? SteamCategory
          : null;
 }

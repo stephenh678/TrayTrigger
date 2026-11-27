@@ -99,40 +99,10 @@ public partial class LibraryViewModel
         SelectedCategory = category;
     }
 
+    /// <summary>Orders the list by the sort box's option and direction (see LibraryViewModel.Sorting).</summary>
     public void ApplySort()
     {
-        FilteredGames.SortDescriptions.Clear();
-        switch (SelectedSortOption)
-        {
-            case "Alphabetical (Z - A)":
-                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Descending));
-                break;
-            case "Favorites First (A - Z)":
-                FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
-                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
-                break;
-            case "Favorites First (Z - A)":
-                FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
-                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Descending));
-                break;
-            case SortFavoritesFirstRecent:
-                FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
-                FilteredGames.SortDescriptions.Add(new SortDescription("Game.LastPlayed", ListSortDirection.Descending));
-                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
-                break;
-            case "Most Recently Played":
-                FilteredGames.SortDescriptions.Add(new SortDescription("Game.LastPlayed", ListSortDirection.Descending));
-                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
-                break;
-            case "Cumulative Playtime":
-                FilteredGames.SortDescriptions.Add(new SortDescription("Game.CumulativePlaytimeMinutes", ListSortDirection.Descending));
-                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
-                break;
-            case "Alphabetical (A - Z)":
-            default:
-                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
-                break;
-        }
+        ApplySortOrder();
         FilteredGames.Refresh();
     }
 

@@ -59,6 +59,10 @@ public sealed class ToolsViewModel : ViewModelBase
         Filter.RestoreKeys(settings.ToolFilterKeys);
         Filter.CountProvider = CountForFilterSummary;
 
+        // A sort saved under its name before 2.0.0-beta.2 ("Alphabetical (Z - A)") opens as its sort, turned round.
+        (_settings.ToolsSortOption, _settings.ToolsSortReversed) =
+            ToolCatalog.NormalizePageSortOption(_settings.ToolsSortOption, _settings.ToolsSortReversed);
+
         FilteredTools = new ListCollectionView(Tools)
         {
             Filter = item => item is ToolCardViewModel card
@@ -170,20 +174,52 @@ public sealed class ToolsViewModel : ViewModelBase
         }
     }
 
-    public IReadOnlyList<string> SortOptions => ToolCatalog.SortOptions;
+    public IReadOnlyList<string> SortOptions => ToolCatalog.PageSortOptions;
 
     public string SelectedSortOption
     {
-        get => ToolCatalog.NormalizeSortOption(_settings.ToolsSortOption);
+        get => ToolCatalog.NormalizePageSortOption(_settings.ToolsSortOption).Option;
         set
         {
-            string next = ToolCatalog.NormalizeSortOption(value);
+            string next = ToolCatalog.NormalizePageSortOption(value).Option;
             if (next == SelectedSortOption && _settings.ToolsSortOption == next) return;
             _settings.ToolsSortOption = next;
+            // A different sort starts the way it reads most usefully; the arrow turns it round.
+            _settings.ToolsSortReversed = false;
             SaveSettings();
             OnPropertyChanged();
-            RefreshView();
+            OnSortDirectionChanged();
         }
+    }
+
+    /// <summary>The sort box's option runs the other way (the arrow beside it). Saved, like the option.</summary>
+    public bool IsSortReversed
+    {
+        get => _settings.ToolsSortReversed;
+        set
+        {
+            if (_settings.ToolsSortReversed == value) return;
+            _settings.ToolsSortReversed = value;
+            SaveSettings();
+            OnSortDirectionChanged();
+        }
+    }
+
+    /// <summary>The order runs A to Z or oldest first: what the Up arrow means, as on the Library page.</summary>
+    public bool IsSortAscending => ToolCatalog.IsNaturallyAscending(SelectedSortOption) ^ IsSortReversed;
+    public string SortDirectionGlyph => IsSortAscending ? "" : "";
+    public string SortDirectionToolTip => IsSortAscending ? "Ascending order. Click to reverse it" : "Descending order. Click to reverse it";
+
+    private ICommand? _reverseSortCommand;
+    public ICommand ReverseSortCommand => _reverseSortCommand ??= new RelayCommand(() => IsSortReversed = !IsSortReversed);
+
+    private void OnSortDirectionChanged()
+    {
+        OnPropertyChanged(nameof(IsSortReversed));
+        OnPropertyChanged(nameof(IsSortAscending));
+        OnPropertyChanged(nameof(SortDirectionGlyph));
+        OnPropertyChanged(nameof(SortDirectionToolTip));
+        RefreshView();
     }
 
     public string ViewMode
@@ -231,6 +267,27 @@ public sealed class ToolsViewModel : ViewModelBase
         ToolCatalog.Sort(Tools, c => c.Tool, _settings.ToolsTraySortOption).ToList();
 
     public ToolCardViewModel? FindCard(string id) => Tools.FirstOrDefault(c => c.Id == id);
+
+    /// <summary>
+    /// The tool was just started - from its card, the tray or its hotkey, or with a game - so it is the most recently
+    /// used. Saved at once, and the list re-sorted when it is in Recently Used order.
+    /// </summary>
+    internal void RecordUsed(string toolId)
+    {
+        var card = FindCard(toolId);
+        if (card == null) return;
+        card.Tool.LastUsedUtc = DateTime.UtcNow;
+        Save();
+        RefreshView();
+    }
+
+    /// <summary>After each hotkey registration: marks the tools whose hotkey Windows refused, for the "Hotkey not working" filter.</summary>
+    internal void SetInactiveHotkeys(IReadOnlySet<string> toolIds)
+    {
+        foreach (var card in Tools) card.IsHotkeyInactive = card.HasHotkey && toolIds.Contains(card.Id);
+        Filter.RefreshAvailability(Tools);
+        RefreshView();
+    }
 
     private volatile IReadOnlyList<ToolEntry> _snapshot = [];
 
@@ -508,6 +565,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
             // Only once it is really being added, so a skipped duplicate leaves no icon file behind.
             tool.IconPath = _icons.ExtractAndCacheIcon(tool.Id, iconSource, tool.Name);
+            tool.AddedUtc = DateTime.UtcNow;
             Tools.Add(new ToolCardViewModel(tool, this));
             added.Add(tool);
             LoggingService.Info("Tools", $"Added tool '{tool.Name}' ('{ToolCatalog.LaunchDisplay(tool)}', category '{tool.Category}', run as admin {tool.RunAsAdmin}).");
@@ -667,6 +725,7 @@ public sealed class ToolsViewModel : ViewModelBase
         {
             case ToolLaunchOutcome.Started:
             case ToolLaunchOutcome.ActivatedRunning:
+                RecordUsed(card.Id);
                 StatusMessage = $"Launched {card.Name}";
                 LaunchPopup?.LaunchDispatched(card.Id);
                 break;
@@ -1044,7 +1103,7 @@ public sealed class ToolsViewModel : ViewModelBase
     {
         public int Compare(object? x, object? y) =>
             x is ToolCardViewModel a && y is ToolCardViewModel b
-                ? ToolCatalog.Compare(a.Tool, b.Tool, owner.SelectedSortOption)
+                ? ToolCatalog.Compare(a.Tool, b.Tool, owner.SelectedSortOption, owner.IsSortReversed)
                 : 0;
     }
 }

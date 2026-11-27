@@ -6,7 +6,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Finding a tool
 
-The filter box above the list narrows it by name, category or path, the tabs split it by category, and the filter button beside Sort narrows it by what a tool is and what it does: a program, a script or a Store app, a favorite, a hotkey, run as administrator, starts or closes with games, a missing file. It works exactly as the Library's does, with saved filters and "opposite" ticks. See Filtering tools.
+The filter box above the list narrows it by name, category or path, the tabs split it by category, and the filter button beside Sort narrows it by what a tool is and what it does: a program, a script or a Store app, a favorite, a hotkey, run as administrator, starts or closes with games (and the details of that: a collection, a wait, closing or reopening afterward), a missing file or a hotkey that isn't working. It works exactly as the Library's does, with saved filters and "opposite" ticks. See Filtering tools.
 
 ## Adding a tool
 
@@ -41,7 +41,7 @@ The filter box above the list narrows it by name, category or path, the tabs spl
 - Tools have their own categories, separate from game categories. Set one with Change Category... or in Edit Tool; the picker suggests the categories your tools already use.
 - The tabs are All Tools, Favorites, then each category A to Z. A category tab disappears when its last tool leaves it. To see the tools that start with games or close for them, tick Starts with games or Closes for games in the filter button.
 - Click the star on a tool to make it a favorite.
-- Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category, program path or Store app ID.
+- Sort the page by Name, Favorites First, With Games First (tools that start with games, then those that close for them, then the rest), Recently Used (the tools TrayTrigger started last, from the page, the tray, a hotkey or with a game) or Recently Added. The arrow button beside the sort box turns the order round, as on the Library page: Z to A, or oldest first. Favorites and the tools that go with games stay at the top either way, and tools never used stay at the end. The tray's Tools submenu keeps its own order, set in Settings. Tools added before 2.0.0-beta.2 have no added date, so Recently Added lists them after the newer ones, A to Z. Search matches a tool's name, category, program path or Store app ID.
 - Three views: Large Icons, Small Icons and List. The page remembers the view, sort and tab you last used.
 
 ## Changing several tools at once

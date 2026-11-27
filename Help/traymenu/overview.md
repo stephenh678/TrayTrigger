@@ -48,7 +48,7 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 ## Tools
 
 - With Tools turned on (Settings > General) and "Show Tools in tray menu" ticked (Settings > Tray Menu), a Tools submenu follows your games. Tools is on by default; the submenu is off until you tick it.
-- It's one flat list of every tool in "Tools sort order": A to Z, Z to A, or favorites first. Tool categories and favorites don't get sections of their own.
+- It's one flat list of every tool in "Tools sort order": any of the Tools page's sorts, such as A to Z or Recently Used. Tool categories and favorites don't get sections of their own.
 - A tool launched from the tray gets the same launch popup as a game.
 
 ## Shortcuts at the bottom

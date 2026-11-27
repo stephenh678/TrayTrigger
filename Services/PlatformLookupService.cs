@@ -20,6 +20,8 @@ public sealed class PlatformMatch
     public DiscoveredXboxGame? Xbox { get; init; }
     public DiscoveredBattleNetGame? BattleNet { get; init; }
     public DiscoveredRockstarGame? Rockstar { get; init; }
+    public DiscoveredAmazonGame? Amazon { get; init; }
+    public DiscoveredItchGame? Itch { get; init; }
 
     private PlatformMatch(string platform) => Platform = platform;
 
@@ -31,8 +33,10 @@ public sealed class PlatformMatch
     public static PlatformMatch ForXbox(DiscoveredXboxGame g) => new("Xbox") { Xbox = g };
     public static PlatformMatch ForBattleNet(DiscoveredBattleNetGame g) => new("Battle.net") { BattleNet = g };
     public static PlatformMatch ForRockstar(DiscoveredRockstarGame g) => new("Rockstar") { Rockstar = g };
+    public static PlatformMatch ForAmazon(DiscoveredAmazonGame g) => new("Amazon") { Amazon = g };
+    public static PlatformMatch ForItch(DiscoveredItchGame g) => new("itch.io") { Itch = g };
 
-    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? Xbox?.Name ?? BattleNet?.Name ?? Rockstar?.Name ?? string.Empty;
+    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? Xbox?.Name ?? BattleNet?.Name ?? Rockstar?.Name ?? Amazon?.Name ?? Itch?.Name ?? string.Empty;
 }
 
 /// <summary>
@@ -66,6 +70,8 @@ public class PlatformLookupService
     private readonly XboxScannerService _xbox;
     private readonly BattleNetScannerService _battleNet;
     private readonly RockstarScannerService _rockstar;
+    private readonly AmazonScannerService _amazon;
+    private readonly ItchScannerService _itch;
 
     public PlatformLookupService(
         SteamScannerService steam,
@@ -75,9 +81,13 @@ public class PlatformLookupService
         UbisoftScannerService ubisoft,
         XboxScannerService xbox,
         BattleNetScannerService battleNet,
-        RockstarScannerService? rockstar = null)
+        RockstarScannerService? rockstar = null,
+        AmazonScannerService? amazon = null,
+        ItchScannerService? itch = null)
     {
         _rockstar = rockstar ?? new RockstarScannerService();
+        _amazon = amazon ?? new AmazonScannerService();
+        _itch = itch ?? new ItchScannerService();
         _steam = steam;
         _gog = gog;
         _ea = ea;
@@ -147,6 +157,8 @@ public class PlatformLookupService
         private readonly Dictionary<string, DiscoveredBattleNetGame?> _battleNetResolved = new(StringComparer.OrdinalIgnoreCase);
         private List<(string GameId, string InstallDir)>? _rockstarInstalls;
         private readonly Dictionary<string, DiscoveredRockstarGame?> _rockstarResolved = new(StringComparer.OrdinalIgnoreCase);
+        private List<(string GameId, string Name, string InstallDir)>? _amazonInstalls;
+        private readonly Dictionary<string, DiscoveredAmazonGame?> _amazonResolved = new(StringComparer.OrdinalIgnoreCase);
 
         internal Index(PlatformLookupService owner) => _owner = owner;
 
@@ -161,6 +173,12 @@ public class PlatformLookupService
         public PlatformMatch? Match(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return null;
+
+            // An Amazon Games shortcut (.url) names its game by product id, not by a path - amazon-games://play/<id>,
+            // the link on the app's own desktop and Start menu shortcuts - so it is matched by that id, and a link to a
+            // game that isn't installed matches nothing.
+            if (AmazonScannerService.ParseLaunchUrl(path) is { } amazonId)
+                return MatchAmazon(path, install => install.GameId.Equals(amazonId, StringComparison.OrdinalIgnoreCase));
 
             // Steam first: its libraries are the most common thing users drag in, and Ubisoft
             // titles bought on Steam register with both - Steam is the one that launches them.
@@ -236,6 +254,41 @@ public class PlatformLookupService
                 if (rockstar != null) return PlatformMatch.ForRockstar(rockstar);
             }
 
+            return MatchAmazon(path, install => IsPathUnderDirectory(path, install.InstallDir)) ?? MatchItch(path);
+        }
+
+        /// <summary>
+        /// The itch install <paramref name="path"/> is in, found by the receipt the itch app keeps in each game's
+        /// folder, so a game in any of the app's install locations is recognised. A dropped exe is kept as the
+        /// game's exe; a folder gets the one the folder scan picks.
+        /// </summary>
+        private PlatformMatch? MatchItch(string path)
+        {
+            var install = ItchScannerService.FindInstallContaining(path);
+            if (install == null) return null;
+            if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
+            {
+                var (gameId, name, installDir, storeUrl) = install.Value;
+                return PlatformMatch.ForItch(new DiscoveredItchGame(gameId, name, installDir, path, path, IsAlreadyImported: false, StoreUrl: storeUrl));
+            }
+            var itch = Try(() => _owner._itch.ResolveInstall(install.Value), "itch.io", path);
+            return itch == null ? null : PlatformMatch.ForItch(itch);
+        }
+
+        /// <summary>The first Amazon Games install <paramref name="isMatch"/> accepts, as a platform match.</summary>
+        private PlatformMatch? MatchAmazon(string path, Func<(string GameId, string Name, string InstallDir), bool> isMatch)
+        {
+            _amazonInstalls ??= Try(() => _owner._amazon.GetInstalls(), "Amazon", path) ?? [];
+            foreach (var install in _amazonInstalls)
+            {
+                if (!isMatch(install)) continue;
+                if (!_amazonResolved.TryGetValue(install.GameId, out var amazon))
+                {
+                    amazon = Try(() => _owner._amazon.ResolveInstall(install), "Amazon", path);
+                    _amazonResolved[install.GameId] = amazon;
+                }
+                if (amazon != null) return PlatformMatch.ForAmazon(amazon);
+            }
             return null;
         }
 

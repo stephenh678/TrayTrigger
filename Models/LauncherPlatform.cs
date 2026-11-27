@@ -16,5 +16,7 @@ public enum LauncherPlatform
     Ubisoft,
     Xbox,
     BattleNet,
-    Rockstar
+    Rockstar,
+    Amazon,
+    Itch
 }

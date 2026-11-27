@@ -43,10 +43,12 @@ public class AppSettings
     public bool XboxIntegrationEnabled { get; set; } = true;
     public bool BattleNetIntegrationEnabled { get; set; } = true;
     public bool RockstarIntegrationEnabled { get; set; } = true;
+    public bool AmazonIntegrationEnabled { get; set; } = true;
+    public bool ItchIntegrationEnabled { get; set; } = true;
     /// <summary>
     /// "Keep game launchers minimized when launching a game": each launcher's own start-quietly switch.
     /// Steam cold-starts with -silent, Epic gets its silent launch link, and GOG Galaxy starts with
-    /// /launchViaAutostart. The EA app, Ubisoft Connect and the Rockstar Games Launcher have no such switch, so their windows are
+    /// /launchViaAutostart. The EA app, Ubisoft Connect and the Rockstar Games Launcher have no such switch, and none is known for Amazon Games, so their windows are
     /// left as they are. Xbox launches never open the Xbox app, and Battle.net is left alone because
     /// its launch retries and Play-tab fallback need its window.
     /// </summary>
@@ -98,7 +100,9 @@ public class AppSettings
     public bool ShowCategoryTabs { get; set; } = true;
     /// <summary>The categories' share of the Library's tab row when categories and collections can't both fit, set by dragging the divider between them.</summary>
     public double LibraryTabSplit { get; set; } = LibraryTabRowLayout.DefaultSplit;
-    public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
+    public string LastSortOption { get; set; } = "Name";
+    /// <summary>The Library's sort runs the other way from <see cref="LastSortOption"/>'s own direction (Z to A, smallest first, ...).</summary>
+    public bool LastSortReversed { get; set; }
 
     /// <summary>
     /// Ticked options in the library filter flyout ("launcher:steam", "status:neverplayed"), kept
@@ -212,7 +216,9 @@ public class AppSettings
     /// <summary>Order of the tray's Tools submenu. One of <see cref="Services.ToolCatalog.SortOptions"/>.</summary>
     public string ToolsTraySortOption { get; set; } = ToolCatalog.SortAlphabetical;
     /// <summary>Order of the Tools page, separate from the tray's. View state, like <see cref="LastSortOption"/>.</summary>
-    public string ToolsSortOption { get; set; } = ToolCatalog.SortAlphabetical;
+    public string ToolsSortOption { get; set; } = ToolCatalog.PageSortName;
+    /// <summary>The Tools page's sort runs the other way from <see cref="ToolsSortOption"/>'s own direction, as <see cref="LastSortReversed"/> does the Library's.</summary>
+    public bool ToolsSortReversed { get; set; }
     /// <summary>Tools page layout. One of <see cref="Services.ToolCatalog.ViewModes"/>.</summary>
     public string ToolsViewMode { get; set; } = ToolCatalog.ViewLargeIcons;
     /// <summary>The Tools page's selected category tab, kept across restarts like <see cref="LastCategoryFilter"/>.</summary>

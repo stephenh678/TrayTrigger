@@ -18,8 +18,13 @@ The flyout is in groups, each under a small blue heading.
 - Favorite - the same set as the Favorites tab, here so you can combine it with the others.
 - Has a hotkey, Runs as administrator, Hides its window.
 - Starts with games and Closes for games - the tools in the game tabs, the ones you set up in Edit Tool. A script or Store app can't do either, so a box left ticked on one doesn't count.
+- Limited to a collection - a tool that starts or closes only for the games in the collections picked in Edit Tool.
+- Waits before the game - a tool that starts with games and holds the game back a few seconds while it gets ready.
+- Closes after games - a tool that starts with games and is closed again when they end. Reopens after games - a tool that closes for games and is started again afterward.
 
-**Needs attention** - File missing (a program that has moved, or a Store app that was uninstalled) and No icon.
+Limited to a collection and Waits before the game are listed only while one of your tools has them. Closes after games is listed while a tool starts with games, and Reopens after games while a tool closes for games, so their opposites (Stays open, Stays closed) are there to pick too. Only what can apply counts: a wait on a tool that doesn't start with games is not a wait.
+
+**Needs attention** - File missing (a program that has moved, or a Store app that was uninstalled), No icon, and Hotkey not working (another app already holds the tool's hotkey, so Windows refused it; pick another in Edit Tool). Hotkey not working is listed only while a tool's hotkey is refused.
 
 ## The opposite of a setting
 

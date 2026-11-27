@@ -431,15 +431,17 @@ public partial class GameDetailsViewModel : ViewModelBase
     /// detection can miss, so the page never says a game has none.</summary>
     public string? AntiCheatTag => string.IsNullOrWhiteSpace(Game.DetectedAntiCheat) ? null : $"Anti-cheat: {Game.DetectedAntiCheat}";
 
-    /// <summary>The tag row: the play modes, then the anti-cheat tag when there is one.</summary>
-    public System.Collections.Generic.List<string> TagList
+    /// <summary>The tag row: the play modes, then "HDR available" when Steam lists it, then the anti-cheat tag when
+    /// there is one - the two about how the game runs on this PC, side by side, wherever Steam put HDR in its list.</summary>
+    public System.Collections.Generic.List<string> TagList => BuildTagList(PlayModes, AntiCheatTag);
+
+    internal static System.Collections.Generic.List<string> BuildTagList(System.Collections.Generic.IEnumerable<string> playModes, string? antiCheatTag)
     {
-        get
-        {
-            var tags = new System.Collections.Generic.List<string>(PlayModes);
-            if (AntiCheatTag != null) tags.Add(AntiCheatTag);
-            return tags;
-        }
+        static bool IsHdr(string tag) => string.Equals(tag, SteamMetadataService.HdrAvailableTag, StringComparison.OrdinalIgnoreCase);
+        var tags = playModes.Where(t => !IsHdr(t)).ToList();
+        tags.AddRange(playModes.Where(IsHdr).Take(1));
+        if (antiCheatTag != null) tags.Add(antiCheatTag);
+        return tags;
     }
 
     /// <summary>"Open on RAWG" - the RAWG counterpart of the Steam Store button, shown while
@@ -562,6 +564,12 @@ public partial class GameDetailsViewModel : ViewModelBase
 
     public ICommand OpenPcGamingWikiCommand { get; }
 
+    /// <summary>An itch.io game's page on itch.io, from the receipt the itch app keeps (itch has no page address
+    /// built from the game's id alone).</summary>
+    public bool HasItchPage => Game.IsItchGame && Uri.TryCreate(Game.ItchUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+    public ICommand OpenItchPageCommand { get; }
+
     public ICommand LaunchGameCommand { get; }
     /// <summary>Play Without Changes, from the ... menu: the game starts once with none of its settings applied.</summary>
     public ICommand LaunchWithoutChangesCommand { get; }
@@ -578,6 +586,21 @@ public partial class GameDetailsViewModel : ViewModelBase
     public ICommand CloseGameCommand { get; }
     public ICommand ForceCloseCommand { get; }
     public ICommand OpenStorePageCommand { get; }
+
+    /// <summary>"Open in Steam" and so on: the launcher's own page for the game, where it keeps Verify, Repair and
+    /// Uninstall (see <see cref="LauncherPages"/>). Null, which hides the item, for a game with no launcher or one
+    /// whose launcher isn't installed. Read when the page opens.</summary>
+    public string? OpenInLauncherLabel { get; private set; }
+    public bool HasOpenInLauncher => OpenInLauncherLabel != null;
+    public ICommand OpenInLauncherCommand { get; }
+
+    /// <summary>Steam's own check of the game's files; Steam is the one launcher with a link for it.</summary>
+    public bool CanVerifyFiles => Game.IsSteamGame && UrlProtocolHelper.IsValidSteamAppId(Game.SteamAppId);
+    public ICommand VerifyFilesCommand { get; }
+
+    /// <summary>The game's exe in Explorer, as the library card's Open File Location.</summary>
+    public bool CanOpenFileLocation => GameFolder.CanOpen(Game);
+    public ICommand OpenFileLocationCommand { get; }
     public ICommand OpenNewsUrlCommand { get; }
     public ICommand OpenNewsHubCommand { get; }
     public ICommand ShowMinReqsCommand { get; }
@@ -660,7 +683,12 @@ public partial class GameDetailsViewModel : ViewModelBase
         CloseGameCommand = new RelayCommand(() => { if (!CanLeave()) return; RequestClose?.Invoke(); _closeGameAction?.Invoke(Game); }, () => IsPlaying);
         ForceCloseCommand = new RelayCommand(() => { if (!CanLeave()) return; RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
+        OpenInLauncherLabel = LauncherPages.OpenLabel(Game);
+        OpenInLauncherCommand = new RelayCommand(() => LauncherPages.Open(Game));
+        VerifyFilesCommand = new RelayCommand(() => SteamScannerService.VerifyGameFiles(Game.SteamAppId!), () => CanVerifyFiles);
+        OpenFileLocationCommand = new RelayCommand(() => GameFolder.Open(Game, "GameDetails"));
         OpenPcGamingWikiCommand = new RelayCommand(() => ExecuteOpenUrl(PcGamingWikiUrl), () => HasPcGamingWikiPage);
+        OpenItchPageCommand = new RelayCommand(() => ExecuteOpenUrl(Game.ItchUrl), () => HasItchPage);
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
         OpenNewsHubCommand = new RelayCommand(() => ExecuteOpenUrl(NewsHubUrl), () => HasNewsHub);
         ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);
@@ -955,7 +983,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                 // RAWG's genre fills the category the same way Steam's does - only while the
                 // game is still Uncategorized (or on a platform placeholder), never overriding
                 // a category the user or Steam already set.
-                if (_autoCategorize && LibraryConstants.IsEnrichableCategory(Game.Category) && !string.IsNullOrWhiteSpace(found.PrimaryGenre))
+                if (_autoCategorize && LibraryConstants.IsEnrichableCategory(Game) && !string.IsNullOrWhiteSpace(found.PrimaryGenre))
                 {
                     Game.Category = found.PrimaryGenre;
                     changed = true;
@@ -1147,7 +1175,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                 }
 
                 // Auto-categorize under the same setting and rule as the library's enrichment pass.
-                if (linked && _autoCategorize && LibraryConstants.IsEnrichableCategory(Game.Category) &&
+                if (linked && _autoCategorize && LibraryConstants.IsEnrichableCategory(Game) &&
                     !string.IsNullOrWhiteSpace(loaded.PrimaryGenre))
                 {
                     Game.Category = loaded.PrimaryGenre;
@@ -1161,7 +1189,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                     if (CanToggleSource)
                         _ = EnsureRawgLoadedAsync();
                 }
-                else if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game.Category))
+                else if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game))
                 {
                     // Steam listed no genre: let RAWG's fill the category in the background,
                     // the same as the library's enrichment pass does.
@@ -1171,7 +1199,7 @@ public partial class GameDetailsViewModel : ViewModelBase
             else if (_details == null && _activeSource == MetadataSource.Steam)
             {
                 // No Steam store page for this App ID. RAWG can still categorise it.
-                if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game.Category))
+                if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game))
                     _ = EnsureRawgLoadedAsync();
 
                 // Distinguish a real "Steam has no store data for this AppId" (delisted /

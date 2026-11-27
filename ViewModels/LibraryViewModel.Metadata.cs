@@ -173,7 +173,7 @@ public partial class LibraryViewModel
                 card.Game.HasCustomPoster = false;
             }
             // The same setting and rule as the enrichment pass and Game Details.
-            if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game.Category) &&
+            if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game) &&
                 !string.IsNullOrWhiteSpace(details.PrimaryGenre))
             {
                 card.Game.Category = details.PrimaryGenre;
@@ -213,7 +213,7 @@ public partial class LibraryViewModel
                 card.Game.HasCustomPoster = false;
             }
             // Same RAWG fallback as the background pass for a still-uncategorized game.
-            if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game.Category))
+            if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game))
                 await TryEnrichFromRawgAsync(card.Game, forceRefresh: card.Game.RawgId > 0);
         }
 
@@ -241,7 +241,7 @@ public partial class LibraryViewModel
                     var details = await _steamMetadataService.GetAppDetailsAsync(entry.SteamAppId, _getSteamGridDbApiKeyOrNull());
                     if (details != null)
                     {
-                        if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                        if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                             entry.Category = details.PrimaryGenre;
                         if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                         {
@@ -252,7 +252,7 @@ public partial class LibraryViewModel
 
                     // A Steam App ID with no store page (delisted, region-locked) or a page that
                     // lists no genres leaves the category empty - let RAWG fill it.
-                    if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category))
+                    if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry))
                         await TryEnrichFromRawgAsync(entry);
                 }
                 return;
@@ -291,7 +291,7 @@ public partial class LibraryViewModel
                 var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, _getSteamGridDbApiKeyOrNull());
                 if (details != null)
                 {
-                    if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                    if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                         entry.Category = details.PrimaryGenre;
                     if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                     {
@@ -397,7 +397,7 @@ public partial class LibraryViewModel
             LoggingService.Info("Library", $"'{entry.Name}' matched RAWG entry '{details.Name}' (id {details.RawgId}).");
         }
 
-        if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+        if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
         {
             entry.Category = details.PrimaryGenre;
             LoggingService.Info("Library", $"'{entry.Name}' categorized as '{details.PrimaryGenre}' from RAWG.");

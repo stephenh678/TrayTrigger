@@ -87,6 +87,9 @@ public sealed partial class CompanionToolService
     /// <summary>A tool that should have started with a game didn't; the text says which and why. A declined administrator prompt isn't reported.</summary>
     public event Action<string>? StartFailed;
 
+    /// <summary>A tool was started with a game: it counts as used, for the Tools page's Recently Used sort. Raised on the launch's thread.</summary>
+    public event Action<ToolEntry>? Started;
+
     /// <summary>Starts the tool's program the way the Tools page does. Replaced in tests, so nothing real is started.</summary>
     internal Func<ToolEntry, Process?> StartProcess { get; set; } = tool => Process.Start(ToolLauncherService.BuildStartInfo(tool));
 
@@ -378,6 +381,7 @@ public sealed partial class CompanionToolService
         try
         {
             var process = StartProcess(tool);
+            Started?.Invoke(tool);
             int? pid = process == null ? null : SafeId(process);
             LoggingService.Info("Tools", $"Started '{tool.Name}' with '{game.Name}'{(pid != null ? $" (PID {pid})" : string.Empty)}.");
             Note(game, remember && process != null && tool.CloseAfterGames ? ClosesAfter(tool.Name) : $"{tool.Name} started");
