@@ -78,7 +78,7 @@
                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}">
                                <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource SideArrowScrollViewer}"
                                              PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
-                                   <ItemsControl x:Name="CategoryItems" ItemsSource="{Binding CategoryTabs}">
+                                   <ItemsControl x:Name="CategoryItems" ItemsSource="{Binding CategoryTabs}" views:FocusGroup.IsGroup="True">
                                        <ItemsControl.ItemsPanel>
                                            <ItemsPanelTemplate>
                                                <StackPanel Orientation="Horizontal"/>
@@ -134,7 +134,7 @@
                                    Visibility="{Binding HasCollections, Converter={StaticResource BoolToVis}}">
                                <ScrollViewer Style="{StaticResource SideArrowScrollViewer}"
                                              PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
-                                   <ItemsControl x:Name="CollectionItems" ItemsSource="{Binding CollectionTabs}">
+                                   <ItemsControl x:Name="CollectionItems" ItemsSource="{Binding CollectionTabs}" views:FocusGroup.IsGroup="True">
                                        <ItemsControl.ItemsPanel>
                                            <ItemsPanelTemplate>
                                                <StackPanel Orientation="Horizontal"/>
@@ -253,10 +253,10 @@
                                </Button>
                            </Border>
 
-                           <!-- View Mode Switcher (Grid, Icons, List) -->
+                           <!-- View Mode Switcher (Grid, Icons, List): one Tab stop, Left and Right move along it. -->
                            <Border Grid.Column="4" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
-                               <StackPanel Orientation="Horizontal">
+                               <StackPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
 
                                    <!-- Every button is icon-only, so each carries a tooltip and an automation
                                         name. Extra Large uses a "large tiles" glyph (E8A9) - the old E71D
@@ -484,7 +484,8 @@
                                    <!-- them for the larger pair. Compact Icons and the Details List    -->
                                    <!-- are different designs and stay separate.                        -->
                                    <!-- ============================================================== -->
-                                   <ItemsControl x:Name="PosterItems" ItemsSource="{Binding FilteredGames}" Focusable="False">
+                                   <!-- The games are one Tab stop: Tab lands on the game you were last on, the arrow keys move between them (OnCardGridKeyDown). -->
+                                   <ItemsControl x:Name="PosterItems" ItemsSource="{Binding FilteredGames}" Focusable="False" views:FocusGroup.IsGroup="True">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>
@@ -754,7 +755,7 @@
                                                                <!-- Declared first so it gets its room first: at a large text size the left badges and category would otherwise take the whole row and push the favorite star out of the card. -->
                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                                                                    <!-- Favorite Star - outermost corner -->
-                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
+                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center" IsTabStop="False"
                                                                            views:PosterDetailFade.Part="FavoriteStar"
             AutomationProperties.Name="{Binding FavoriteMenuLabel}">
                                                                        <Button.Style>
@@ -1028,7 +1029,7 @@
                                    <!-- ============================================================== -->
                                    <!-- VIEW 2: COMPACT ICONS VIEW                                     -->
                                    <!-- ============================================================== -->
-                                   <ItemsControl x:Name="IconItems" ItemsSource="{Binding FilteredGames}" Focusable="False">
+                                   <ItemsControl x:Name="IconItems" ItemsSource="{Binding FilteredGames}" Focusable="False" views:FocusGroup.IsGroup="True">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>
@@ -1077,7 +1078,7 @@
 
                                                        <!-- Top Badges -->
                                                        <DockPanel Grid.Row="0" Height="14">
-                                                           <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}"
+                                                           <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}" IsTabStop="False"
                                                                    Width="14" Height="14" Padding="0" Margin="0,0,3,0"
                                                                    Background="Transparent" BorderThickness="0" Cursor="Hand"
         AutomationProperties.Name="{Binding FavoriteMenuLabel}" ToolTip="{Binding FavoriteMenuLabel}" VerticalAlignment="Center">
@@ -1482,7 +1483,8 @@
                                                    <!-- Action Buttons -->
                                                    <StackPanel Grid.Column="8" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                        <!-- Details needs no button here: a left-click anywhere on the row opens it. -->
-                                                       <Button Command="{Binding LaunchCommand}" AutomationProperties.Name="Play Game"
+                                                       <!-- Not a Tab stop: Ctrl+Enter (X on a controller) plays the row. Still a click. -->
+                                                       <Button Command="{Binding LaunchCommand}" AutomationProperties.Name="Play Game" IsTabStop="False"
                                                                Height="34" Width="34">
                                                            <Button.Style>
                                                                <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">

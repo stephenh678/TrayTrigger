@@ -109,7 +109,7 @@
                 KeyboardNavigation.TabIndex="0" KeyboardNavigation.TabNavigation="Local"
                 views:ScrollToTop.Target="{Binding ElementName=AboutScroll}">
             <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
                 <Button Content="Overview" Command="{Binding SelectAboutOverviewTabCommand}"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAboutOverviewTab}"/>
                 <Button Content="Shortcuts" Command="{Binding SelectAboutShortcutsTabCommand}" Margin="2,0,0,0"

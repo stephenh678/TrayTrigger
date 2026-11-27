@@ -94,8 +94,8 @@ public partial class App
                 inside.Stop();
                 var active = Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
                 report.AppendLine($"  in front: {active?.GetType().Name ?? "none"}");
-                Press("Down", XInputReader.DPadDown);
-                Press("Down", XInputReader.DPadDown);
+                // Down the Overview: nothing out of the Tab order (the pencils, the info button) should be landed on.
+                for (int i = 0; i < 10; i++) Press("Down", XInputReader.DPadDown);
                 Press("Right", XInputReader.DPadRight);
                 Press("B", XInputReader.B);
                 // A dialog that stayed open (it didn't take Esc) is closed here so the run can finish.

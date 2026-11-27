@@ -3627,6 +3627,13 @@ public partial class App
                 return;
             }
 
+            // --test-tab-order <out.txt>: every Tab stop in the Library's views and Game Details (App.TabOrderCheck.cs).
+            if (e.Args[i].Equals("--test-tab-order", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunTabOrderCheck(e.Args[i + 1]);
+                return;
+            }
+
             // --test-layout-audit <out.txt>: text cut off and elements clipped on each page and dialog (App.LayoutAudit.cs).
             if (e.Args[i].Equals("--test-layout-audit", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

@@ -80,7 +80,7 @@
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" HorizontalAlignment="Left"
                     views:ScrollToTop.Target="{Binding ElementName=EditScroll}">
                 <!-- A WrapPanel: six tabs outgrow the dialog at a large text size, and a second row beats a clipped last tab. -->
-                <WrapPanel Orientation="Horizontal">
+                <WrapPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
                     <Button Content="All" Command="{Binding SelectSectionCommand}" CommandParameter="All"
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllSection}"/>
                     <Button Content="Identity &amp; Library" Command="{Binding SelectSectionCommand}" CommandParameter="Identity" Margin="2,0,0,0"

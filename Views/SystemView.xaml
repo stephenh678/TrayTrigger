@@ -183,7 +183,7 @@
         <Border Grid.Column="0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
                 BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" HorizontalAlignment="Left" VerticalAlignment="Center"
                 views:ScrollToTop.Target="{Binding ElementName=ContentScroll}">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
                 <Button Content="Hardware Specs" Command="{Binding SelectSpecsTabCommand}"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSpecsTab}"/>
                 <Button Content="Stutter Check" Command="{Binding SelectStutterTabCommand}" Margin="2,0,0,0"

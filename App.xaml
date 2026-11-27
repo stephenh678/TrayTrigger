@@ -5,6 +5,7 @@
              xmlns:theming="clr-namespace:TrayTrigger.Services.Theming"
              xmlns:services="clr-namespace:TrayTrigger.Services"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             xmlns:views="clr-namespace:TrayTrigger.Views"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
@@ -272,8 +273,10 @@
         </Style>
 
         <!-- A Details List column header: its label, and a lit background under the pointer, as a column header in Explorer. -->
+        <!-- Not a Tab stop: the sort box above the library does the same from the keyboard. Still a click. -->
         <Style x:Key="ColumnHeaderButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="5,2"/>
@@ -337,6 +340,14 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <!-- A link to a Help page is not a Tab stop: dozens of them sat between the settings you'd change, and
+                     About > Help Topics opens every page. Still a click, and a screen reader can still press it.
+                     The same style's actions (New script..., Reset, Show in log) stay Tab stops. -->
+                <Trigger Property="Command" Value="{x:Static services:HelpCommands.ShowTopic}">
+                    <Setter Property="IsTabStop" Value="False"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Segmented Tab Button: for pill/segmented switchers (System page's Specs/Tweaks
@@ -355,6 +366,8 @@
             <Setter Property="Padding" Value="12,5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Tag" Value="False"/>
+            <!-- In a views:FocusGroup strip, Tab lands on the selected segment. -->
+            <Setter Property="views:FocusGroup.IsCurrent" Value="{Binding Tag, RelativeSource={RelativeSource Self}}"/>
             <Setter Property="Foreground">
                 <Setter.Value>
                     <MultiBinding Converter="{StaticResource TabForegroundConverter}">
@@ -506,9 +519,12 @@
             </Setter>
         </Style>
 
-        <!-- Favorite Star Toggle (Game Cards, List Rows, Details Dialog) -->
+        <!-- Favorite Star Toggle (Game Cards, List Rows, Details Dialog). Not a Tab stop: on every game it doubled
+             the presses to get through the library, and the game's menu (the menu key, or Menu on a controller) has
+             Add to / Remove from Favorites. Still a click, and a screen reader can still press it. -->
         <Style x:Key="FavoriteToggleButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Width" Value="22"/>
             <Setter Property="Height" Value="22"/>
             <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}"/>
@@ -1531,6 +1547,8 @@
         </Style>
         <!-- "Learn more" at the end of a description, in the same line: a Hyperlink in the description's TextBlock. -->
         <Style x:Key="InlineHelpLink" TargetType="Hyperlink">
+            <!-- Not a Tab stop, like HelpLinkButton's Help links. -->
+            <Setter Property="KeyboardNavigation.IsTabStop" Value="False"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
             <Setter Property="TextDecorations" Value="{x:Null}"/>
             <Setter Property="Command" Value="{x:Static services:HelpCommands.ShowTopic}"/>

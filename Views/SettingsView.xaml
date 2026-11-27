@@ -141,7 +141,7 @@
                 KeyboardNavigation.TabIndex="0" KeyboardNavigation.TabNavigation="Local"
                 views:ScrollToTop.Target="{Binding ElementName=SettingsScroll}">
             <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
                 <Button Content="General" Command="{Binding SelectGeneralTabCommand}"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsGeneralTab}"/>
                 <Button Content="Launchers" Command="{Binding SelectLaunchersTabCommand}" Margin="2,0,0,0"

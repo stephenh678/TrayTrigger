@@ -41,6 +41,8 @@
         <!-- A tab as a word with a line under it while it is the one on show (Tag is true): quieter than a boxed segmented control. -->
         <Style x:Key="UnderlineTabButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
+            <!-- In the Overview / Settings strip (views:FocusGroup), Tab lands on the tab you're on. -->
+            <Setter Property="views:FocusGroup.IsCurrent" Value="{Binding Tag, RelativeSource={RelativeSource Self}}"/>
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize" Value="{DynamicResource FontSizeSubhead}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
@@ -321,7 +323,7 @@
                     <TextBlock Text="{Binding ProfileStat}" Style="{StaticResource HeroFigureValue}"/>
                 </StackPanel>
             </WrapPanel>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" views:FocusGroup.IsGroup="True"
                         Visibility="{Binding CanEdit, Converter={StaticResource BoolToVis}}">
                 <Button Content="Overview" Command="{Binding SelectTabCommand}" CommandParameter="Overview"
                         Style="{StaticResource UnderlineTabButton}" Tag="{Binding IsOverviewTab}"/>
@@ -395,7 +397,8 @@
                                 <TextBlock Text="{Binding LastUpdatedCaption}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" TextTrimming="CharacterEllipsis"
                                            Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}"/>
-                                <Button x:Name="SourceButton" AutomationProperties.Name="Where this info comes from" Click="OpenMenu_Click"
+                                <!-- Not a Tab stop: it only explains where the page's info comes from. Still a click. -->
+                                <Button x:Name="SourceButton" AutomationProperties.Name="Where this info comes from" Click="OpenMenu_Click" IsTabStop="False"
                                         Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="{DynamicResource FontSizeBody}"
                                         Foreground="{DynamicResource BrushAccentText}" ToolTip="Where this info comes from, how fresh it is, and how to change it">
                                     <StackPanel Orientation="Horizontal">
@@ -435,7 +438,8 @@
                         <!-- Required RAWG attribution: an active link wherever RAWG data is shown. -->
                         <TextBlock Margin="0,10,0,0" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                    Visibility="{Binding ShowRawgAttribution, Converter={StaticResource BoolToVis}}">
-                            <Hyperlink Command="{Binding OpenRawgPageCommand}" Foreground="{DynamicResource BrushTextSecondary}">Data from RAWG</Hyperlink>
+                            <!-- Focusable only while shown: a link in a collapsed TextBlock still took a Tab press, with nothing on screen. -->
+                            <Hyperlink Command="{Binding OpenRawgPageCommand}" Foreground="{DynamicResource BrushTextSecondary}" Focusable="{Binding ShowRawgAttribution}">Data from RAWG</Hyperlink>
                         </TextBlock>
                     </StackPanel>
                 </Border>
@@ -468,7 +472,8 @@
                             <TextBlock Text="LATEST DEVELOPER NEWS &amp; PATCH NOTES" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/>
                         </DockPanel>
 
-                        <ItemsControl ItemsSource="{Binding VisibleNews}">
+                        <!-- The news items are one Tab stop; the arrow keys move between them. -->
+                        <ItemsControl ItemsSource="{Binding VisibleNews}" views:FocusGroup.IsGroup="True">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,10" Margin="0,0,0,10">
@@ -535,7 +540,7 @@
                             <Border DockPanel.Dock="Right" Margin="10,0,0,0" VerticalAlignment="Center"
                                     Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                     CornerRadius="{DynamicResource RadiusControl}" Padding="2">
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
                                     <Button Content="Minimum" Command="{Binding ShowMinReqsCommand}" Padding="10,3"
                                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsShowingMinimumReqs}"/>
                                     <Button Content="Recommended" Command="{Binding ShowRecReqsCommand}" Padding="10,3" Margin="2,0,0,0"
@@ -671,7 +676,7 @@
                 </ScrollViewer>
 
                                 <!-- Where to read more: only the links that exist for this game -->
-                                <WrapPanel Margin="0,8,0,0" Visibility="{Binding ShowLinks, Converter={StaticResource BoolToVis}}">
+                                <WrapPanel Margin="0,8,0,0" Visibility="{Binding ShowLinks, Converter={StaticResource BoolToVis}}" views:FocusGroup.IsGroup="True">
                                     <Button Content="Store Page" Command="{Binding OpenStorePageCommand}" Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"
                                             Style="{StaticResource ModernGhostButton}" Padding="0" Margin="0,0,14,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"/>
                                     <Button Content="PCGamingWiki" Command="{Binding OpenPcGamingWikiCommand}" Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"
@@ -726,7 +731,8 @@
                                                 </DockPanel>
                                                 <TextBlock Text="{Binding Summary}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,6,0,6"
                                                            Foreground="{DynamicResource BrushTextSecondary}"/>
-                                                <Button Content="{Binding LinkText}" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
+                                                <!-- Not a Tab stop: the Settings tab beside Overview goes to the same settings. Still a click. -->
+                                                <Button Content="{Binding LinkText}" IsTabStop="False" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
                                                         Foreground="{DynamicResource BrushAccentText}"
                                                         Command="{Binding DataContext.EditSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding Field}"/>

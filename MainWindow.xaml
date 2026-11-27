@@ -43,7 +43,8 @@
         <!-- ============================================================== -->
         <!-- LEFT COLLAPSIBLE SIDEBAR                                      -->
         <!-- ============================================================== -->
-        <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" 
+        <!-- One Tab stop (views:FocusGroup): Tab lands on the page you are on, Up and Down move through the rest. -->
+        <Border Grid.Column="0" views:FocusGroup.IsGroup="True" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" 
                 BorderThickness="0,0,1,0" Width="{Binding SidebarWidth}">
             <Grid Margin="6,12,6,12">
                 <Grid.RowDefinitions>
@@ -92,7 +93,7 @@
                     <!-- Top Navigation Items -->
                     <StackPanel Grid.Row="0">
                         <!-- 1. Library -->
-                        <Button Command="{Binding SelectLibraryCommand}" AutomationProperties.Name="Library" Margin="0,0,0,6">
+                        <Button Command="{Binding SelectLibraryCommand}" views:FocusGroup.IsCurrent="{Binding IsLibraryView}" AutomationProperties.Name="Library" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>
@@ -122,7 +123,7 @@
                         </Button>
 
                         <!-- 1b. Tools: only while Settings > General > Enable Tools is on -->
-                        <Button Command="{Binding SelectToolsCommand}" AutomationProperties.Name="Tools" Margin="0,0,0,6"
+                        <Button Command="{Binding SelectToolsCommand}" views:FocusGroup.IsCurrent="{Binding IsToolsView}" AutomationProperties.Name="Tools" Margin="0,0,0,6"
                                 Visibility="{Binding IsToolsEnabled, Converter={StaticResource BoolToVis}}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
@@ -153,7 +154,7 @@
                         </Button>
 
                         <!-- 2. System & Performance -->
-                        <Button Command="{Binding SelectSystemCommand}" AutomationProperties.Name="System &amp; Performance" Margin="0,0,0,6">
+                        <Button Command="{Binding SelectSystemCommand}" views:FocusGroup.IsCurrent="{Binding IsSystemView}" AutomationProperties.Name="System &amp; Performance" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>
@@ -183,7 +184,7 @@
                         </Button>
 
                         <!-- 3. Settings -->
-                        <Button Command="{Binding SelectSettingsCommand}" AutomationProperties.Name="Settings" Margin="0,0,0,6">
+                        <Button Command="{Binding SelectSettingsCommand}" views:FocusGroup.IsCurrent="{Binding IsSettingsView}" AutomationProperties.Name="Settings" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>
@@ -213,7 +214,7 @@
                         </Button>
 
                         <!-- 3. About -->
-                        <Button Command="{Binding SelectAboutCommand}" AutomationProperties.Name="About TrayTrigger" Margin="0,0,0,6">
+                        <Button Command="{Binding SelectAboutCommand}" views:FocusGroup.IsCurrent="{Binding IsAboutView}" AutomationProperties.Name="About TrayTrigger" Margin="0,0,0,6">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
                                     <Style.Triggers>
@@ -270,7 +271,7 @@
 
                         <!-- The bell: a red dot while something needs attention, and the way into Activity & History.
                              The only indicator in the sidebar; the count is in the page header. -->
-                        <Button Command="{Binding SelectActivityCommand}" Margin="0,0,0,6"
+                        <Button Command="{Binding SelectActivityCommand}" views:FocusGroup.IsCurrent="{Binding IsActivityView}" Margin="0,0,0,6"
                                 AutomationProperties.Name="{Binding ActivityVM.HeaderStatus, StringFormat='Activity and History, {0}'}"
                                 ToolTip="{Binding ActivityVM.HeaderStatus, StringFormat='Activity &amp; History · {0}'}">
                             <Button.Style>
