@@ -63,12 +63,13 @@ public class TabStopGuardTests
             string xaml = File.ReadAllText(file);
             foreach (Match m in button.Matches(xaml))
             {
-                bool fine = m.Value.Contains("IsTabStop=\"False\"") || m.Value.Contains("FavoriteToggleButton");
+                // Focusable, not just IsTabStop: the arrow keys and a click still put focus on a button that is only out of the Tab order.
+                bool fine = m.Value.Contains("Focusable=\"False\"") || m.Value.Contains("FavoriteToggleButton");
                 if (!fine) stops.Add($"{Path.GetFileName(file)}:{xaml[..m.Index].Count(c => c == '\n') + 1}");
             }
         }
-        Assert.True(stops.Count == 0, "Favorite stars that are Tab stops (the game's menu has Favorite):\n" + string.Join("\n", stops));
+        Assert.True(stops.Count == 0, "Favorite stars that can take focus (the game's menu has Favorite):\n" + string.Join("\n", stops));
         string app = File.ReadAllText(Path.Combine(RepoRoot, "App.xaml"));
-        Assert.Matches(new Regex("x:Key=\"FavoriteToggleButton\".*?<Setter Property=\"IsTabStop\" Value=\"False\"/>", RegexOptions.Singleline), app);
+        Assert.Matches(new Regex("x:Key=\"FavoriteToggleButton\".*?<Setter Property=\"Focusable\" Value=\"False\"/>", RegexOptions.Singleline), app);
     }
 }

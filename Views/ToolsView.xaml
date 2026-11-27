@@ -141,7 +141,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <DockPanel Grid.Row="0" LastChildFill="False">
-                        <Button DockPanel.Dock="Left" Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" IsTabStop="False"
+                        <Button DockPanel.Dock="Left" Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" Focusable="False"
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                         <TextBlock DockPanel.Dock="Right" Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                    Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"
@@ -195,7 +195,7 @@
                                    Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                         <TextBlock Style="{StaticResource ToolGameGlyph}" Margin="0,0,6,0"/>
-                        <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" IsTabStop="False"
+                        <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" Focusable="False"
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                     </StackPanel>
                 </Grid>
@@ -228,7 +228,7 @@
                     </Border>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" IsTabStop="False" Margin="0,0,6,0"
+                        <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}" Focusable="False" Margin="0,0,6,0"
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                         <TextBlock Style="{StaticResource StrongText}" Text="{Binding Name}" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         <TextBlock Style="{StaticResource ToolGameGlyph}" Margin="8,0,0,0"/>

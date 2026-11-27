@@ -31,7 +31,7 @@ Tab moves from one group of controls to the next, and the arrow keys move inside
 - **The games** in the Library are one Tab stop. Tab lands on the game you were last on, or the first.
 - **Game Details' links and news** are one Tab stop each; the arrow keys move between them.
 
-Some things you click are left out of the Tab order because the keyboard has another way to them:
+Some things you click can't be reached with Tab or the arrow keys, because the keyboard has another way to them:
 
 - **Favorite stars** - the game's menu (the menu key, or Shift+F10) has Add to Favorites and Remove from Favorites.
 - **Play buttons on Details List rows** - Ctrl+Enter plays the row.

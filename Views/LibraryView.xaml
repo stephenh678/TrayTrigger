@@ -755,7 +755,7 @@
                                                                <!-- Declared first so it gets its room first: at a large text size the left badges and category would otherwise take the whole row and push the favorite star out of the card. -->
                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                                                                    <!-- Favorite Star - outermost corner -->
-                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center" IsTabStop="False"
+                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center" Focusable="False"
                                                                            views:PosterDetailFade.Part="FavoriteStar"
             AutomationProperties.Name="{Binding FavoriteMenuLabel}">
                                                                        <Button.Style>
@@ -1078,7 +1078,7 @@
 
                                                        <!-- Top Badges -->
                                                        <DockPanel Grid.Row="0" Height="14">
-                                                           <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}" IsTabStop="False"
+                                                           <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}" Focusable="False"
                                                                    Width="14" Height="14" Padding="0" Margin="0,0,3,0"
                                                                    Background="Transparent" BorderThickness="0" Cursor="Hand"
         AutomationProperties.Name="{Binding FavoriteMenuLabel}" ToolTip="{Binding FavoriteMenuLabel}" VerticalAlignment="Center">
@@ -1483,8 +1483,8 @@
                                                    <!-- Action Buttons -->
                                                    <StackPanel Grid.Column="8" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                        <!-- Details needs no button here: a left-click anywhere on the row opens it. -->
-                                                       <!-- Not a Tab stop: Ctrl+Enter (X on a controller) plays the row. Still a click. -->
-                                                       <Button Command="{Binding LaunchCommand}" AutomationProperties.Name="Play Game" IsTabStop="False"
+                                                       <!-- Takes no focus: Ctrl+Enter (X on a controller) plays the row. Still a click. -->
+                                                       <Button Command="{Binding LaunchCommand}" AutomationProperties.Name="Play Game" Focusable="False"
                                                                Height="34" Width="34">
                                                            <Button.Style>
                                                                <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">

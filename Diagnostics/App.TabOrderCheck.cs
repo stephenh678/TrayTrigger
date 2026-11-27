@@ -43,11 +43,25 @@ public partial class App
             var games = main.FilteredGames.Cast<GameCardViewModel>().ToList();
             report.AppendLine($"{games.Count} games; Show details on hover: {main.SettingsVM.PosterDetailsOnHover}");
 
+            // The first two games as favorites, in memory only (put back below), so their stars show and can be tried.
+            var madeFavorite = games.Take(2).Where(g => !g.Game.IsFavorite).ToList();
+            foreach (var g in madeFavorite) { g.Game.IsFavorite = true; g.RefreshProperties(); }
             foreach (var mode in new[] { SettingsViewModel.ViewModePosterGrid, SettingsViewModel.ViewModeCompactIcons, SettingsViewModel.ViewModeDetailsList })
             {
                 main.SettingsVM.LibraryViewMode = mode;
                 Settle(window);
                 Walk($"Library, {mode}", window, games, report);
+                // Down and Right from the view buttons, the way into the games without Tab.
+                var page = (LibraryView)window.FindName("LibraryPage");
+                var viewButton = Descendants(page).OfType<Button>().First(b => AutomationProperties.GetName(b) == "Poster grid view");
+                foreach (var key in new[] { Key.Down, Key.Right, Key.Right, Key.Left })
+                {
+                    if (key == Key.Down) { Keyboard.Focus(viewButton); Settle(window); }
+                    SendTestKey(key);
+                    Settle(window);
+                    var f = Keyboard.FocusedElement as UIElement;
+                    report.AppendLine($"  {key} -> {(f != null ? Describe(f) : "nothing")}");
+                }
             }
             // The poster view with details on hover the other way round, since it changes what a card shows.
             main.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModePosterGrid;
@@ -55,6 +69,7 @@ public partial class App
             Settle(window);
             Walk($"Library, Poster Grid, Show details on hover {main.SettingsVM.PosterDetailsOnHover}", window, games, report);
             main.SettingsVM.PosterDetailsOnHover = !main.SettingsVM.PosterDetailsOnHover;
+            foreach (var g in madeFavorite) { g.Game.IsFavorite = false; g.RefreshProperties(); }
 
             // The other pages, counted only: how many stops, which can't be seen, and how many are help links.
             foreach (var section in new[] { NavSection.Tools, NavSection.Activity, NavSection.System, NavSection.Settings, NavSection.About })

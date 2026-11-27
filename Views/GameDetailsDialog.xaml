@@ -397,8 +397,8 @@
                                 <TextBlock Text="{Binding LastUpdatedCaption}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" TextTrimming="CharacterEllipsis"
                                            Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}"/>
-                                <!-- Not a Tab stop: it only explains where the page's info comes from. Still a click. -->
-                                <Button x:Name="SourceButton" AutomationProperties.Name="Where this info comes from" Click="OpenMenu_Click" IsTabStop="False"
+                                <!-- Takes no focus: it only explains where the page's info comes from. Still a click. -->
+                                <Button x:Name="SourceButton" AutomationProperties.Name="Where this info comes from" Click="OpenMenu_Click" Focusable="False"
                                         Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="{DynamicResource FontSizeBody}"
                                         Foreground="{DynamicResource BrushAccentText}" ToolTip="Where this info comes from, how fresh it is, and how to change it">
                                     <StackPanel Orientation="Horizontal">
@@ -731,8 +731,8 @@
                                                 </DockPanel>
                                                 <TextBlock Text="{Binding Summary}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" Margin="0,6,0,6"
                                                            Foreground="{DynamicResource BrushTextSecondary}"/>
-                                                <!-- Not a Tab stop: the Settings tab beside Overview goes to the same settings. Still a click. -->
-                                                <Button Content="{Binding LinkText}" IsTabStop="False" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
+                                                <!-- Takes no focus: the Settings tab beside Overview goes to the same settings. Still a click. -->
+                                                <Button Content="{Binding LinkText}" Focusable="False" HorizontalAlignment="Left" Style="{StaticResource ModernGhostButton}" Padding="0" FontSize="{DynamicResource FontSizeBody}"
                                                         Foreground="{DynamicResource BrushAccentText}"
                                                         Command="{Binding DataContext.EditSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding Field}"/>
