@@ -112,6 +112,19 @@ public partial class App
                 zoomed.RenderTransform = original;
             }
 
+            // The game's right-click menu, opened with Menu: it must fit without scrolling, with room to spare for a 1080p TV
+            // at 150% (720 tall).
+            window.LibraryPage.FocusGames();
+            Settle(window);
+            var gameMenu = (ContextMenu)window.LibraryPage.FindResource("GameItemContextMenu");
+            Press(XInputReader.Start);
+            PumpDispatcher(TimeSpan.FromMilliseconds(400));
+            if (gameMenu.IsOpen && FindVisualChildren<ScrollViewer>(gameMenu).FirstOrDefault() is { } menuScroll)
+                report.AppendLine($"  game menu: {menuScroll.ExtentHeight:F0} tall, room for {menuScroll.MaxHeight:F0}, scrolls {menuScroll.ScrollableHeight > 0.5} (should be False)");
+            else report.AppendLine($"  game menu: open {gameMenu.IsOpen}");
+            gameMenu.IsOpen = false;
+            Settle(window);
+
             // Game Details from the full-screen Library: a card with no title bar over the Library dimmed behind it.
             window.LibraryPage.FocusGames();
             Settle(window);

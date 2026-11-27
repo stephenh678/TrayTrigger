@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Threading;
@@ -20,6 +21,7 @@ public partial class MainWindow
     internal const double FullScreenTextScale = 1.3;
 
     private (WindowState State, WindowStyle Style, ResizeMode Resize)? _beforeFullScreen;
+    private (object Padding, object Spacing, object MaxHeight)? _menuLookBefore;
 
     /// <summary>Whether the window is in the full-screen Library: its placement is not recorded meanwhile.</summary>
     internal bool IsFullScreen => _beforeFullScreen != null;
@@ -56,8 +58,20 @@ public partial class MainWindow
         WindowState = WindowState.Maximized;
         LoggingService.Info("MainWindow", "Full-screen Library on");
 
-        // On a game, for the controller, once the bigger posters are laid out.
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => { if (IsFullScreen) LibraryPage.FocusGames(); });
+        // Menus: tighter rows, and as tall as the screen before they scroll (bigger text made the game menu taller
+        // than the usual 640). Put back on leaving.
+        var resources = Application.Current.Resources;
+        _menuLookBefore = (resources["MenuItemPadding"], resources["MenuItemSpacing"], resources["MenuMaxHeight"]);
+        resources["MenuItemPadding"] = new Thickness(10, 5, 10, 5);
+        resources["MenuItemSpacing"] = new Thickness(0);
+
+        // On a game, for the controller, once the bigger posters are laid out; and the menus' height from the screen's.
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            if (!IsFullScreen) return;
+            resources["MenuMaxHeight"] = Math.Max(640, ActualHeight - 48);
+            LibraryPage.FocusGames();
+        });
     }
 
     /// <summary>Dims the Library behind a window shown over the full-screen Library (Game Details), until it closes.</summary>
@@ -78,6 +92,14 @@ public partial class MainWindow
 
         // The saved view shows again; one picked while full screen was saved as it was picked, and stays.
         _viewModel.SettingsVM.ShowViewModeFor(null);
+        if (_menuLookBefore is { } menus)
+        {
+            var resources = Application.Current.Resources;
+            resources["MenuItemPadding"] = menus.Padding;
+            resources["MenuItemSpacing"] = menus.Spacing;
+            resources["MenuMaxHeight"] = menus.MaxHeight;
+            _menuLookBefore = null;
+        }
         AppTypography.FullScreenMinimumScale = null;
         AppTypography.ApplyForTheme(ThemeService.Instance.Active.TextSize);
         LoggingService.Info("MainWindow", "Full-screen Library off");
