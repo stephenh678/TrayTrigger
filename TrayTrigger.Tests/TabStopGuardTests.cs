@@ -43,12 +43,14 @@ public class TabStopGuardTests
     [Fact]
     public void ControllerSkipsEveryButtonThatOpensAWindowsPicker()
     {
-        // Browse..., Choose image and New script open Windows' own file pickers, which a controller can't work or close.
+        // Browse..., Choose image and New script open Windows' own file pickers, which a controller can't work or close;
+        // a hotkey box would take the controller's moves as the keys to record.
         var opensPicker = new Regex(@"\{Binding (\w+\.)?(Browse\w*|Choose\w*|New\w*Script)Command\}");
         var missing = ControllerWindows
             .Select(name => Path.Combine(RepoRoot, "Views", name))
             .SelectMany(file => XDocument.Load(file).Descendants()
-                .Where(e => (string?)e.Attribute("Command") is { } command && opensPicker.IsMatch(command))
+                .Where(e => (string?)e.Attribute("Command") is { } command && opensPicker.IsMatch(command)
+                            || e.Name.LocalName == "HotkeyRecorderBox") // it would record the controller's moves as the hotkey
                 .Where(e => !e.Attributes().Any(a => a.Name.LocalName == "GamepadNavigator.Skip" && a.Value == "True"))
                 .Select(e => $"{Path.GetFileName(file)}: {(string?)e.Attribute("Command")}"))
             .ToList();

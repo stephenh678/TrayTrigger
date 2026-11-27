@@ -50,8 +50,9 @@ public sealed class GamepadNavigator
     private Window? _lastWindow;
 
     /// <summary>
-    /// A button the controller passes over: one that opens Windows' own file or folder picker (Browse..., Choose
-    /// image, New script), which a controller can't work or close. It still clicks, and Tab still reaches it.
+    /// A control the controller passes over: a button that opens Windows' own file or folder picker (Browse..., Choose
+    /// image, New script), which a controller can't work or close, and a hotkey box, which would take the controller's
+    /// moves as the keys to record. It still clicks, and Tab still reaches it.
     /// </summary>
     public static readonly DependencyProperty SkipProperty = DependencyProperty.RegisterAttached(
         "Skip", typeof(bool), typeof(GamepadNavigator), new PropertyMetadata(false));
@@ -282,6 +283,8 @@ public sealed class GamepadNavigator
         {
             case PadAction.Up or PadAction.Down or PadAction.Left or PadAction.Right:
                 var request = new TraversalRequest(DirectionFor(action));
+                // A long page (Game Details' Overview): Up or Down past the last control on screen scrolls it instead.
+                if (inside && action is PadAction.Up or PadAction.Down && ScrollInstead(action, focused!, request)) break;
                 // A link in text (Data from RAWG) is a ContentElement, not a UIElement: it moves on the same way.
                 if (inside && focused is UIElement element) element.MoveFocus(request);
                 else if (inside && focused is ContentElement content) content.MoveFocus(request);
@@ -335,6 +338,48 @@ public sealed class GamepadNavigator
                 SendKey(Key.Escape);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Up or Down in a page that scrolls: moves on to the next control that way only if it is on screen within the
+    /// page. Otherwise (the next one is past the edge, or there is none in the page, only text, so WPF would jump out
+    /// of it to the window's own buttons) the page scrolls a third of a screen and focus stays where it was. Returns
+    /// false, to move as usual, when there is no page to scroll or it is already at that end.
+    /// </summary>
+    private static bool ScrollInstead(PadAction action, DependencyObject focused, TraversalRequest request)
+    {
+        if (ScrollerOf(focused) is not { } page) return false;
+        bool down = action == PadAction.Down;
+        bool canScroll = down ? page.VerticalOffset < page.ScrollableHeight - 0.5 : page.VerticalOffset > 0.5;
+        if (!canScroll) return false;
+        double offset = page.VerticalOffset;
+        if (focused is UIElement element) element.MoveFocus(request);
+        else if (focused is ContentElement content) content.MoveFocus(request);
+        if (Keyboard.FocusedElement is DependencyObject now && !ReferenceEquals(now, focused) && IsOnScreenIn(now, page))
+        {
+            if (GetSkip(now)) SkipPast(request.FocusNavigationDirection, focused);
+            return true;
+        }
+        // Nothing on screen that way: put focus back, then scroll (in that order, as focus scrolls its control into view).
+        if (!ReferenceEquals(Keyboard.FocusedElement, focused) && focused is IInputElement back) Keyboard.Focus(back);
+        page.ScrollToVerticalOffset(offset + (down ? 1 : -1) * Math.Max(40, page.ViewportHeight / 3));
+        return true;
+    }
+
+    /// <summary>The page around an element that can scroll up or down: not a text box's own scroller.</summary>
+    private static ScrollViewer? ScrollerOf(DependencyObject element)
+    {
+        for (var d = element; d != null; d = d is Visual ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+            if (d is ScrollViewer { ScrollableHeight: > 0 } scroller && scroller.TemplatedParent is not TextBoxBase) return scroller;
+        return null;
+    }
+
+    /// <summary>Whether an element is inside the page and shows within what the page has on screen.</summary>
+    private static bool IsOnScreenIn(DependencyObject element, ScrollViewer page)
+    {
+        if (element is not Visual visual || !visual.IsDescendantOf(page) || element is not FrameworkElement fe) return false;
+        var box = fe.TransformToAncestor(page).TransformBounds(new Rect(0, 0, fe.ActualWidth, fe.ActualHeight));
+        return box.Bottom > 0 && box.Top < page.ViewportHeight;
     }
 
     /// <summary>

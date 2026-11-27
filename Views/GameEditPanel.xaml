@@ -499,7 +499,7 @@
                                     <!-- Recorded from real key presses, and refused on the spot if another game, the
                                          window hotkey, or another app already has the combo. Its message is rendered
                                          below, across the whole row, rather than wrapped under the 160 px box. -->
-                                    <views:HotkeyRecorderBox AutomationProperties.Name="Launch hotkey" x:Name="LaunchHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
+                                    <views:HotkeyRecorderBox AutomationProperties.Name="Launch hotkey" x:Name="LaunchHotkeyBox" views:GamepadNavigator.Skip="True" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
                                                              ShowInlineMessage="False" Width="180" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Global Launch Hotkey" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>

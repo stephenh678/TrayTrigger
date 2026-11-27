@@ -258,6 +258,22 @@ public partial class App
                     Hold(XInputReader.DPadDown);
                     report.AppendLine($"  Down         -> {Focus()}");
                 }
+                // The Overview, walked down and back up with the D-pad: it must scroll to the end (text with no controls
+                // included) before Down leaves it for the window's own buttons, and back to the top.
+                if (Current.Windows.OfType<GameDetailsDialog>().FirstOrDefault() is { } overview)
+                {
+                    var page = overview.DetailsScroll;
+                    void Step(ushort dir) { pad = new PadState(dir, 0, 0); PumpDispatcher(TimeSpan.FromMilliseconds(90)); pad = default; PumpDispatcher(TimeSpan.FromMilliseconds(90)); }
+                    double? leftAt = null;
+                    for (int i = 0; i < 40 && leftAt == null; i++)
+                    {
+                        Step(XInputReader.DPadDown);
+                        if (Keyboard.FocusedElement is System.Windows.Media.Visual v && !v.IsDescendantOf(page)) leftAt = page.VerticalOffset;
+                    }
+                    report.AppendLine($"  Overview down: left the page at {leftAt:F0} of {page.ScrollableHeight:F0} (should be the end) -> {Focus()}");
+                    for (int i = 0; i < 40 && page.VerticalOffset > 0.5; i++) Step(XInputReader.DPadUp);
+                    report.AppendLine($"  Overview up: back to {page.VerticalOffset:F0} (should be 0) -> {Focus()}");
+                }
                 // The Settings tab, walked with the D-pad: it must never land on a Browse... or New script button
                 // (they open Windows' file pickers, which a controller can't work or close).
                 if (Current.Windows.OfType<GameDetailsDialog>().FirstOrDefault() is { DataContext: GameDetailsViewModel detailsVm })

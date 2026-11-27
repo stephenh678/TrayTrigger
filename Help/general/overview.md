@@ -72,7 +72,7 @@ Turn on **Use a game controller in the Library** in Settings > Library & Art > L
 
 On a PlayStation controller, Cross is A, Circle is B, Square is X, Options is Menu, and L1 and R1 are LB and RB.
 
-Game Details opens with Play selected, so A on a game and A again plays it. There the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. On a drop-down, such as Performance Profile, A opens it, the D-pad moves through it, A chooses and B closes it as it was. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld, and the controller passes over its Browse..., Choose image and New script buttons: they open Windows' own file pickers, which a controller can't use.
+Game Details opens with Play selected, so A on a game and A again plays it. There the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. On a drop-down, such as Performance Profile, A opens it, the D-pad moves through it, A chooses and B closes it as it was. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld, and the controller passes over its Browse..., Choose image and New script buttons (they open Windows' own file pickers, which a controller can't use) and its hotkey box (it would record the controller's moves as the hotkey). When there is more of the page below or above, Up and Down scroll it until the next control is on screen, so text with nothing to press is read on the way.
 
 What it doesn't do:
 
