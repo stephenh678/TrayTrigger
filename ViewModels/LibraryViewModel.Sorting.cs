@@ -19,6 +19,8 @@ public partial class LibraryViewModel
     public const string SortFavoritesFirst = "Favorites First";
     public const string SortMostRecentlyPlayed = "Last Played";
     public const string SortCumulativePlaytime = "Playtime";
+    /// <summary>Aggressive, then Optimized; games with the profile Off last in both directions.</summary>
+    public const string SortPerformanceProfile = "Performance Profile";
 
     /// <summary>
     /// A saved sort as the sort box names it now, and whether it runs reversed. The names before 2.0.0-beta.2 carried
@@ -41,7 +43,7 @@ public partial class LibraryViewModel
         };
         if (legacy is { } old) return (old.option, old.descending ^ savedReversed);
         return saved is SortAlphabetical or SortCategory or SortFavoritesFirst or SortFavoritesFirstRecent
-            or SortMostRecentlyPlayed or SortCumulativePlaytime or SortLargestFirst
+            or SortMostRecentlyPlayed or SortCumulativePlaytime or SortLargestFirst or SortPerformanceProfile
             ? (saved, savedReversed)
             : (SortAlphabetical, false);
     }
@@ -49,6 +51,7 @@ public partial class LibraryViewModel
     /// <summary>The Details List columns a header click sorts by.</summary>
     public const string ColumnTitle = "Title";
     public const string ColumnCategory = "Category";
+    public const string ColumnProfile = "Profile";
     public const string ColumnPlaytime = "Playtime";
     public const string ColumnLastPlayed = "LastPlayed";
     public const string ColumnSize = "Size";
@@ -75,6 +78,7 @@ public partial class LibraryViewModel
 
     public string TitleSortArrow => ArrowFor(ColumnTitle);
     public string CategorySortArrow => ArrowFor(ColumnCategory);
+    public string ProfileSortArrow => ArrowFor(ColumnProfile);
     public string PlaytimeSortArrow => ArrowFor(ColumnPlaytime);
     public string LastPlayedSortArrow => ArrowFor(ColumnLastPlayed);
     public string SizeSortArrow => ArrowFor(ColumnSize);
@@ -105,6 +109,7 @@ public partial class LibraryViewModel
     {
         ColumnTitle => SortAlphabetical,
         ColumnCategory => SortCategory,
+        ColumnProfile => SortPerformanceProfile,
         ColumnPlaytime => SortCumulativePlaytime,
         ColumnLastPlayed => SortMostRecentlyPlayed,
         ColumnSize => SortLargestFirst,
@@ -116,14 +121,15 @@ public partial class LibraryViewModel
     {
         SortAlphabetical => ColumnTitle,
         SortCategory => ColumnCategory,
+        SortPerformanceProfile => ColumnProfile,
         SortCumulativePlaytime => ColumnPlaytime,
         SortMostRecentlyPlayed => ColumnLastPlayed,
         SortLargestFirst => ColumnSize,
         _ => null,
     };
 
-    /// <summary>Which way an option runs before it is reversed: names A to Z; playtime, last played and size biggest
-    /// or newest first. The Favorites First sorts say it of the order after the favorites.</summary>
+    /// <summary>Which way an option runs before it is reversed: names A to Z; playtime, last played, size and profile
+    /// biggest, newest or strongest first. The Favorites First sorts say it of the order after the favorites.</summary>
     internal static bool IsNaturallyAscending(string? option) =>
         option is SortAlphabetical or SortCategory or SortFavoritesFirst;
 
@@ -139,7 +145,7 @@ public partial class LibraryViewModel
             view.CustomSort = new GameSortComparer(SelectedSortOption, IsSortReversed);
         }
         foreach (string name in new[] { nameof(IsSortReversed), nameof(IsSortAscending), nameof(SortDirectionGlyph), nameof(SortDirectionToolTip),
-                     nameof(TitleSortArrow), nameof(CategorySortArrow), nameof(PlaytimeSortArrow), nameof(LastPlayedSortArrow), nameof(SizeSortArrow) })
+                     nameof(TitleSortArrow), nameof(CategorySortArrow), nameof(ProfileSortArrow), nameof(PlaytimeSortArrow), nameof(LastPlayedSortArrow), nameof(SizeSortArrow) })
             OnPropertyChanged(name);
     }
 }
@@ -164,6 +170,7 @@ internal sealed class GameSortComparer(string? option, bool reversed) : ICompare
             LibraryViewModel.SortCategory => direction * StringComparer.CurrentCultureIgnoreCase.Compare(a.Category ?? string.Empty, b.Category ?? string.Empty),
             LibraryViewModel.SortCumulativePlaytime => WithBlanksLast(Positive(a.CumulativePlaytimeMinutes), Positive(b.CumulativePlaytimeMinutes), direction),
             LibraryViewModel.SortMostRecentlyPlayed => WithBlanksLast(a.LastPlayed, b.LastPlayed, direction),
+            LibraryViewModel.SortPerformanceProfile => WithBlanksLast(ProfileRank(a), ProfileRank(b), direction),
             LibraryViewModel.SortLargestFirst => WithBlanksLast(a.InstallSizeBytes is > 0 ? a.InstallSizeBytes : null, b.InstallSizeBytes is > 0 ? b.InstallSizeBytes : null, direction),
             _ => direction * ByName(a, b),
         };
@@ -177,6 +184,9 @@ internal sealed class GameSortComparer(string? option, bool reversed) : ICompare
     private static int Then(int first, Func<int> next) => first != 0 ? first : next();
 
     private static long? Positive(long value) => value > 0 ? value : null;
+
+    /// <summary>Off has nothing to sort by, so it stays last like a game never played.</summary>
+    private static int? ProfileRank(GameEntry game) => game.PerformanceProfile == PerformanceProfileMode.Off ? null : (int)game.PerformanceProfile;
 
     private static int WithBlanksLast<T>(T? a, T? b, int direction) where T : struct, IComparable<T> =>
         a is { } x ? (b is { } y ? direction * x.CompareTo(y) : -1) : (b is null ? 0 : 1);

@@ -296,6 +296,54 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
+    <!-- ==================================================================== -->
+    <!-- PERFORMANCE PROFILE (Details List's Profile column)                  -->
+    <!-- Optimized and Aggressive are pills; Off is plain muted text, so the  -->
+    <!-- tuned games stand out down the column.                               -->
+    <!-- ==================================================================== -->
+    <!-- The column's cell, in the header and in every row: 90 wide, and gone while the Library is
+         narrower than 1100, so a half-screen window keeps room for the game titles (the column
+         is Auto, so it closes up with its cells). -->
+    <Style x:Key="ProfileColumnCell" TargetType="Border">
+        <Setter Property="Width" Value="90"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource WidthBelowConverter}, ConverterParameter=1100}" Value="True">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="ProfilePill" TargetType="Border">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Setter Property="Padding" Value="0,2"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Optimized}">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+                <Setter Property="Padding" Value="7,2"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Aggressive}">
+                <Setter Property="Background" Value="{DynamicResource BrushWarningWash}"/>
+                <Setter Property="Padding" Value="7,2"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="ProfilePillText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBadge}"/>
+        <Setter Property="Text" Value="{Binding ListProfileLabel}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Optimized}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Aggressive}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushGold}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- The pill's logo; a Local pill is the name alone. -->
     <Style x:Key="LauncherBadgeLogo" TargetType="Image">
         <Setter Property="Source" Value="{Binding LauncherLogoUri}"/>

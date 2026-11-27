@@ -25,6 +25,7 @@
         <converters:ScrollArrowConverter x:Key="ScrollArrowConverter"/>
         <converters:RoundedClipConverter x:Key="RoundedClipConverter"/>
         <converters:RatioHeightConverter x:Key="RatioHeightConverter"/>
+        <converters:WidthBelowConverter x:Key="WidthBelowConverter"/>
         <converters:PosterCardRadiusConverter x:Key="PosterCardRadiusConverter"/>
         <converters:PosterShadeClipConverter x:Key="PosterShadeClipConverter"/>
         <converters:AnyTrueConverter x:Key="AnyTrueConverter"/>

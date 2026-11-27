@@ -102,7 +102,8 @@ public partial class LibraryViewModel : ViewModelBase
         SortFavoritesFirstRecent,
         SortMostRecentlyPlayed,
         SortCumulativePlaytime,
-        SortLargestFirst
+        SortLargestFirst,
+        SortPerformanceProfile
     };
     public ICollectionView FilteredGames { get; }
 

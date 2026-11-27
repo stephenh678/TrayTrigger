@@ -505,6 +505,9 @@ public class GameCardViewModel : ViewModelBase
     public ICommand ToggleDlssOverrideCommand { get; }
 
     // Check marks for the cascading quick-setting submenus.
+    /// <summary>Details List's Profile column: the pill's colour and its words.</summary>
+    public PerformanceProfileMode PerformanceProfile => Game.PerformanceProfile;
+    public string ListProfileLabel => Game.PerformanceProfile.ToString();
     public bool ProfileIsOff => Game.PerformanceProfile == PerformanceProfileMode.Off;
     public bool ProfileIsOptimized => Game.PerformanceProfile == PerformanceProfileMode.Optimized;
     public bool ProfileIsAggressive => Game.PerformanceProfile == PerformanceProfileMode.Aggressive;
@@ -569,6 +572,8 @@ public class GameCardViewModel : ViewModelBase
 
     private void NotifyQuickSettingsChanged()
     {
+        OnPropertyChanged(nameof(PerformanceProfile));
+        OnPropertyChanged(nameof(ListProfileLabel));
         OnPropertyChanged(nameof(ProfileIsOff));
         OnPropertyChanged(nameof(ProfileIsOptimized));
         OnPropertyChanged(nameof(ProfileIsAggressive));

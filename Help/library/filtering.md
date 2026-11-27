@@ -67,7 +67,9 @@ Clear in the flyout, or Clear Filters in that message, removes every tick at onc
 
 ## Sorting
 
-Pick an order in the sort box: Name, Category, Favorites First, Favorites First (Recent), Last Played, Playtime or Size on Disk. Each starts the way it reads most usefully: Name and Category A to Z, Last Played newest first, Playtime and Size on Disk biggest first. The arrow button beside the sort box shows which way the order runs (up for A to Z, oldest or smallest first) and turns it round. Favorites stay at the top of the Favorites First sorts either way. Picking a different sort starts it its own way again. In the Details List view, click a column header to sort by that column, and click it again to reverse it, as in File Explorer; the sorted column shows an arrow. Games with nothing to sort by - never played, or not counted yet - stay at the end whichever way the list runs.
+Pick an order in the sort box: Name, Category, Favorites First, Favorites First (Recent), Last Played, Playtime, Size on Disk or Performance Profile. Each starts the way it reads most usefully: Name and Category A to Z, Last Played newest first, Playtime and Size on Disk biggest first, Performance Profile with Aggressive first, then Optimized, with the games whose profile is Off last. The arrow button beside the sort box shows which way the order runs (up for A to Z, oldest or smallest first) and turns it round. Favorites stay at the top of the Favorites First sorts either way. Picking a different sort starts it its own way again. In the Details List view, click a column header to sort by that column, and click it again to reverse it, as in File Explorer; the sorted column shows an arrow. Games with nothing to sort by - never played, not counted yet, or with the profile Off - stay at the end whichever way the list runs.
+
+The Details List view's Profile column shows each game's performance profile: Optimized and Aggressive as coloured labels, Off in plain text. When the window is too narrow for every column, the Profile column is left out so the game titles keep their room; widen the window to bring it back.
 
 ## Sorting by size
 

@@ -4,7 +4,7 @@ A Performance Profile is a set of system changes that apply only while a specifi
 
 ## New games
 
-A game you add, by Scan for Games, Add Game, Add Folder or a drop, starts on the profile picked in "New games start on" at the top of this page: Optimized unless you change it. Changing it doesn't touch games already in the library. Change one of those in Edit Game, or several at once by selecting them and using Performance Profile in the right-click menu.
+A game you add, by Scan for Games, Add Game, Add Folder or a drop, starts on the profile picked in "New games start on" at the top of this page: Optimized unless you change it. Changing it doesn't touch games already in the library. Change one of those in Edit Game, or several at once by selecting them and using Performance Profile in the right-click menu. To see every game's profile at once, use the Library's Details List view: its Profile column shows Optimized or Aggressive as a coloured label and Off in plain text, and clicking the column header sorts by it.
 
 ## Optimized versus Aggressive
 
