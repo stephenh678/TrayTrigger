@@ -3606,6 +3606,13 @@ public partial class App
                 return;
             }
 
+            // --test-column-drag <out.txt>: the Details List column handles dragged step by step (App.ColumnDragCheck.cs).
+            if (e.Args[i].Equals("--test-column-drag", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunColumnDragCheck(e.Args[i + 1]);
+                return;
+            }
+
             // --test-layout-audit <out.txt>: text cut off and elements clipped on each page and dialog (App.LayoutAudit.cs).
             if (e.Args[i].Equals("--test-layout-audit", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

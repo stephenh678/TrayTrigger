@@ -1242,12 +1242,13 @@
                                    <Grid x:Name="DetailsHeaderGrid">
                                        <Grid.ColumnDefinitions>
                                            <ColumnDefinition Width="42"/> <!-- Icon -->
-                                           <ColumnDefinition Width="*"/>  <!-- Title -->
+                                           <ColumnDefinition Width="1000*" MaxWidth="{Binding TitleMaxWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Title: fills until the first drag, then capped (DetailsListColumns) -->
                                            <ColumnDefinition Width="{Binding CategoryWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Category: DetailsListColumns, resizable -->
                                            <ColumnDefinition Width="Auto"/> <!-- Profile: ProfileColumnCell, gone when narrow -->
                                            <ColumnDefinition Width="{Binding PlaytimeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Playtime -->
                                            <ColumnDefinition Width="{Binding LastPlayedWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Last Played -->
                                            <ColumnDefinition Width="{Binding SizeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Size -->
+                                           <ColumnDefinition Width="*"/>  <!-- Spare room, so Actions stays at the right end -->
                                            <ColumnDefinition Width="90"/>  <!-- Actions -->
                                        </Grid.ColumnDefinitions>
                                        <!-- Click a column to sort by it, again to reverse it, as in Explorer (LibraryViewModel.Sorting). -->
@@ -1312,6 +1313,8 @@
                                            </Grid>
                                        </Button>
                                        <!-- The handles on the right edge of each resizable column (DetailsListColumns, LibraryView.Columns.cs). Profile's is in its cell. -->
+                                       <Thumb Grid.Column="1" Style="{StaticResource ColumnResizeGrip}" Tag="Title" AutomationProperties.Name="Resize the Game Title column"
+                                              DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
                                        <Thumb Grid.Column="2" Style="{StaticResource ColumnResizeGrip}" Tag="Category" AutomationProperties.Name="Resize the Category column"
                                               DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
                                        <Thumb Grid.Column="4" Style="{StaticResource ColumnResizeGrip}" Tag="Playtime" AutomationProperties.Name="Resize the Playtime column"
@@ -1320,7 +1323,7 @@
                                               DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
                                        <Thumb Grid.Column="6" Style="{StaticResource ColumnResizeGrip}" Tag="Size" AutomationProperties.Name="Resize the Size column"
                                               DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
-                                       <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="7" Text="ACTIONS" FontFamily="{DynamicResource AppFont}"
+                                       <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="8" Text="ACTIONS" FontFamily="{DynamicResource AppFont}"
                                                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                    </Grid>
                                </Border>
@@ -1378,12 +1381,13 @@
                                                <Grid VerticalAlignment="Center">
                                                    <Grid.ColumnDefinitions>
                                                        <ColumnDefinition Width="42"/>
-                                                       <ColumnDefinition Width="*"/>
+                                                       <ColumnDefinition Width="1000*" MaxWidth="{Binding TitleMaxWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
                                                        <ColumnDefinition Width="{Binding CategoryWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
                                                        <ColumnDefinition Width="Auto"/>
                                                        <ColumnDefinition Width="{Binding PlaytimeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
                                                        <ColumnDefinition Width="{Binding LastPlayedWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
                                                        <ColumnDefinition Width="{Binding SizeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
+                                                       <ColumnDefinition Width="*"/>
                                                        <ColumnDefinition Width="90"/>
                                                    </Grid.ColumnDefinitions>
 
@@ -1476,7 +1480,7 @@
                                                               FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
 
                                                    <!-- Action Buttons -->
-                                                   <StackPanel Grid.Column="7" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                   <StackPanel Grid.Column="8" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                        <!-- Details needs no button here: a left-click anywhere on the row opens it. -->
                                                        <Button Command="{Binding LaunchCommand}" AutomationProperties.Name="Play Game"
                                                                Height="34" Width="34">

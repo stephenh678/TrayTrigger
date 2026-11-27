@@ -306,14 +306,15 @@
          is Auto, so it closes up with its cells). -->
     <!-- ==================================================================== -->
     <!-- DETAILS LIST COLUMN HANDLES                                          -->
-    <!-- On the right edge of a resizable column's header: a faint line that  -->
+    <!-- On the right edge of a resizable column's header: a clear line that  -->
     <!-- brightens under the mouse and turns accent while dragging, like the  -->
     <!-- divider between categories and collections. The drag is in          -->
     <!-- LibraryView.Columns.cs.                                              -->
     <!-- ==================================================================== -->
     <Style x:Key="ColumnResizeGrip" TargetType="Thumb">
         <Setter Property="Width" Value="11"/>
-        <Setter Property="Margin" Value="0,-8,-6,-8"/>
+        <!-- The line sits 5 px inside the column's right edge, clear of the next header's first letter. -->
+        <Setter Property="Margin" Value="0,-8,0,-8"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
         <Setter Property="Cursor" Value="SizeWE"/>
         <Setter Property="Focusable" Value="False"/>
@@ -322,11 +323,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
                     <Border Background="Transparent">
-                        <Border x:Name="Line" Width="1" Height="16" Background="{DynamicResource BrushBorder}" HorizontalAlignment="Center"/>
+                        <Border x:Name="Line" Width="1" Height="22" Background="{DynamicResource BrushBorderStrong}" HorizontalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushBorderStrong}"/>
+                            <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushTextMuted}"/>
                             <Setter TargetName="Line" Property="Width" Value="2"/>
                         </Trigger>
                         <Trigger Property="IsDragging" Value="True">
