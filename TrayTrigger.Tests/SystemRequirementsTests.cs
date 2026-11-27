@@ -79,7 +79,7 @@ public class SystemRequirementsTests
     {
         var rows = SystemRequirements.Compare(SystemRequirements.Parse(
             "• OS: Windows 11\n• Processor: Intel Core i7-13700K\n• Memory: 16 GB RAM\n• Graphics: GTX 1060 6GB or RX 580 8GB\n• DirectX: Version 12\n• Storage: 90 GB available space").Rows,
-            SmallPc, new(null, false));
+            SmallPc, new(null, NotInstalled: true));
 
         Assert.Equal("Below: needs Windows 11", Row(rows, RequirementKind.Os).Warning);
         Assert.False(Row(rows, RequirementKind.Processor).HasWarning);
@@ -95,12 +95,78 @@ public class SystemRequirementsTests
     {
         var rows = SystemRequirements.Compare(SystemRequirements.Parse(
             "• OS: Windows 10 / 11\n• Graphics: NVIDIA GeForce GTX 1070\n• Storage: 90 GB available space").Rows,
-            SmallPc, new(null, MayBeInstalled: true));
+            SmallPc, new(null, NotInstalled: false));
 
         Assert.All(rows, r => Assert.False(r.HasWarning));
-        // An Xbox game may be installed where TrayTrigger sees no folder: no free-space line at all.
+        // Installed by its launcher's account but with no folder TrayTrigger can see (a game added from a Steam
+        // shortcut): no free-space line at all, so no "Not enough free space" for a game that is installed.
         Assert.False(Row(rows, RequirementKind.Storage).HasYours);
     }
+
+    [Fact]
+    public void Storage_ForAGameItsLauncherSaysIsNotInstalled_UsesFreeSpace_EvenWithAFolderLeftBehind()
+    {
+        var rows = SystemRequirements.Compare(SystemRequirements.Parse("• Storage: 90 GB available space").Rows,
+            SmallPc, new("C:", NotInstalled: true));
+        Assert.Equal("10 GB free on C:", rows[0].Yours);
+        Assert.True(rows[0].HasWarning);
+    }
+
+    [Fact]
+    public void Storage_AFullDrive_StillWarns()
+    {
+        var rows = SystemRequirements.Compare(SystemRequirements.Parse("• Storage: 50 GB available space").Rows,
+            SmallPc with { Drives = [("C:", 0)] }, new(null, NotInstalled: true));
+        Assert.Equal("0 GB free on C:", rows[0].Yours);
+        Assert.Equal("Not enough free space: needs 50 GB", rows[0].Warning);
+    }
+
+    [Fact]
+    public void Memory_WhenTheInstalledAmountCantBeRead_ShowsWhatWindowsCanUse_AndNeverWarns()
+    {
+        var pc = BigPc with { InstalledRamGb = 0, UsableRamGb = 31.7 };
+        var rows = SystemRequirements.Compare(SystemRequirements.Parse("• Memory: 64 GB RAM").Rows, pc, default);
+        Assert.Equal("32 GB", rows[0].Yours);
+        Assert.False(rows[0].HasWarning);
+    }
+
+    [Theory]
+    [InlineData("Minimum Requirements:\n• OS: Windows 10")]
+    [InlineData("RECOMMENDED SYSTEM REQUIREMENTS\n• OS: Windows 10")]
+    [InlineData("Minimum: OS: Windows 10")]
+    public void Parse_SkipsSteamsHeadings_AndReadsALineAfterOne(string text)
+    {
+        var parsed = SystemRequirements.Parse(text);
+        Assert.Equal("OS", Assert.Single(parsed.Rows).Label);
+        Assert.Empty(parsed.Notes);
+    }
+
+    [Fact]
+    public void Parse_AHeadingWithTheListsFirstLine_KeepsThatLineAsANote()
+    {
+        var parsed = SystemRequirements.Parse("Minimum: Requires a 64-bit processor and operating system\n• OS: Windows 10");
+        Assert.Equal(["OS"], parsed.Rows.Select(r => r.Label));
+        Assert.Equal(["Requires a 64-bit processor and operating system"], parsed.Notes);
+    }
+
+    [Fact]
+    public void Parse_TextWithNoBreaksBetweenParts_StillGivesOneRowEach()
+    {
+        var parsed = SystemRequirements.Parse("OS: Windows 10 64-bit Processor: Intel Core i5-4460 Memory: 8 GB RAM Graphics: GTX 970 Storage: 50 GB available space");
+        Assert.Equal(["OS", "Processor", "Memory", "Graphics", "Storage"], parsed.Rows.Select(r => r.Label));
+        Assert.Equal("Windows 10 64-bit", parsed.Rows[0].Value);
+        Assert.Equal("8 GB RAM", parsed.Rows[2].Value);
+    }
+
+    [Theory]
+    [InlineData(0xc200, null, 12, "DirectX 12 Ultimate")]
+    [InlineData(0xc000, null, 12, "DirectX 12")]
+    [InlineData(0xb000, null, 12, "DirectX 12")] // a GTX 650 Ti: DirectX 12 at feature level 11_0
+    [InlineData(null, 0xb100, 11, "DirectX 11")] // DirectX 12 refuses it, DirectX 11 takes it
+    [InlineData(null, 0xa100, null, "")]         // feature level 10: not claimed either way
+    [InlineData(null, null, null, "")]
+    public void DirectXOf_ADirectX12CardAtAnyFeatureLevel_IsDirectX12(int? d3d12, int? d3d11, int? major, string label) =>
+        Assert.Equal((major, label), SystemInfoService.DirectXOf(d3d12, d3d11));
 
     [Fact]
     public void Compare_WithoutThePcRead_LeavesTheRowsAsTheyAre()

@@ -28,7 +28,7 @@ public partial class LibraryView
             c => c != DetailsListColumns.Profile || profileShown);
     }
 
-    private void ColumnGrip_DragCompleted(object sender, DragCompletedEventArgs e) => DetailsListColumns.Instance.Save();
+    private void ColumnGrip_DragCompleted(object sender, DragCompletedEventArgs e) => DetailsListColumns.Instance.SaveIfChanged();
 
     private void ColumnGrip_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {

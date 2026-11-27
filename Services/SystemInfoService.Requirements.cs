@@ -9,26 +9,38 @@ using TrayTrigger.Models;
 namespace TrayTrigger.Services;
 
 /// <summary>
-/// This PC's parts for Game Details' requirements card (<see cref="PcSummary"/>): read once per run on a
-/// background thread, from the same registry keys as the System page plus three small reads of its own -
-/// the memory installed, the DirectX level of the graphics card games use, and the default playback
-/// device. Nothing leaves the PC.
+/// This PC's parts for Game Details' requirements card (<see cref="PcSummary"/>). The hardware is read once per run
+/// on a background thread, from the same registry keys as the System page plus the memory installed and the graphics
+/// card games use (DXGI, with its own memory and the newest DirectX it runs). The drives' free space and the default
+/// playback device are read each time a window asks, since both change while TrayTrigger sits in the tray for days.
+/// Nothing leaves the PC.
 /// </summary>
 public partial class SystemInfoService
 {
-    private static readonly Lazy<Task<PcSummary>> PcSummaryOnce = new(() => Task.Run(ReadPcSummary));
+    private static readonly Lazy<Task<PcSummary>> HardwareOnce = new(() => Task.Run(ReadHardware));
 
-    /// <summary>This PC's parts, read the first time any Game Details window asks and kept for the run.</summary>
-    public static Task<PcSummary> GetPcSummaryAsync() => PcSummaryOnce.Value;
+    /// <summary>This PC's parts: the hardware as read the first time any window asked, the free space and playback device now.</summary>
+    public static async Task<PcSummary> GetPcSummaryAsync()
+    {
+        var hardware = await HardwareOnce.Value.ConfigureAwait(false);
+        return await Task.Run(() => hardware with
+        {
+            SoundDevice = AudioEndpointService.GetDefaultRenderName(),
+            Drives = Safe(FixedDrives, []),
+        }).ConfigureAwait(false);
+    }
 
-    private static PcSummary ReadPcSummary()
+    private static PcSummary ReadHardware()
     {
         var info = new SystemInfoService();
         var os = Safe(info.GetOsInfo, new OsEnvironmentInfo());
         var cpu = Safe(info.GetCpuInfo, new CpuHardwareInfo());
-        var gpus = Safe(info.GetGpuInfoList, new List<GpuHardwareInfo>());
-        var gpu = gpus.Where(g => g.IsDedicated).OrderByDescending(g => g.VramGigabytes).FirstOrDefault() ?? gpus.FirstOrDefault();
-        var (dxMajor, dxLabel) = Safe(DirectXLevel, (null, ""));
+        // The card's name, memory and DirectX come from DXGI: its memory figure is 64-bit, where the registry's
+        // older value stops at 4 GB. The registry's list only names the card when DXGI can't be read.
+        var card = Safe(GamesCard, null);
+        string registryName = card == null
+            ? Safe(() => info.GetGpuInfoList().Where(g => g.IsDedicated).OrderByDescending(g => g.VramGigabytes).FirstOrDefault()?.ModelName, null) ?? ""
+            : "";
 
         return new PcSummary
         {
@@ -37,12 +49,11 @@ public partial class SystemInfoService
             Cpu = cpu.ModelName == "Unknown CPU" ? "" : cpu.ModelName,
             CpuCores = cpu.PhysicalCores,
             InstalledRamGb = Safe(InstalledMemoryGb, 0),
-            Gpu = gpu?.ModelName ?? "",
-            GpuMemoryGb = gpu?.VramGigabytes ?? 0,
-            DirectXMajor = dxMajor,
-            DirectXLabel = dxLabel,
-            SoundDevice = AudioEndpointService.GetDefaultRenderName(),
-            Drives = Safe(FixedDrives, []),
+            UsableRamGb = Safe(() => info.GetRamUsage().TotalGigabytes, 0),
+            Gpu = card?.Name ?? registryName,
+            GpuMemoryGb = card?.MemoryGb ?? 0,
+            DirectXMajor = card?.DirectXMajor,
+            DirectXLabel = card?.DirectXLabel ?? "",
         };
     }
 
@@ -63,41 +74,65 @@ public partial class SystemInfoService
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetPhysicallyInstalledSystemMemory(out ulong totalKilobytes);
 
-    /// <summary>The memory installed, from the modules themselves: 32 for 32 GB, where Windows reports 31.7 usable.</summary>
+    /// <summary>The memory installed, from the modules themselves: 32 for 32 GB, where Windows reports 31.7 usable.
+    /// 0 where the firmware doesn't say (some VMs).</summary>
     private static double InstalledMemoryGb() =>
         GetPhysicallyInstalledSystemMemory(out ulong kb) && kb > 0 ? Math.Round(kb / (1024.0 * 1024.0), 1) : 0;
 
-    private static IReadOnlyList<(string Letter, double FreeGb)> FixedDrives() =>
-        DriveInfo.GetDrives()
-            .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
-            .Select(d => (d.Name.TrimEnd('\\'), Math.Round(d.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0), 1)))
-            .ToList();
+    /// <summary>Each fixed drive's letter and free space; a drive that can't be read is left out, not the whole list.</summary>
+    private static IReadOnlyList<(string Letter, double FreeGb)> FixedDrives()
+    {
+        var drives = new List<(string, double)>();
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            try
+            {
+                if (drive.DriveType == DriveType.Fixed && drive.IsReady)
+                    drives.Add((drive.Name.TrimEnd('\\'), Math.Round(drive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0), 1)));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                LoggingService.Verbose("SystemInfo", $"Requirements card: drive {drive.Name} could not be read: {ex.Message}");
+            }
+        }
+        return drives;
+    }
 
     // ---------------------------------------------------------------------------------------------
-    // DirectX level. Every Windows 10 and 11 PC has DirectX 12 itself; what a game's "DirectX:
-    // Version 12" line needs is a graphics card that supports it. DXGI lists the cards (the same
-    // interfaces as MatchDxgiAdapters); the one with the most memory of its own is the one games use. D3D12CreateDevice with no device to return
-    // only answers whether that card supports a level, so nothing is created.
+    // The graphics card games use, and the newest DirectX it runs. DXGI lists the cards (the same
+    // interfaces as MatchDxgiAdapters); the one with the most memory of its own is the one games use.
+    // Every Windows 10 and 11 PC has DirectX 12 itself; what a game's "DirectX: Version 12" line needs
+    // is a card DirectX 12 accepts, at any feature level: a GTX 650 Ti runs DirectX 12 at feature level
+    // 11_0. D3D12CreateDevice and D3D11CreateDevice with no device to return only answer whether a card
+    // is accepted, so nothing is created.
     // ---------------------------------------------------------------------------------------------
+
+    private sealed record GraphicsCard(string Name, double MemoryGb, int? DirectXMajor, string DirectXLabel);
 
     [DllImport("d3d12.dll")]
     private static extern int D3D12CreateDevice(IntPtr adapter, int minimumFeatureLevel, ref Guid riid, IntPtr device);
 
-    private static readonly Guid D3D12DeviceIid = new("189819F1-1DB6-4B57-BE54-1821339B85F7");
+    [DllImport("d3d11.dll")]
+    private static extern int D3D11CreateDevice(IntPtr adapter, int driverType, IntPtr software, uint flags, int[] featureLevels,
+        uint featureLevelCount, uint sdkVersion, IntPtr device, out int featureLevel, IntPtr immediateContext);
 
-    /// <summary>The highest DirectX level the graphics card games use supports, or (null, "") when that can't be told.</summary>
-    private static (int? Major, string Label) DirectXLevel()
+    private static readonly Guid D3D12DeviceIid = new("189819F1-1DB6-4B57-BE54-1821339B85F7");
+    private const int D3DDriverTypeUnknown = 0;
+    private const uint D3D11SdkVersion = 7;
+
+    /// <summary>The card with the most memory of its own, or null when DXGI lists none.</summary>
+    private static GraphicsCard? GamesCard()
     {
         var iid = typeof(IDXGIFactory1).GUID;
-        if (CreateDXGIFactory1(ref iid, out var factory) != 0 || factory == null) return (null, "");
+        if (CreateDXGIFactory1(ref iid, out var factory) != 0 || factory == null) return null;
         IDXGIAdapter1? best = null;
+        DXGI_ADAPTER_DESC1 bestDesc = default;
         try
         {
-            nuint bestMemory = 0;
             for (uint i = 0; factory.EnumAdapters1(i, out var adapter) == 0 && adapter != null; i++)
             {
                 bool keep = adapter.GetDesc1(out var desc) == 0 && (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0
-                            && (best == null || desc.DedicatedVideoMemory > bestMemory);
+                            && (best == null || desc.DedicatedVideoMemory > bestDesc.DedicatedVideoMemory);
                 if (!keep)
                 {
                     Marshal.ReleaseComObject(adapter);
@@ -105,24 +140,19 @@ public partial class SystemInfoService
                 }
                 if (best != null) Marshal.ReleaseComObject(best);
                 best = adapter;
-                bestMemory = desc.DedicatedVideoMemory;
+                bestDesc = desc;
             }
-            if (best == null) return (null, "");
+            if (best == null) return null;
 
             IntPtr adapterPtr = Marshal.GetIUnknownForObject(best);
             try
             {
-                var deviceIid = D3D12DeviceIid;
-                foreach (var (level, major, label) in new[]
-                         {
-                             (0xc200, 12, "DirectX 12 Ultimate"), (0xc100, 12, "DirectX 12"), (0xc000, 12, "DirectX 12"),
-                             (0xb100, 11, "DirectX 11"), (0xb000, 11, "DirectX 11"),
-                         })
-                {
-                    // S_FALSE (1) with no device to return means "it would succeed".
-                    if (D3D12CreateDevice(adapterPtr, level, ref deviceIid, IntPtr.Zero) is 0 or 1) return (major, label);
-                }
-                return (null, "");
+                int? d3d12 = D3D12Level(adapterPtr);
+                var (major, label) = DirectXOf(d3d12, d3d12 == null ? Safe(() => D3D11Level(adapterPtr), null) : null);
+                // Built-in graphics has a token amount of its own and borrows the rest: no figure to compare a
+                // game's "4 GB VRAM" against, so none is given (and nothing is warned on).
+                double memory = Math.Round(bestDesc.DedicatedVideoMemory / (1024.0 * 1024.0 * 1024.0), 1);
+                return new GraphicsCard(bestDesc.Description?.Trim() ?? "", memory >= 0.5 ? memory : 0, major, label);
             }
             finally
             {
@@ -135,4 +165,36 @@ public partial class SystemInfoService
             Marshal.ReleaseComObject(factory);
         }
     }
+
+    /// <summary>The highest feature level DirectX 12 accepts the card at, or null when it doesn't.</summary>
+    private static int? D3D12Level(IntPtr adapter)
+    {
+        var iid = D3D12DeviceIid;
+        foreach (int level in new[] { 0xc200, 0xc100, 0xc000, 0xb100, 0xb000 })
+        {
+            // S_FALSE (1) with no device to return means "it would succeed". A Windows too old to know 12_2 refuses
+            // that level as invalid, and the next one is tried.
+            if (Safe(() => D3D12CreateDevice(adapter, level, ref iid, IntPtr.Zero), -1) is 0 or 1) return level;
+        }
+        return null;
+    }
+
+    /// <summary>The highest feature level DirectX 11 accepts the card at, or null when it doesn't.</summary>
+    private static int? D3D11Level(IntPtr adapter)
+    {
+        int[] levels = [0xb100, 0xb000, 0xa100, 0xa000];
+        int hr = D3D11CreateDevice(adapter, D3DDriverTypeUnknown, IntPtr.Zero, 0, levels, (uint)levels.Length, D3D11SdkVersion,
+            IntPtr.Zero, out int level, IntPtr.Zero);
+        return hr is 0 or 1 ? level : null;
+    }
+
+    /// <summary>
+    /// The newest DirectX a card runs, from the feature levels DirectX 12 and DirectX 11 accept it at: any DirectX 12
+    /// level is DirectX 12 (12_2 is DirectX 12 Ultimate); a card only DirectX 11 accepts, at 11_0 or above, is DirectX
+    /// 11; anything less is not claimed, so a game's DirectX line is never warned on from a guess.
+    /// </summary>
+    internal static (int? Major, string Label) DirectXOf(int? d3d12Level, int? d3d11Level) =>
+        d3d12Level is int level12 ? (12, level12 >= 0xc200 ? "DirectX 12 Ultimate" : "DirectX 12")
+        : d3d11Level is >= 0xb000 ? (11, "DirectX 11")
+        : (null, "");
 }

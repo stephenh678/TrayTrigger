@@ -58,14 +58,17 @@ public partial class GameDetailsViewModel
             OnPropertyChanged(name);
     }
 
-    /// <summary>Reads this PC's parts (once per run, shared by every window) and the game's drive, off the UI thread.</summary>
+    /// <summary>Reads this PC's parts (the hardware once per run, free space and sound each time) and the game's install, off the UI thread.</summary>
     public async Task LoadPcSummaryAsync()
     {
         try
         {
             var game = Game;
-            string? drive = await Task.Run(() => SystemInfoService.GameDriveLetter(game));
-            _installState = new SystemRequirements.InstallState(drive, MayBeInstalled: game.IsXboxGame);
+            // Not installed is the launcher's answer, the one behind the Library's NOT INSTALLED badge: a game with no
+            // folder TrayTrigger can see (one added from a Steam shortcut) is still installed.
+            _installState = await Task.Run(() => new SystemRequirements.InstallState(
+                SystemInfoService.GameDriveLetter(game),
+                NotInstalled: InstalledGameIndex.Current.AvailabilityOf(game) == GameAvailability.NotInstalled));
             _pcSummary = await SystemInfoService.GetPcSummaryAsync();
             NotifyRequirementsChanged();
         }

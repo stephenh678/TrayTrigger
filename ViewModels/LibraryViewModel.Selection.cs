@@ -173,6 +173,7 @@ public partial class LibraryViewModel
             card.RefreshProperties();
         }
         SaveGamesOnly();
+        RefreshAfterQuickSetting();
         LoggingService.Info("Library", $"{cards.Count} game(s) performance profile set to {mode} (batch).");
         PerformanceActivity.GamesChanged(changed, mode);
         StatusMessage = $"Set Performance Profile of {cards.Count} game(s) to {mode}";

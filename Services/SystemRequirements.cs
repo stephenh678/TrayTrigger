@@ -52,8 +52,14 @@ public static partial class SystemRequirements
     [GeneratedRegex(@"\bWin(?:dows)?\s*(?:10|8(?:\.1)?|7|XP|Vista)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OlderWindows();
 
-    [GeneratedRegex(@"^(Minimum|Recommended)\s*:?$", RegexOptions.IgnoreCase)]
+    /// <summary>"Minimum:", "Recommended Requirements:", and "Minimum: Requires a 64-bit..." with the list's first line after it.</summary>
+    [GeneratedRegex(@"^(?:Minimum|Recommended)(?:\s+(?:System\s+)?Requirements?)?\s*(?::\s*(?<rest>.*))?$", RegexOptions.IgnoreCase)]
     private static partial Regex ListHeading();
+
+    /// <summary>A part's label in the middle of a line, as in Steam text with no breaks between the parts
+    /// ("OS: Windows 10 Processor: i5 Memory: 8 GB RAM"): each starts a line of its own.</summary>
+    [GeneratedRegex(@"(?<=\S)\s+(?=(?:OS|Processor|Memory|Graphics|Video Card|DirectX|Storage|Hard Drive|Hard Disk Space|Sound Card|Network|VR Support|Additional Notes)\s*\*?\s*:)")]
+    private static partial Regex MidLineLabel();
 
     /// <summary>Steam's cleaned text ("• OS: Windows 10\n• Memory: 8 GB RAM\n...") as rows and notes.</summary>
     public static ParsedRequirements Parse(string? text)
@@ -62,10 +68,12 @@ public static partial class SystemRequirements
         var notes = new List<string>();
         if (string.IsNullOrWhiteSpace(text)) return new(rows, notes);
 
-        foreach (string raw in text.Split('\n'))
+        foreach (string raw in MidLineLabel().Replace(text, "\n").Split('\n'))
         {
             string line = raw.Trim().TrimStart('•', '-', '·').Trim();
-            if (line.Length == 0 || ListHeading().IsMatch(line)) continue;
+            if (ListHeading().Match(line) is { Success: true } heading)
+                line = heading.Groups["rest"].Value.Trim().TrimStart('•', '-', '·').Trim();
+            if (line.Length == 0) continue;
 
             var match = LabelledLine().Match(line);
             if (!match.Success)
@@ -105,10 +113,10 @@ public static partial class SystemRequirements
     }
 
     /// <summary>The game's install, as far as the storage row needs it.</summary>
-    /// <param name="InstalledOn">The drive the game is installed on ("C:"), or null.</param>
-    /// <param name="MayBeInstalled">True when the game could be installed where TrayTrigger can't see a
-    /// folder (an Xbox game), so a missing folder doesn't mean it still needs the space.</param>
-    public readonly record struct InstallState(string? InstalledOn, bool MayBeInstalled);
+    /// <param name="InstalledOn">The drive the game's folder is on ("C:"), or null when TrayTrigger can't see one.</param>
+    /// <param name="NotInstalled">The game's launcher says it isn't installed (the Library's NOT INSTALLED): only then
+    /// does free space matter. A game added from a Steam shortcut has no folder TrayTrigger can see, yet is installed.</param>
+    public readonly record struct InstallState(string? InstalledOn, bool NotInstalled);
 
     /// <summary>Adds this PC's part and any sure shortfall to each row. Rows stay as they are without a PC summary.</summary>
     public static IReadOnlyList<RequirementRow> Compare(IReadOnlyList<RequirementRow> rows, PcSummary? pc, InstallState install)
@@ -120,7 +128,8 @@ public static partial class SystemRequirements
             RequirementKind.Processor => row with { Yours = Join(pc.Cpu, pc.CpuCores > 0 ? $"{pc.CpuCores} cores" : "") },
             RequirementKind.Memory => row with
             {
-                Yours = pc.InstalledRamGb > 0 ? FormatGb(pc.InstalledRamGb) : "",
+                // The installed amount, else what Windows can use (shown, never warned on: it reads short of what is fitted).
+                Yours = pc.InstalledRamGb > 0 ? FormatGb(pc.InstalledRamGb) : pc.UsableRamGb > 0 ? FormatGb(pc.UsableRamGb) : "",
                 Warning = Short(SmallestGb(row.Value), pc.InstalledRamGb) is { } need ? $"Below: needs {FormatGb(need)}" : "",
             },
             RequirementKind.Graphics => row with
@@ -142,13 +151,15 @@ public static partial class SystemRequirements
 
     private static RequirementRow StorageRow(RequirementRow row, PcSummary pc, InstallState install)
     {
-        if (install.InstalledOn != null) return row with { Yours = $"Installed on {install.InstalledOn}" };
-        if (install.MayBeInstalled || pc.Drives.Count == 0) return row;
+        if (!install.NotInstalled)
+            return install.InstalledOn != null ? row with { Yours = $"Installed on {install.InstalledOn}" } : row;
+        if (pc.Drives.Count == 0) return row;
         var roomiest = pc.Drives.MaxBy(d => d.FreeGb);
+        // Free space is a real figure even at 0 (a full drive), unlike memory, where 0 means unknown.
         return row with
         {
             Yours = $"{FormatGb(roomiest.FreeGb)} free on {roomiest.Letter}",
-            Warning = Short(SmallestGb(row.Value), roomiest.FreeGb) is { } need ? $"Not enough free space: needs {FormatGb(need)}" : "",
+            Warning = SmallestGb(row.Value) is double need && roomiest.FreeGb + 0.25 < need ? $"Not enough free space: needs {FormatGb(need)}" : "",
         };
     }
 

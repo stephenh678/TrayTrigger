@@ -549,7 +549,11 @@ public partial class LibraryViewModel : ViewModelBase
             onRangeSelect: OnCardRangeSelect,
             // The quick settings change the game entry and nothing else, so this is the narrow
             // save - no settings.json rewrite for a menu tick.
-            onQuickSettingChanged: _ => SaveGamesOnly(),
+            onQuickSettingChanged: _ =>
+            {
+                SaveGamesOnly();
+                RefreshAfterQuickSetting();
+            },
             onToggleDlssOverride: card => _ = ToggleDlssOverrideAsync(card),
             onLaunchWithoutChanges: card => { if (!HasSelection) LaunchGame(card, withoutChanges: true); },
             onCreateShortcut: CreateGameShortcut,

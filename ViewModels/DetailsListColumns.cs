@@ -11,9 +11,9 @@ namespace TrayTrigger.ViewModels;
 /// Profile, Playtime, Last Played and Size can be resized; the icon and Actions columns are fixed, and Actions stays
 /// at the right end with any spare room before it.
 /// Until the first drag Game Title fills the row, as it always has (<see cref="TitleMaxWidth"/> is infinite). The
-/// first drag fixes it at its width then, so every edge after it can follow the mouse. The title column is still a
-/// star column capped at that width, so a window too narrow for every width shrinks the title (to
-/// <see cref="TitleMinWidth"/>) before Actions could go off the edge.
+/// first drag fixes it at its width then (never less than <see cref="TitleMinWidth"/>), so every edge after it can
+/// follow the mouse. The title column is still a star column capped at that width, with no minimum of its own, so a
+/// window too narrow for every width shrinks the title before Actions could go off the edge.
 /// Saved in <c>AppSettings.DetailsColumnWidths</c> (LibraryViewModel attaches the save); a column with no saved width,
 /// or one outside its limits, is at its default. One instance, so the XAML can bind the header's and the rows'
 /// ColumnDefinitions, which are outside the visual tree, through <c>{x:Static}</c>.
@@ -39,7 +39,8 @@ public sealed class DetailsListColumns : ViewModelBase
 
     public const double MaxWidth = 400;
     public const double TitleMinWidth = 150;
-    public const double TitleMaxDragWidth = 2000;
+    /// <summary>Well past any screen: the title's width is only limited by the room the window has.</summary>
+    public const double TitleMaxDragWidth = 10000;
 
     /// <summary>The one the XAML binds. After <see cref="Limits"/>: static fields start in the order they are written.</summary>
     public static DetailsListColumns Instance { get; } = new();
@@ -47,6 +48,7 @@ public sealed class DetailsListColumns : ViewModelBase
     private readonly Dictionary<string, double> _widths = Limits.ToDictionary(p => p.Key, p => p.Value.Default);
     private double _titleWidth = double.PositiveInfinity;
     private Action<Dictionary<string, double>>? _save;
+    private bool _changedSinceSave;
 
     /// <summary>Game Title's width once set by a drag; infinite while it fills the row.</summary>
     public double TitleMaxWidth => _titleWidth;
@@ -85,7 +87,9 @@ public sealed class DetailsListColumns : ViewModelBase
     {
         if (IsTitleFilling && titleShown > 0)
         {
-            _titleWidth = Math.Round(titleShown);
+            // In the range Attach takes back, so the widths left on screen are the ones the next start opens with.
+            _titleWidth = Math.Clamp(Math.Round(titleShown), TitleMinWidth, TitleMaxDragWidth);
+            _changedSinceSave = true;
             OnPropertyChanged(nameof(TitleMaxWidth));
         }
         // Game Title's width on screen, not its cap: a narrow window can show less than the cap.
@@ -105,6 +109,7 @@ public sealed class DetailsListColumns : ViewModelBase
                 double give = Math.Min(needed, _widths[after] - Limits[after].Min);
                 if (give <= 0) continue;
                 _widths[after] -= give;
+                _changedSinceSave = true;
                 needed -= give;
                 Notify(after);
             }
@@ -113,6 +118,7 @@ public sealed class DetailsListColumns : ViewModelBase
         if (target == current && column != Title) return;
         if (column == Title)
         {
+            if (target == _titleWidth) return;
             _titleWidth = target;
             OnPropertyChanged(nameof(TitleMaxWidth));
         }
@@ -121,6 +127,7 @@ public sealed class DetailsListColumns : ViewModelBase
             _widths[column] = target;
             Notify(column);
         }
+        _changedSinceSave = true;
     }
 
     /// <summary>Puts one column, or every column when <paramref name="column"/> is null, back to its default, and saves.
@@ -134,7 +141,17 @@ public sealed class DetailsListColumns : ViewModelBase
         Save();
     }
 
-    public void Save() => _save?.Invoke(Saved());
+    public void Save()
+    {
+        _changedSinceSave = false;
+        _save?.Invoke(Saved());
+    }
+
+    /// <summary>Saves when a drag changed a width; a plain click on a handle writes nothing.</summary>
+    public void SaveIfChanged()
+    {
+        if (_changedSinceSave) Save();
+    }
 
     /// <summary>Only the widths moved from their default, so a later default change still reaches the rest.</summary>
     internal Dictionary<string, double> Saved()

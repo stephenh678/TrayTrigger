@@ -128,6 +128,8 @@ public partial class SettingsViewModel
             // The Library's tab divider: the view keeps showing the dragged split, so a reset of the stored one
             // would only disagree with the screen (and a click on the divider would write it back).
             nameof(AppSettings.LibraryTabSplit),
+            // The Details List's column widths, for the same reason: the columns would stay as dragged on screen.
+            nameof(AppSettings.DetailsColumnWidths),
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),

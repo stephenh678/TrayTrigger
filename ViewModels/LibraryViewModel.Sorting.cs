@@ -136,6 +136,16 @@ public partial class LibraryViewModel
     private string ArrowFor(string column) =>
         ColumnOf(SelectedSortOption) == column ? (IsSortAscending ? "▲" : "▼") : string.Empty;
 
+    /// <summary>
+    /// A game's profile (or another quick setting) changed from its right-click menu: puts it where the order and the
+    /// filter now say, as a favorite toggle does. Only when the list is sorted by profile or filtered at all, so a menu
+    /// tick in an unfiltered list sorted by something else doesn't rebuild it.
+    /// </summary>
+    internal void RefreshAfterQuickSetting()
+    {
+        if (SelectedSortOption == SortPerformanceProfile || Filter.HasActiveFilters) FilteredGames.Refresh();
+    }
+
     /// <summary>Puts the comparer for the sort box's option and direction on the list, and tells the arrows.</summary>
     private void ApplySortOrder()
     {

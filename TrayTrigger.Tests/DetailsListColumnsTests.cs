@@ -52,6 +52,32 @@ public class DetailsListColumnsTests
         Assert.Equal(612, columns.TitleMaxWidth);
     }
 
+    [Theory]
+    [InlineData(90, DetailsListColumns.TitleMinWidth)] // a narrow window: kept at least at the minimum
+    [InlineData(2700, 2700)]                           // an ultrawide window: kept as it is
+    public void TheFirstDrag_FixesGameTitleInTheRangeTheNextStartTakesBack(double shown, double frozen)
+    {
+        var (columns, saves) = Attached();
+        columns.Resize(DetailsListColumns.Size, -10, titleShown: shown, spare: 0, All);
+        Assert.Equal(frozen, columns.TitleMaxWidth);
+
+        columns.Save();
+        var (reopened, _) = Attached(saves.Single());
+        Assert.Equal(frozen, reopened.TitleMaxWidth);
+    }
+
+    [Fact]
+    public void SaveIfChanged_WritesNothingForAPlainClick_AndOnceAfterADrag()
+    {
+        var (columns, saves) = Attached();
+        columns.SaveIfChanged();
+        Assert.Empty(saves);
+        columns.Resize(DetailsListColumns.Size, 10, titleShown: 600, spare: 100, All);
+        columns.SaveIfChanged();
+        columns.SaveIfChanged();
+        Assert.Single(saves);
+    }
+
     [Fact]
     public void Widening_UsesTheSpareRoomFirst_ThenTheColumnsAfter_NeverOnesBefore()
     {
