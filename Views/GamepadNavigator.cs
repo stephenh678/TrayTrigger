@@ -25,6 +25,7 @@ namespace TrayTrigger.Views;
 /// <item>D-pad or left stick: the arrow keys in the Library's views; in Game Details, to the next button that way.</item>
 /// <item>A: Enter on a game (Game Details), or presses the focused button. B: Esc (back, close, clear).</item>
 /// <item>X: plays the focused game. Menu (Start): its right-click menu. LB / RB: the previous or next category tab.</item>
+/// <item>View: the full-screen Library, on and off. While it is on the controller is read whatever the setting says.</item>
 /// </list>
 /// Xbox controllers and handhelds are read through XInput, PlayStation controllers (DualShock 4, DualSense) through
 /// HID. Nothing is read while any other window (a game included) is in front, and the keys only ever go to
@@ -67,6 +68,7 @@ public sealed class GamepadNavigator
         _timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = IdleInterval };
         _timer.Tick += (_, _) => Tick();
         main.SettingsVM.PropertyChanged += OnSettingChanged;
+        main.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainViewModel.IsFullScreenLibrary)) Apply(); };
         Apply();
     }
 
@@ -78,7 +80,7 @@ public sealed class GamepadNavigator
     private void Apply()
     {
         _reading = false;
-        if (_main.SettingsVM.ControllerNavigation) _timer.Start();
+        if (_main.SettingsVM.ControllerNavigation || _main.IsFullScreenLibrary) _timer.Start();
         else _timer.Stop();
     }
 
@@ -264,6 +266,9 @@ public sealed class GamepadNavigator
                 case PadAction.Menu:
                     if (onGame) SendKey(Key.Apps);
                     break;
+                case PadAction.View:
+                    _main.IsFullScreenLibrary = !_main.IsFullScreenLibrary;
+                    return;
                 case PadAction.PreviousTab or PadAction.NextTab:
                     _main.Library.StepCategoryTab(action == PadAction.NextTab ? 1 : -1);
                     // The tab's games are laid out first, then the first gets focus (the card that had it may be gone).

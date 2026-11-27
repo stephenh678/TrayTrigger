@@ -33,6 +33,16 @@
                        <!-- 1. Header: title and subtitle on the left; the game count and the add buttons on the right, so the
                             row below can give its whole width to the category and collection strips. -->
                        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+                           <!-- Not in the full-screen Library: only the games, and the bar to sort and filter them. -->
+                           <DockPanel.Style>
+                               <Style TargetType="DockPanel">
+                                   <Style.Triggers>
+                                       <DataTrigger Binding="{Binding IsFullScreenLibrary}" Value="True">
+                                           <Setter Property="Visibility" Value="Collapsed"/>
+                                       </DataTrigger>
+                                   </Style.Triggers>
+                               </Style>
+                           </DockPanel.Style>
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -168,6 +178,7 @@
                                <ColumnDefinition Width="Auto"/>
                                <ColumnDefinition Width="Auto"/>
                                <ColumnDefinition Width="Auto"/>
+                               <ColumnDefinition Width="Auto"/>
                            </Grid.ColumnDefinitions>
 
                            <!-- The same search box as Settings, About and System, with its clear x;
@@ -290,6 +301,39 @@
                                                   Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                </StackPanel>
+                           </Border>
+
+                           <!-- The full-screen Library (for a TV or a handheld), on and off: F11 and the controller's View
+                                button do the same. -->
+                           <Border Grid.Column="5" Margin="10,0,0,0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
+                               <Button Command="{Binding ToggleFullScreenLibraryCommand}" Width="32" Height="30" Padding="0" Cursor="Hand">
+                                   <TextBlock FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
+                                              Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                       <TextBlock.Style>
+                                           <Style TargetType="TextBlock">
+                                               <Setter Property="Text" Value="&#xE740;"/>
+                                               <Style.Triggers>
+                                                   <DataTrigger Binding="{Binding IsFullScreenLibrary}" Value="True">
+                                                       <Setter Property="Text" Value="&#xE73F;"/>
+                                                   </DataTrigger>
+                                               </Style.Triggers>
+                                           </Style>
+                                       </TextBlock.Style>
+                                   </TextBlock>
+                                   <Button.Style>
+                                       <Style TargetType="Button" BasedOn="{StaticResource SegmentedTabButton}">
+                                           <Setter Property="ToolTip" Value="Full-screen Library (F11): only your games, big, for a TV or a handheld"/>
+                                           <Setter Property="AutomationProperties.Name" Value="Full-screen Library"/>
+                                           <Style.Triggers>
+                                               <DataTrigger Binding="{Binding IsFullScreenLibrary}" Value="True">
+                                                   <Setter Property="ToolTip" Value="Back to the window (F11)"/>
+                                                   <Setter Property="AutomationProperties.Name" Value="Leave the full-screen Library"/>
+                                               </DataTrigger>
+                                           </Style.Triggers>
+                                       </Style>
+                                   </Button.Style>
+                               </Button>
                            </Border>
                        </Grid>
 

@@ -579,6 +579,7 @@ public partial class App : Application
         // Steam" - for as long as the game runs, because nothing else re-reads GameStarted.
         _launcherService.SessionGameStarted += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
         _launcherService.SessionEnded += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
+        _launcherService.SessionEnded += _ => Dispatcher.BeginInvoke(ReturnToFullScreenLibraryAfterGame, System.Windows.Threading.DispatcherPriority.Background);
         _launcherService.SessionSuspendChanged += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
 
         WireLaunchPopupAndCompanionTools();
@@ -650,6 +651,9 @@ public partial class App : Application
         {
             Log("Showing MainWindow...");
             ShowMainWindow();
+            // "--couch": straight into the full-screen Library (a shortcut for a TV or a handheld).
+            if (!isScreenshot && e.Args.Any(a => a.Equals("--couch", StringComparison.OrdinalIgnoreCase)))
+                _mainViewModel.IsFullScreenLibrary = true;
         }
 
         if (_restoreResult != null)
@@ -699,6 +703,25 @@ public partial class App : Application
         }
         foreach (var tool in vm.Tools.ToolsSnapshot) paths.Add(tool.TargetPath);
         return paths;
+    }
+
+    /// <summary>The full-screen Library, from the tray or "--couch": on, and the window in front.</summary>
+    public void OpenFullScreenLibrary()
+    {
+        if (_mainViewModel == null) return;
+        ShowMainWindow();
+        _mainViewModel.IsFullScreenLibrary = true;
+    }
+
+    /// <summary>
+    /// A game has ended: in the full-screen Library, once no game is left running, TrayTrigger comes back to the front
+    /// full screen (it hid in the tray when the game started), so the TV never shows the desktop.
+    /// </summary>
+    private void ReturnToFullScreenLibraryAfterGame()
+    {
+        if (_isShuttingDown || _mainViewModel?.IsFullScreenLibrary != true) return;
+        if (_launcherService?.GetActiveSessions().Count > 0) return;
+        ShowMainWindow();
     }
 
     public void OpenSection(NavSection section)
@@ -853,6 +876,15 @@ public partial class App : Application
             _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();
 
+            // The view and the window placement go back before they are saved (the full-screen Library changes both).
+            try
+            {
+                if (_mainViewModel?.IsFullScreenLibrary == true) _mainViewModel.IsFullScreenLibrary = false;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Swallowed("App", ex, "leaving the full-screen Library on exit");
+            }
             SaveSettingsOnShutdown("App.ExitApplication");
 
             _trayToolTipTimer?.Stop();

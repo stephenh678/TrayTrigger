@@ -460,6 +460,29 @@ public class MainViewModel : ViewModelBase
     // --- NAVIGATION PROPERTIES ---
     public ICommand SelectSystemCommand { get; }
 
+    private bool _isFullScreenLibrary;
+    private ICommand? _toggleFullScreenLibrary;
+
+    /// <summary>
+    /// The full-screen Library, for a TV or a handheld: the window fills the screen and shows only the games, as Extra
+    /// Large posters, and the controller is read (MainWindow.FullScreen, GamepadNavigator). Turned on from the tray, the
+    /// Library's full-screen button, F11, the controller's View button or "--couch"; going to another page leaves it.
+    /// Not saved: TrayTrigger always starts in its window.
+    /// </summary>
+    public bool IsFullScreenLibrary
+    {
+        get => _isFullScreenLibrary;
+        set
+        {
+            if (_isFullScreenLibrary == value) return;
+            if (value) CurrentSection = NavSection.Library;
+            _isFullScreenLibrary = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public ICommand ToggleFullScreenLibraryCommand => _toggleFullScreenLibrary ??= new RelayCommand(() => IsFullScreenLibrary = !IsFullScreenLibrary);
+
     public NavSection CurrentSection
     {
         get => _currentSection;
@@ -469,6 +492,8 @@ public class MainViewModel : ViewModelBase
             {
                 var prev = _currentSection;
                 _currentSection = value;
+                // Another page is a desktop page: the full-screen Library is left for it.
+                if (_isFullScreenLibrary && value != NavSection.Library) IsFullScreenLibrary = false;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsLibraryView));
                 OnPropertyChanged(nameof(IsSystemView));

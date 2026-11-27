@@ -46,6 +46,16 @@
         <!-- One Tab stop (views:FocusGroup): Tab lands on the page you are on, Up and Down move through the rest. -->
         <Border Grid.Column="0" views:FocusGroup.IsGroup="True" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" 
                 BorderThickness="0,0,1,0" Width="{Binding SidebarWidth}">
+            <!-- Not in the full-screen Library: only the games. -->
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsFullScreenLibrary}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid Margin="6,12,6,12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/> <!-- Brand & Toggle -->

@@ -42,13 +42,14 @@ public class GamepadInputTests
     [InlineData(XInputReader.X, PadAction.Play)]
     [InlineData(XInputReader.Start, PadAction.Menu)]
     [InlineData(XInputReader.LeftShoulder, PadAction.PreviousTab)]
+    [InlineData(XInputReader.Back, PadAction.View)]
     [InlineData(XInputReader.RightShoulder, PadAction.NextTab)]
     public void Each_button_has_its_action(ushort button, PadAction action) =>
         Assert.Equal(new[] { action }, Started().Update(Pad(button), 10));
 
     [Fact]
-    public void Y_and_View_do_nothing() =>
-        Assert.Empty(Started().Update(Pad(XInputReader.Y | XInputReader.Back), 10));
+    public void Y_does_nothing() =>
+        Assert.Empty(Started().Update(Pad(XInputReader.Y), 10));
 
     [Fact]
     public void Held_direction_repeats_after_a_delay_like_a_key()

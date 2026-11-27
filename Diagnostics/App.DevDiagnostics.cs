@@ -3634,6 +3634,13 @@ public partial class App
                 return;
             }
 
+            // --test-fullscreen <out.txt>: the full-screen Library on and off, and that everything goes back (App.FullScreenCheck.cs).
+            if (e.Args[i].Equals("--test-fullscreen", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunFullScreenCheck(e.Args[i + 1]);
+                return;
+            }
+
             // --test-tab-order <out.txt>: every Tab stop in the Library's views and Game Details (App.TabOrderCheck.cs).
             if (e.Args[i].Equals("--test-tab-order", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace TrayTrigger.Services;
 
 /// <summary>What a controller press asks the Library or Game Details to do.</summary>
-public enum PadAction { Up, Down, Left, Right, Accept, Back, Play, Menu, PreviousTab, NextTab }
+public enum PadAction { Up, Down, Left, Right, Accept, Back, Play, Menu, PreviousTab, NextTab, View }
 
 /// <summary>
 /// Turns controller readings into actions: a button acts once when pressed, and a direction (D-pad or left stick)
@@ -27,6 +27,7 @@ public sealed class GamepadInput
         (XInputReader.Start, PadAction.Menu),
         (XInputReader.LeftShoulder, PadAction.PreviousTab),
         (XInputReader.RightShoulder, PadAction.NextTab),
+        (XInputReader.Back, PadAction.View), // View (two squares) on Xbox, Create on PlayStation
     };
 
     /// <summary>

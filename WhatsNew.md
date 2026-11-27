@@ -15,6 +15,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 - **Arrow keys in the Library** - Move between games with the arrow keys, Home, End, Page Up and Page Down, then Enter for details or Ctrl+Enter to play.
 - **Fewer Tab presses** - Tab moves between groups and the arrow keys move inside them, so the keyboard gets around with far fewer presses.
 - **Controller in the Library** - Turn it on in Settings > Library & Art to pick and play games with a controller or a handheld's controls.
+- **Full-screen Library** - Your games, big, for a TV or a handheld: F11, the tray menu or the controller's View button.
 - **See every game's profile** - the Details List view has a Profile column, and you can sort by it.
 - **Sort by size** - Size on Disk in the Library's sort box shows which games take the most room.
 - **Repair a game** - Game Details' ... menu opens the game in its launcher, where Verify, Repair and Uninstall are.

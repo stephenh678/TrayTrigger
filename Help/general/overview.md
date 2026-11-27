@@ -81,6 +81,20 @@ What it doesn't do:
 - **The sidebar, other pages** (Tools, Activity, System, Settings, About) **and the tray menu** still need a mouse, touch or the keyboard. The D-pad never leaves the Library for the sidebar.
 - **Handhelds in a mouse mode.** A handheld set to make its controls work as a mouse and keyboard (a "desktop mode") may not appear to Windows as a controller, and then this setting has nothing to read; in that mode the D-pad may already work as the arrow keys above. Switch the handheld to its controller (gamepad) mode to use this setting.
 
+## Full-screen Library
+
+For a TV or a handheld: the window fills the screen and shows only your games, as Extra Large posters with bigger text, and the controller works whether or not its setting is on. Turn it on from:
+
+- **The tray menu** - Full-Screen Library.
+- **The Library** - the full-screen button at the right end of the bar above your games (it also takes you back).
+- **F11**, on any page.
+- **The controller's View button** (the two squares; Create on a PlayStation controller), in the Library, when Use a game controller in the Library is on.
+- **A shortcut to TrayTrigger.exe with `--couch`** - starts TrayTrigger in it.
+
+When a game you start from it exits, TrayTrigger comes back full screen, so the TV never shows the desktop. Leave it with F11, View, the same button, or by going to another page: the window comes back as it was, with your own view and text size (neither is changed while it's on).
+
+What it doesn't do: the sidebar, Add Game and the other pages stay desktop things, and there is no on-screen keyboard (typing in the search box needs a keyboard, or Windows' touch keyboard on a handheld).
+
 ## Search and filter
 
 Three ways to find something, named for what they do. A **filter** (Library, Tools and Activity) narrows the list you are looking at to what matches. A **page search** (Settings, About and System) finds a card on any tab of that page and takes you to it. **Search everything** looks in all of them at once. Ctrl+F puts the cursor in the filter or search box of the page you are on, Ctrl+K opens Search everything, and Esc clears or closes either.
