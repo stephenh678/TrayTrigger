@@ -41,6 +41,10 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 
 The **PCGamingWiki** link in the Details card (and the ... menu) opens the game's page on pcgamingwiki.com, where the PC fixes are: ultrawide and FOV support, frame cap and save game location. A Steam game opens its page directly; any other game opens the wiki's search for its name, which lands on the page when the title matches. It shows for every game and does not follow the Steam | RAWG switch. The button itself downloads nothing: the link opens in your browser.
 
+## The HDR available tag
+
+When Steam lists a game as **HDR available**, its details show that tag after the play modes. It helps with the game's HDR choice in its Performance settings: a game with HDR of its own wants HDR on, and Auto HDR is for games without it. The tag comes from the developer's Steam store page, so a game without it may still have HDR; RAWG has no such flag, so games shown from RAWG never have it. Details downloaded before this tag existed show it after their next refresh.
+
 ## The anti-cheat tag
 
 After you launch a game, its details window shows an **Anti-cheat: Name** tag beside the play-mode tags when TrayTrigger saw an anti-cheat service run with it (Easy Anti-Cheat, BattlEye, Riot Vanguard and the like), and the game's row in Activity & History says the same. The tag is there so you know which games not to expect tools like Suspend to work with. It comes from the game's last launch, so a game you have not launched since this was added has none yet.

@@ -431,15 +431,17 @@ public partial class GameDetailsViewModel : ViewModelBase
     /// detection can miss, so the page never says a game has none.</summary>
     public string? AntiCheatTag => string.IsNullOrWhiteSpace(Game.DetectedAntiCheat) ? null : $"Anti-cheat: {Game.DetectedAntiCheat}";
 
-    /// <summary>The tag row: the play modes, then the anti-cheat tag when there is one.</summary>
-    public System.Collections.Generic.List<string> TagList
+    /// <summary>The tag row: the play modes, then "HDR available" when Steam lists it, then the anti-cheat tag when
+    /// there is one - the two about how the game runs on this PC, side by side, wherever Steam put HDR in its list.</summary>
+    public System.Collections.Generic.List<string> TagList => BuildTagList(PlayModes, AntiCheatTag);
+
+    internal static System.Collections.Generic.List<string> BuildTagList(System.Collections.Generic.IEnumerable<string> playModes, string? antiCheatTag)
     {
-        get
-        {
-            var tags = new System.Collections.Generic.List<string>(PlayModes);
-            if (AntiCheatTag != null) tags.Add(AntiCheatTag);
-            return tags;
-        }
+        static bool IsHdr(string tag) => string.Equals(tag, SteamMetadataService.HdrAvailableTag, StringComparison.OrdinalIgnoreCase);
+        var tags = playModes.Where(t => !IsHdr(t)).ToList();
+        tags.AddRange(playModes.Where(IsHdr).Take(1));
+        if (antiCheatTag != null) tags.Add(antiCheatTag);
+        return tags;
     }
 
     /// <summary>"Open on RAWG" - the RAWG counterpart of the Steam Store button, shown while
