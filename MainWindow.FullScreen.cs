@@ -60,6 +60,13 @@ public partial class MainWindow
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => { if (IsFullScreen) LibraryPage.FocusGames(); });
     }
 
+    /// <summary>Dims the Library behind a window shown over the full-screen Library (Game Details), until it closes.</summary>
+    internal void DimWhileOpen(Window over)
+    {
+        DialogDim.Visibility = Visibility.Visible;
+        over.Closed += (_, _) => DialogDim.Visibility = Visibility.Collapsed;
+    }
+
     private void LeaveFullScreen()
     {
         if (_beforeFullScreen is not { } before) return;

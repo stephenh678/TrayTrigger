@@ -488,5 +488,8 @@
 
         <!-- The window's search (Ctrl+K), over everything including the sidebar. -->
         <views:GlobalSearchOverlay x:Name="SearchOverlay" Grid.ColumnSpan="2" Panel.ZIndex="200"/>
+
+        <!-- The Library dimmed behind Game Details shown as a card over the full-screen Library (MainWindow.FullScreen). -->
+        <Border x:Name="DialogDim" Grid.ColumnSpan="2" Panel.ZIndex="300" Background="{DynamicResource BrushScrim}" Visibility="Collapsed" IsHitTestVisible="False"/>
     </Grid>
 </Window>

@@ -91,7 +91,7 @@ For a TV or a handheld: the window fills the screen and shows only your games, a
 - **The controller's View button** (the two squares; Create on a PlayStation controller), in the Library, when Use a game controller in the Library is on.
 - **A shortcut to TrayTrigger.exe with `--couch`** - starts TrayTrigger in it, or, when TrayTrigger is already running in the tray, switches it to it.
 
-When a game you start from it exits, TrayTrigger comes back full screen, so the TV never shows the desktop. Leave it with F11, View, the same button, or by going to another page: the window comes back as it was, with your own view and text size (neither is changed while it's on).
+Game Details opens over it as a card, with the Library dimmed behind it and no window title bar; Close, Esc or the controller's B closes it. When a game you start from it exits, TrayTrigger comes back full screen, so the TV never shows the desktop. Leave it with F11, View, the same button, or by going to another page: the window comes back as it was, with your own view and text size (neither is changed while it's on).
 
 What it doesn't do: the sidebar, Add Game and the other pages stay desktop things, and there is no on-screen keyboard (typing in the search box needs a keyboard, or Windows' touch keyboard on a handheld).
 

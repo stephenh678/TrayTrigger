@@ -112,6 +112,23 @@ public partial class App
                 zoomed.RenderTransform = original;
             }
 
+            // Game Details from the full-screen Library: a card with no title bar over the Library dimmed behind it.
+            window.LibraryPage.FocusGames();
+            Settle(window);
+            var shot = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            shot.Tick += (_, _) =>
+            {
+                shot.Stop();
+                var details = Current.Windows.OfType<GameDetailsDialog>().FirstOrDefault();
+                report.AppendLine($"  Game Details: {details?.WindowStyle}/{details?.ResizeMode}, border {details?.BorderThickness}, Library dimmed {window.DialogDim.IsVisible}");
+                CaptureScreen(window, Path.ChangeExtension(outPath, ".details.png"));
+                details?.Close();
+            };
+            shot.Start();
+            Press(XInputReader.A);
+            PumpDispatcher(TimeSpan.FromSeconds(4), () => !shot.IsEnabled && !Current.Windows.OfType<GameDetailsDialog>().Any());
+            report.AppendLine($"  closed: Library dimmed {window.DialogDim.IsVisible}");
+
             // Another page leaves it (the Library's view stays a desktop page's business).
             main.CurrentSection = NavSection.Settings;
             Settle(window);
