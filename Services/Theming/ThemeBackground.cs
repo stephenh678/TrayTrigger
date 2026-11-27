@@ -20,13 +20,17 @@ internal sealed record ThemeBackground(string? Image, double? Strength, string? 
 
 /// <summary>
 /// Which part of a picture stays in view when the window is a different shape from it and the picture is cropped.
-/// "left" keeps the left edge and crops the right; "top" keeps the top edge; "center" crops both sides equally.
+/// "left" keeps the left edge and crops the right; "top" keeps the top edge; "center" crops both sides equally. A corner
+/// ("bottom-right") keeps both its edges, whichever way the window is cropped: the built-in pictures' TT mark is in that
+/// corner, and "right" alone lost its lower half on a screen wider than 16:9 (21:9, or a full-screen Library).
 /// </summary>
 internal static class BackgroundPosition
 {
     public const string Center = "center";
 
-    public static readonly string[] All = ["center", "left", "right", "top", "bottom"];
+    public const string BottomRight = "bottom-right";
+
+    public static readonly string[] All = ["center", "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", BottomRight];
 
     /// <summary>The position written as <paramref name="text"/> (any case), or null when it is not one.</summary>
     public static string? Parse(string? text) =>
@@ -34,17 +38,20 @@ internal static class BackgroundPosition
 
     public static HorizontalAlignment Horizontal(string position) => position switch
     {
-        "left" => HorizontalAlignment.Left,
-        "right" => HorizontalAlignment.Right,
+        "left" or "top-left" or "bottom-left" => HorizontalAlignment.Left,
+        "right" or "top-right" or "bottom-right" => HorizontalAlignment.Right,
         _ => HorizontalAlignment.Center,
     };
 
     public static VerticalAlignment Vertical(string position) => position switch
     {
-        "top" => VerticalAlignment.Top,
-        "bottom" => VerticalAlignment.Bottom,
+        "top" or "top-left" or "top-right" => VerticalAlignment.Top,
+        "bottom" or "bottom-left" or "bottom-right" => VerticalAlignment.Bottom,
         _ => VerticalAlignment.Center,
     };
+
+    /// <summary>How a position reads in the theme editor: "Bottom right".</summary>
+    public static string Label(string position) => char.ToUpperInvariant(position[0]) + position[1..].Replace('-', ' ');
 }
 
 /// <summary>A theme's background once its base is taken into account: which picture, from where, how strongly, and which part stays in view.</summary>

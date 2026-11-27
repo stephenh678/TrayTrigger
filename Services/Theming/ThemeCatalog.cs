@@ -108,7 +108,7 @@ internal static class ThemeCatalog
     {
         var list = new List<ThemeDefinition>
         {
-            new(DarkId, "Dark", "TrayTrigger", IsDark: true, ThemeOrigin.BuiltIn, null, new Dictionary<string, Color>(), new ThemeBackground("dark.jpg", 1.0, "right"))
+            new(DarkId, "Dark", "TrayTrigger", IsDark: true, ThemeOrigin.BuiltIn, null, new Dictionary<string, Color>(), new ThemeBackground("dark.jpg", 1.0, BackgroundPosition.BottomRight))
         };
         foreach (string file in BuiltInFiles)
         {

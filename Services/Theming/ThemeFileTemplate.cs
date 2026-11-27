@@ -84,7 +84,7 @@ internal static class ThemeFileTemplate
         text.AppendLine("  // Use a JPG or PNG, at least 1280 x 720. Settings > Appearance > Edit theme... fills this in for you.");
         text.AppendLine("  \"background\": {");
         text.AppendLine($"    \"image\": {Quote(background?.Image ?? ThemeBackground.None)},");
-        text.AppendLine($"    \"position\": {Quote(position)},  // Which part stays in view when the window is a different shape: center, left, right, top or bottom");
+        text.AppendLine($"    \"position\": {Quote(position)},  // Which part stays in view when the window is a different shape: center, left, right, top, bottom, or a corner such as bottom-right");
         text.AppendLine($"    \"strength\": {(background?.Strength ?? 0.6).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}  // 0 hides the picture, 1 shows it at full brightness");
         text.AppendLine("  },");
         text.AppendLine();

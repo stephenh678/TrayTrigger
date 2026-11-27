@@ -530,7 +530,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     public double ThumbnailTint => 1 - _strength;
 
     public IReadOnlyList<PositionChoice> Positions { get; } =
-        BackgroundPosition.All.Select(p => new PositionChoice(p, char.ToUpperInvariant(p[0]) + p[1..])).ToList();
+        BackgroundPosition.All.Select(p => new PositionChoice(p, BackgroundPosition.Label(p))).ToList();
 
     /// <summary>Which part of the picture stays in view when the window is a different shape: one of <see cref="BackgroundPosition.All"/>.</summary>
     public string Position

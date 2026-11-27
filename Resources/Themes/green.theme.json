@@ -3,7 +3,7 @@
   "name": "Green",
   "author": "TrayTrigger",
   "base": "dark",
-  "background": { "image": "green.jpg", "strength": 1.0, "position": "right" },
+  "background": { "image": "green.jpg", "strength": 1.0, "position": "bottom-right" },
   "colors": {
     "Accent": "#238636"
   }

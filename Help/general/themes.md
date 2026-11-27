@@ -105,7 +105,7 @@ To do it by hand, put the picture in the same folder as the theme file and name 
 ```
 
 - **image** is the file name, in the Themes folder beside the theme file. `"none"` turns the picture off for the theme.
-- **position** is which part of the picture stays in view when the window is a different shape: `center` (the default for a picture of your own), `left`, `right`, `top` or `bottom`. The built-in pictures are kept to the `right`, where the TT mark is, and a theme with no picture of its own takes its base theme's position along with its picture.
+- **position** is which part of the picture stays in view when the window is a different shape: `center` (the default for a picture of your own), `left`, `right`, `top`, `bottom`, or a corner: `top-left`, `top-right`, `bottom-left` or `bottom-right`, which keeps that corner in view whichever way the picture is cropped (on a screen wider than the picture, its top and bottom are cropped; on a narrower one, its sides). The built-in pictures are kept to the `bottom-right`, where the TT mark is, and a theme with no picture of its own takes its base theme's position along with its picture.
 - **strength** is how much of the picture shows, from 0 to 1. The rest is covered by the theme's `Background` color, which keeps the text on the page readable whatever the picture is. A picture with no strength is shown at 0.6.
 - A theme with no `background` at all takes the picture of the built-in theme it is based on.
 - A picture put in the folder by hand may also be a BMP. If it cannot be used it is left out and Appearance says why.

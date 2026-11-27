@@ -3,7 +3,7 @@
   "name": "Light",
   "author": "TrayTrigger",
   "base": "light",
-  "background": { "image": "light.jpg", "strength": 1.0, "position": "right" },
+  "background": { "image": "light.jpg", "strength": 1.0, "position": "bottom-right" },
   "colors": {
     "Background": "#F3F3F6",
     "Surface": "#FFFFFF",

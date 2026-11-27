@@ -89,6 +89,8 @@ public class ThemeBackgroundTests : IDisposable
     [InlineData("top", System.Windows.HorizontalAlignment.Center, System.Windows.VerticalAlignment.Top)]
     [InlineData("bottom", System.Windows.HorizontalAlignment.Center, System.Windows.VerticalAlignment.Bottom)]
     [InlineData("center", System.Windows.HorizontalAlignment.Center, System.Windows.VerticalAlignment.Center)]
+    [InlineData("bottom-right", System.Windows.HorizontalAlignment.Right, System.Windows.VerticalAlignment.Bottom)]
+    [InlineData("top-left", System.Windows.HorizontalAlignment.Left, System.Windows.VerticalAlignment.Top)]
     public void EachPosition_AnchorsThePicture_AndCenterIsExplicit(string position, System.Windows.HorizontalAlignment h, System.Windows.VerticalAlignment v)
     {
         // A picture scaled up to fill is bigger than its slot, and WPF draws that from the top left unless it is told otherwise.
@@ -121,7 +123,7 @@ public class ThemeBackgroundTests : IDisposable
     });
 
     [Fact]
-    public void EveryBuiltInTheme_HasItsPicture_PinnedRight_SoTheTTMarkAlwaysShows()
+    public void EveryBuiltInTheme_HasItsPicture_PinnedBottomRight_SoTheTTMarkAlwaysShows()
     {
         // Dark, Light, Green, Amber and Purple: the TT mark is in the picture's lower right corner.
         Assert.Equal(5, ThemeCatalog.BuiltIns.Count(t => t.Name is "Dark" or "Light" or "Green" or "Amber" or "Purple"));
@@ -129,7 +131,8 @@ public class ThemeBackgroundTests : IDisposable
         {
             var resolved = ThemeCatalog.ResolveBackground(theme);
             Assert.True(resolved != null, theme.Name + " has no picture");
-            Assert.Equal("right", resolved!.Position);
+            // The corner, not just the right edge: a screen wider than the picture crops its top and bottom.
+            Assert.Equal("bottom-right", resolved!.Position);
             Assert.NotNull(ThemeBackgroundLoader.Load(resolved, out string? problem));
             Assert.Null(problem);
         }
@@ -139,7 +142,7 @@ public class ThemeBackgroundTests : IDisposable
     public void ATheme_WithNoPictureOfItsOwn_TakesThePositionOfItsBase()
     {
         var plain = ThemeFileReader.Parse("""{ "base": "light" }""", "t", ThemeOrigin.User).Theme!;
-        Assert.Equal("right", ThemeCatalog.ResolveBackground(plain)!.Position);
+        Assert.Equal("bottom-right", ThemeCatalog.ResolveBackground(plain)!.Position);
 
         var own = ThemeFileReader.Parse("""{ "base": "light", "background": { "image": "mine.jpg" } }""", "t", ThemeOrigin.User).Theme!;
         Assert.Equal("center", ThemeCatalog.ResolveBackground(own)!.Position);
