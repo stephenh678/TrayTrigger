@@ -13,11 +13,38 @@ namespace TrayTrigger.ViewModels;
 /// </summary>
 public partial class LibraryViewModel
 {
-    public const string SortAlphabetical = "Alphabetical (A - Z)";
-    public const string SortAlphabeticalDescending = "Alphabetical (Z - A)";
-    public const string SortCategory = "Category (A - Z)";
-    public const string SortMostRecentlyPlayed = "Most Recently Played";
-    public const string SortCumulativePlaytime = "Cumulative Playtime";
+    // The sort box names what a sort orders by, never which way: the arrow beside it says that.
+    public const string SortAlphabetical = "Name";
+    public const string SortCategory = "Category";
+    public const string SortFavoritesFirst = "Favorites First";
+    public const string SortMostRecentlyPlayed = "Last Played";
+    public const string SortCumulativePlaytime = "Playtime";
+
+    /// <summary>
+    /// A saved sort as the sort box names it now, and whether it runs reversed. The names before 2.0.0-beta.2 carried
+    /// their direction ("Alphabetical (Z - A)"); each becomes its sort, reversed where the old one ran the other way,
+    /// so the Library opens in the same order. A name the box doesn't offer is Name, A to Z.
+    /// </summary>
+    internal static (string Option, bool Reversed) MigrateSortOption(string? saved, bool savedReversed)
+    {
+        (string option, bool descending)? legacy = saved?.Trim() switch
+        {
+            "Alphabetical (A - Z)" => (SortAlphabetical, false),
+            "Alphabetical (Z - A)" => (SortAlphabetical, true),
+            "Category (A - Z)" => (SortCategory, false),
+            "Favorites First (A - Z)" => (SortFavoritesFirst, false),
+            "Favorites First (Z - A)" => (SortFavoritesFirst, true),
+            "Most Recently Played" => (SortMostRecentlyPlayed, false),
+            "Cumulative Playtime" => (SortCumulativePlaytime, false),
+            "Largest First (Size on Disk)" => (SortLargestFirst, false),
+            _ => null,
+        };
+        if (legacy is { } old) return (old.option, old.descending ^ savedReversed);
+        return saved is SortAlphabetical or SortCategory or SortFavoritesFirst or SortFavoritesFirstRecent
+            or SortMostRecentlyPlayed or SortCumulativePlaytime or SortLargestFirst
+            ? (saved, savedReversed)
+            : (SortAlphabetical, false);
+    }
 
     /// <summary>The Details List columns a header click sorts by.</summary>
     public const string ColumnTitle = "Title";
@@ -87,7 +114,7 @@ public partial class LibraryViewModel
     /// <summary>The Details List column a sort option orders by, or null (the Favorites First sorts have none).</summary>
     internal static string? ColumnOf(string? option) => option switch
     {
-        SortAlphabetical or SortAlphabeticalDescending => ColumnTitle,
+        SortAlphabetical => ColumnTitle,
         SortCategory => ColumnCategory,
         SortCumulativePlaytime => ColumnPlaytime,
         SortMostRecentlyPlayed => ColumnLastPlayed,
@@ -98,7 +125,7 @@ public partial class LibraryViewModel
     /// <summary>Which way an option runs before it is reversed: names A to Z; playtime, last played and size biggest
     /// or newest first. The Favorites First sorts say it of the order after the favorites.</summary>
     internal static bool IsNaturallyAscending(string? option) =>
-        option is SortAlphabetical or SortCategory or "Favorites First (A - Z)";
+        option is SortAlphabetical or SortCategory or SortFavoritesFirst;
 
     private string ArrowFor(string column) =>
         ColumnOf(SelectedSortOption) == column ? (IsSortAscending ? "▲" : "▼") : string.Empty;
@@ -132,7 +159,7 @@ internal sealed class GameSortComparer(string? option, bool reversed) : ICompare
         int direction = LibraryViewModel.IsNaturallyAscending(option) ^ reversed ? 1 : -1;
         int result = option switch
         {
-            "Favorites First (A - Z)" or "Favorites First (Z - A)" => Then(Favorites(a, b), () => direction * ByName(a, b)),
+            LibraryViewModel.SortFavoritesFirst => Then(Favorites(a, b), () => direction * ByName(a, b)),
             LibraryViewModel.SortFavoritesFirstRecent => Then(Favorites(a, b), () => WithBlanksLast(a.LastPlayed, b.LastPlayed, direction)),
             LibraryViewModel.SortCategory => direction * StringComparer.CurrentCultureIgnoreCase.Compare(a.Category ?? string.Empty, b.Category ?? string.Empty),
             LibraryViewModel.SortCumulativePlaytime => WithBlanksLast(Positive(a.CumulativePlaytimeMinutes), Positive(b.CumulativePlaytimeMinutes), direction),

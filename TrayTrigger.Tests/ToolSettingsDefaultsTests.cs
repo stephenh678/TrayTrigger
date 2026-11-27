@@ -14,7 +14,7 @@ public class ToolSettingsDefaultsTests
         Assert.True(settings.EnableTools);
         Assert.False(settings.ShowToolsInTray);
         Assert.Equal(ToolCatalog.SortAlphabetical, settings.ToolsTraySortOption);
-        Assert.Equal(ToolCatalog.SortAlphabetical, settings.ToolsSortOption);
+        Assert.Equal(ToolCatalog.PageSortName, settings.ToolsSortOption);
         Assert.Equal(ToolCatalog.ViewLargeIcons, settings.ToolsViewMode);
         Assert.Equal(LibraryConstants.AllCategory, settings.LastToolsCategoryTab);
     }

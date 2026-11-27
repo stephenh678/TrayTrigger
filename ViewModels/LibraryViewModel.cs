@@ -66,7 +66,7 @@ public partial class LibraryViewModel : ViewModelBase
 
     private string _searchText = string.Empty;
     private string _selectedCategory = LibraryConstants.AllCategory;
-    private string _selectedSortOption = "Alphabetical (A - Z)";
+    private string _selectedSortOption = SortAlphabetical;
     private string _statusMessage = string.Empty;
 
     // Undo toast state
@@ -91,16 +91,14 @@ public partial class LibraryViewModel : ViewModelBase
     public ObservableCollection<string> Categories { get; } = new();
     public ObservableCollection<CategoryTabItem> CategoryTabs { get; } = new();
     /// <summary>Favorites, then everything else, each most recently played first; never-played games
-    /// last, alphabetically - "Most Recently Played" within each half.</summary>
+    /// last, alphabetically - "Last Played" within each half.</summary>
     public const string SortFavoritesFirstRecent = "Favorites First (Recent)";
 
     public ObservableCollection<string> SortOptions { get; } = new()
     {
         SortAlphabetical,
-        SortAlphabeticalDescending,
         SortCategory,
-        "Favorites First (A - Z)",
-        "Favorites First (Z - A)",
+        SortFavoritesFirst,
         SortFavoritesFirstRecent,
         SortMostRecentlyPlayed,
         SortCumulativePlaytime,
@@ -176,10 +174,8 @@ public partial class LibraryViewModel : ViewModelBase
         _getUseVerticalPosterArt = getUseVerticalPosterArt;
         _getSteamGridDbApiKeyOrNull = getSteamGridDbApiKeyOrNull;
 
-        if (!string.IsNullOrWhiteSpace(_settings.LastSortOption) && SortOptions.Contains(_settings.LastSortOption))
-        {
-            _selectedSortOption = _settings.LastSortOption;
-        }
+        (_selectedSortOption, _settings.LastSortReversed) = MigrateSortOption(_settings.LastSortOption, _settings.LastSortReversed);
+        _settings.LastSortOption = _selectedSortOption;
         if (!string.IsNullOrWhiteSpace(_settings.LastCategoryFilter))
         {
             _selectedCategory = _settings.LastCategoryFilter;
@@ -258,6 +254,8 @@ public partial class LibraryViewModel : ViewModelBase
             {
                 _selectedSortOption = value;
                 _settings.LastSortOption = value;
+                // A different sort starts the way it reads most usefully; the arrow turns it round.
+                _settings.LastSortReversed = false;
                 _storageService.SaveSettings(_settings);
                 OnPropertyChanged();
                 ApplySort();

@@ -142,6 +142,6 @@ public class NewGameProfileAndSortTests : IDisposable
     {
         var (library, _) = NewLibrary(Offline(PerformanceProfileMode.Optimized));
         var options = library.SortOptions.ToList();
-        Assert.Equal(options.IndexOf("Favorites First (Z - A)") + 1, options.IndexOf(LibraryViewModel.SortFavoritesFirstRecent));
+        Assert.Equal(options.IndexOf(LibraryViewModel.SortFavoritesFirst) + 1, options.IndexOf(LibraryViewModel.SortFavoritesFirstRecent));
     });
 }

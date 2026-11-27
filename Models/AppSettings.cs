@@ -100,7 +100,7 @@ public class AppSettings
     public bool ShowCategoryTabs { get; set; } = true;
     /// <summary>The categories' share of the Library's tab row when categories and collections can't both fit, set by dragging the divider between them.</summary>
     public double LibraryTabSplit { get; set; } = LibraryTabRowLayout.DefaultSplit;
-    public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
+    public string LastSortOption { get; set; } = "Name";
     /// <summary>The Library's sort runs the other way from <see cref="LastSortOption"/>'s own direction (Z to A, smallest first, ...).</summary>
     public bool LastSortReversed { get; set; }
 
@@ -216,7 +216,9 @@ public class AppSettings
     /// <summary>Order of the tray's Tools submenu. One of <see cref="Services.ToolCatalog.SortOptions"/>.</summary>
     public string ToolsTraySortOption { get; set; } = ToolCatalog.SortAlphabetical;
     /// <summary>Order of the Tools page, separate from the tray's. View state, like <see cref="LastSortOption"/>.</summary>
-    public string ToolsSortOption { get; set; } = ToolCatalog.SortAlphabetical;
+    public string ToolsSortOption { get; set; } = ToolCatalog.PageSortName;
+    /// <summary>The Tools page's sort runs the other way from <see cref="ToolsSortOption"/>'s own direction, as <see cref="LastSortReversed"/> does the Library's.</summary>
+    public bool ToolsSortReversed { get; set; }
     /// <summary>Tools page layout. One of <see cref="Services.ToolCatalog.ViewModes"/>.</summary>
     public string ToolsViewMode { get; set; } = ToolCatalog.ViewLargeIcons;
     /// <summary>The Tools page's selected category tab, kept across restarts like <see cref="LastCategoryFilter"/>.</summary>

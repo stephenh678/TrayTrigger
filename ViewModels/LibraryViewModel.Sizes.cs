@@ -17,7 +17,7 @@ namespace TrayTrigger.ViewModels;
 public partial class LibraryViewModel
 {
     /// <summary>The biggest games first, by <see cref="GameEntry.InstallSizeBytes"/>; games not counted yet last.</summary>
-    public const string SortLargestFirst = "Largest First (Size on Disk)";
+    public const string SortLargestFirst = "Size on Disk";
 
     /// <summary>How long a pass waits before it starts: after startup, so the window and the library come first, and
     /// after a game ends, so it has finished writing.</summary>

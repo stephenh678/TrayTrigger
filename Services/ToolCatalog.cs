@@ -27,8 +27,41 @@ public static class ToolCatalog
     /// <summary>The tools added last first (<see cref="ToolEntry.AddedUtc"/>); ones added before it was recorded, A to Z, after them.</summary>
     public const string SortRecentlyAdded = "Recently Added";
 
+    /// <summary>The tray's Tools submenu orders (Settings > Tray Menu), each with its direction in its name.</summary>
     public static readonly IReadOnlyList<string> SortOptions =
         [SortAlphabetical, SortAlphabeticalDescending, SortFavoritesFirst, SortRecentlyUsed, SortWithGamesFirst, SortRecentlyAdded];
+
+    // The Tools page's sort box names what a sort orders by, as the Library's does: the arrow beside it says which way.
+    public const string PageSortName = "Name";
+    public const string PageSortFavoritesFirst = "Favorites First";
+    public const string PageSortWithGamesFirst = "With Games First";
+
+    public static readonly IReadOnlyList<string> PageSortOptions =
+        [PageSortName, PageSortFavoritesFirst, PageSortWithGamesFirst, SortRecentlyUsed, SortRecentlyAdded];
+
+    /// <summary>
+    /// A saved Tools page sort as its box names it now, and whether it runs reversed. The names before 2.0.0-beta.2
+    /// carried their direction ("Alphabetical (Z - A)"); each becomes its sort, reversed where the old one ran the
+    /// other way. A name the box doesn't offer is Name, A to Z.
+    /// </summary>
+    public static (string Option, bool Reversed) NormalizePageSortOption(string? saved, bool savedReversed = false)
+    {
+        string? trimmed = saved?.Trim();
+        string? page = PageSortOptions.FirstOrDefault(o => string.Equals(o, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (page != null) return (page, savedReversed);
+        return trimmed switch
+        {
+            SortAlphabeticalDescending => (PageSortName, true),
+            SortFavoritesFirst => (PageSortFavoritesFirst, false),
+            SortWithGamesFirst => (PageSortWithGamesFirst, false),
+            _ => (PageSortName, false),
+        };
+    }
+
+    /// <summary>Which way a Tools page sort runs before it is reversed: names A to Z; Recently Used and Recently
+    /// Added newest first. Favorites First and With Games First say it of the order under the group.</summary>
+    public static bool IsNaturallyAscending(string? pageOption) =>
+        pageOption is PageSortName or PageSortFavoritesFirst or PageSortWithGamesFirst;
 
     public const string ViewLargeIcons = "Large Icons";
     public const string ViewSmallIcons = "Small Icons";
@@ -207,31 +240,43 @@ public static class ToolCatalog
     public static string NormalizeViewMode(string? mode) =>
         ViewModes.FirstOrDefault(m => string.Equals(m, mode?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? ViewLargeIcons;
 
-    /// <summary>Orders two tools for <paramref name="sortOption"/>. Names compare case-insensitively, as the Library's do.</summary>
-    public static int Compare(ToolEntry a, ToolEntry b, string? sortOption)
+    /// <summary>Orders two tools for <paramref name="sortOption"/>, a tray order or a Tools page one, turned round
+    /// when <paramref name="reversed"/>. The favorites, or the tools that go with games, stay first either way, and so
+    /// do tools with a time ahead of those without one. Names compare case-insensitively, as the Library's do.</summary>
+    public static int Compare(ToolEntry a, ToolEntry b, string? sortOption, bool reversed = false)
     {
-        switch (NormalizeSortOption(sortOption))
+        int direction = reversed ? -1 : 1;
+        int byName = StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+        string option = sortOption?.Trim() switch
+        {
+            PageSortName => SortAlphabetical,
+            PageSortFavoritesFirst => SortFavoritesFirst,
+            PageSortWithGamesFirst => SortWithGamesFirst,
+            _ => NormalizeSortOption(sortOption),
+        };
+        switch (option)
         {
             case SortAlphabeticalDescending:
-                return StringComparer.OrdinalIgnoreCase.Compare(b.Name, a.Name);
+                return -direction * byName;
             case SortFavoritesFirst:
                 int favorites = b.IsFavorite.CompareTo(a.IsFavorite);
-                return favorites != 0 ? favorites : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+                return favorites != 0 ? favorites : direction * byName;
             case SortRecentlyUsed:
-                return NewestFirst(a.LastUsedUtc, b.LastUsedUtc) is int used and not 0 ? used : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+                return NewestFirst(a.LastUsedUtc, b.LastUsedUtc, direction) is int used and not 0 ? used : byName;
             case SortRecentlyAdded:
-                return NewestFirst(a.AddedUtc, b.AddedUtc) is int added and not 0 ? added : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+                return NewestFirst(a.AddedUtc, b.AddedUtc, direction) is int added and not 0 ? added : byName;
             case SortWithGamesFirst:
                 int role = WithGamesRank(a).CompareTo(WithGamesRank(b));
-                return role != 0 ? role : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+                return role != 0 ? role : direction * byName;
             default:
-                return StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+                return direction * byName;
         }
     }
 
-    /// <summary>The later time first; a missing time after any time; 0 when both are missing or equal.</summary>
-    private static int NewestFirst(DateTime? a, DateTime? b) =>
-        a is { } x ? (b is { } y ? y.CompareTo(x) : -1) : (b is null ? 0 : 1);
+    /// <summary>The later time first (the earlier when <paramref name="direction"/> is -1); a missing time after any
+    /// time both ways; 0 when both are missing or equal.</summary>
+    private static int NewestFirst(DateTime? a, DateTime? b, int direction) =>
+        a is { } x ? (b is { } y ? direction * y.CompareTo(x) : -1) : (b is null ? 0 : 1);
 
     /// <summary>0 for a tool that starts with games, 1 for one that closes for them, 2 for the rest.</summary>
     private static int WithGamesRank(ToolEntry tool) => StartsWithGames(tool) ? 0 : ClosesForGames(tool) ? 1 : 2;
@@ -239,13 +284,13 @@ public static class ToolCatalog
     public static IEnumerable<ToolEntry> Sort(IEnumerable<ToolEntry> tools, string? sortOption) => Sort(tools, t => t, sortOption);
 
     /// <summary>Sorts anything that carries a tool (a card, say) by that tool.</summary>
-    public static IEnumerable<T> Sort<T>(IEnumerable<T> items, Func<T, ToolEntry> toolOf, string? sortOption)
+    public static IEnumerable<T> Sort<T>(IEnumerable<T> items, Func<T, ToolEntry> toolOf, string? sortOption, bool reversed = false)
     {
         // List.Sort is not stable; ties (same name) keep their input order through the index.
         var indexed = items.Select((item, index) => (item, index)).ToList();
         indexed.Sort((x, y) =>
         {
-            int c = Compare(toolOf(x.item), toolOf(y.item), sortOption);
+            int c = Compare(toolOf(x.item), toolOf(y.item), sortOption, reversed);
             return c != 0 ? c : x.index.CompareTo(y.index);
         });
         return indexed.Select(x => x.item);

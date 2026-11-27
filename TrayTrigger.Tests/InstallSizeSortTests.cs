@@ -41,7 +41,7 @@ public class InstallSizeSortTests
     [Fact]
     public void TheLibrary_OffersLargestFirst()
     {
-        Assert.Equal("Largest First (Size on Disk)", LibraryViewModel.SortLargestFirst);
+        Assert.Equal("Size on Disk", LibraryViewModel.SortLargestFirst);
     }
 
     [Fact]

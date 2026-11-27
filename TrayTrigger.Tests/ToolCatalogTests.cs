@@ -85,6 +85,46 @@ public class ToolCatalogTests
         Assert.Equal(["Afterburner", "RTSS", "Discord", "OneDrive", "Backup", "vortex"], names);
     }
 
+    [Fact]
+    public void PageSorts_TurnRound_WithTheGroupAndUnusedToolsKeptInPlace()
+    {
+        var now = new DateTime(2026, 11, 27, 12, 0, 0, DateTimeKind.Utc);
+        var tools = new[]
+        {
+            new ToolEntry { Name = "Bravo", IsFavorite = true, LastUsedUtc = now.AddHours(-1) },
+            new ToolEntry { Name = "Alpha", LastUsedUtc = now.AddHours(-5) },
+            new ToolEntry { Name = "Charlie", IsFavorite = true },
+            new ToolEntry { Name = "Delta", LastUsedUtc = now },
+        };
+        List<string> Sorted(string option, bool reversed) => ToolCatalog.Sort(tools, t => t, option, reversed).Select(t => t.Name).ToList();
+
+        Assert.Equal(["Alpha", "Bravo", "Charlie", "Delta"], Sorted(ToolCatalog.PageSortName, false));
+        Assert.Equal(["Delta", "Charlie", "Bravo", "Alpha"], Sorted(ToolCatalog.PageSortName, true));
+        Assert.Equal(["Charlie", "Bravo", "Delta", "Alpha"], Sorted(ToolCatalog.PageSortFavoritesFirst, true));
+        Assert.Equal(["Delta", "Bravo", "Alpha", "Charlie"], Sorted(ToolCatalog.SortRecentlyUsed, false));
+        Assert.Equal(["Alpha", "Bravo", "Delta", "Charlie"], Sorted(ToolCatalog.SortRecentlyUsed, true));
+    }
+
+    [Theory]
+    [InlineData("Alphabetical (A - Z)", ToolCatalog.PageSortName, false)]
+    [InlineData("Alphabetical (Z - A)", ToolCatalog.PageSortName, true)]
+    [InlineData("Favorites First (A - Z)", ToolCatalog.PageSortFavoritesFirst, false)]
+    [InlineData("With Games First (A - Z)", ToolCatalog.PageSortWithGamesFirst, false)]
+    [InlineData("Recently Used", ToolCatalog.SortRecentlyUsed, false)]
+    [InlineData("Nonsense", ToolCatalog.PageSortName, false)]
+    [InlineData(null, ToolCatalog.PageSortName, false)]
+    public void ASavedPageSort_OpensInTheSameOrder_UnderItsNewName(string? saved, string option, bool reversed)
+    {
+        Assert.Equal((option, reversed), ToolCatalog.NormalizePageSortOption(saved));
+    }
+
+    [Fact]
+    public void ThePageSortNames_DontSayWhichWay_TheTrayOnesStillDo()
+    {
+        Assert.Equal(["Name", "Favorites First", "With Games First", "Recently Used", "Recently Added"], ToolCatalog.PageSortOptions);
+        Assert.Contains("Alphabetical (Z - A)", ToolCatalog.SortOptions);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

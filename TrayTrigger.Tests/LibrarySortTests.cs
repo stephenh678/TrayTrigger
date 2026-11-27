@@ -4,7 +4,7 @@ using TrayTrigger.ViewModels;
 namespace TrayTrigger.Tests;
 
 /// <summary>
-/// The Library's order: every sort through one comparer, turned round by the direction button or a second click on a
+/// The Library's order: every sort through one comparer, turned round by the arrow beside the sort box or a second click on a
 /// Details List column header, with games that have nothing to sort by kept at the end both ways.
 /// </summary>
 public class LibrarySortTests
@@ -48,7 +48,6 @@ public class LibrarySortTests
 
         Assert.Equal(["Alpha", "Bravo", "Charlie"], Sorted(LibraryViewModel.SortAlphabetical, false, games));
         Assert.Equal(["Charlie", "Bravo", "Alpha"], Sorted(LibraryViewModel.SortAlphabetical, true, games));
-        Assert.Equal(["Charlie", "Bravo", "Alpha"], Sorted(LibraryViewModel.SortAlphabeticalDescending, false, games));
         Assert.Equal(["Charlie", "Bravo", "Alpha"], Sorted(LibraryViewModel.SortCategory, false, games));
         Assert.Equal(["Alpha", "Bravo", "Charlie"], Sorted(LibraryViewModel.SortCategory, true, games));
     }
@@ -58,8 +57,8 @@ public class LibrarySortTests
     {
         var games = new[] { Game("Alpha"), Game("Zulu", favorite: true), Game("Mike") };
 
-        Assert.Equal(["Zulu", "Alpha", "Mike"], Sorted("Favorites First (A - Z)", false, games));
-        Assert.Equal(["Zulu", "Mike", "Alpha"], Sorted("Favorites First (A - Z)", true, games));
+        Assert.Equal(["Zulu", "Alpha", "Mike"], Sorted(LibraryViewModel.SortFavoritesFirst, false, games));
+        Assert.Equal(["Zulu", "Mike", "Alpha"], Sorted(LibraryViewModel.SortFavoritesFirst, true, games));
     }
 
     [Theory]
@@ -75,10 +74,37 @@ public class LibrarySortTests
     }
 
     [Fact]
-    public void ZToA_IsTheTitleColumn_AndFavoritesFirstHasNone()
+    public void FavoritesFirst_HasNoColumn()
     {
-        Assert.Equal(LibraryViewModel.ColumnTitle, LibraryViewModel.ColumnOf(LibraryViewModel.SortAlphabeticalDescending));
+        Assert.Null(LibraryViewModel.ColumnOf(LibraryViewModel.SortFavoritesFirst));
         Assert.Null(LibraryViewModel.ColumnOf(LibraryViewModel.SortFavoritesFirstRecent));
         Assert.Null(LibraryViewModel.OptionForColumn("Actions"));
+    }
+
+    [Theory]
+    [InlineData("Alphabetical (A - Z)", false, LibraryViewModel.SortAlphabetical, false)]
+    [InlineData("Alphabetical (Z - A)", false, LibraryViewModel.SortAlphabetical, true)]
+    [InlineData("Alphabetical (Z - A)", true, LibraryViewModel.SortAlphabetical, false)]
+    [InlineData("Category (A - Z)", false, LibraryViewModel.SortCategory, false)]
+    [InlineData("Favorites First (A - Z)", false, LibraryViewModel.SortFavoritesFirst, false)]
+    [InlineData("Favorites First (Z - A)", false, LibraryViewModel.SortFavoritesFirst, true)]
+    [InlineData("Most Recently Played", true, LibraryViewModel.SortMostRecentlyPlayed, true)]
+    [InlineData("Cumulative Playtime", false, LibraryViewModel.SortCumulativePlaytime, false)]
+    [InlineData("Largest First (Size on Disk)", false, LibraryViewModel.SortLargestFirst, false)]
+    [InlineData("Favorites First (Recent)", true, LibraryViewModel.SortFavoritesFirstRecent, true)]
+    [InlineData("Playtime", true, LibraryViewModel.SortCumulativePlaytime, true)]
+    [InlineData("Nonsense", true, LibraryViewModel.SortAlphabetical, false)]
+    [InlineData(null, false, LibraryViewModel.SortAlphabetical, false)]
+    public void ASavedSort_OpensInTheSameOrder_UnderItsNewName(string? saved, bool savedReversed, string option, bool reversed)
+    {
+        Assert.Equal((option, reversed), LibraryViewModel.MigrateSortOption(saved, savedReversed));
+    }
+
+    [Fact]
+    public void NoSortName_SaysWhichWayItRuns()
+    {
+        Assert.Equal(["Name", "Category", "Favorites First", "Favorites First (Recent)", "Last Played", "Playtime", "Size on Disk"],
+            [LibraryViewModel.SortAlphabetical, LibraryViewModel.SortCategory, LibraryViewModel.SortFavoritesFirst, LibraryViewModel.SortFavoritesFirstRecent,
+             LibraryViewModel.SortMostRecentlyPlayed, LibraryViewModel.SortCumulativePlaytime, LibraryViewModel.SortLargestFirst]);
     }
 }
