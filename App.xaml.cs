@@ -52,6 +52,8 @@ public partial class App : Application
     private StartupManager _startupManager = null!;
     private TrayPromotionService _trayPromotionService = null!;
     private MainViewModel _mainViewModel = null!;
+    // Kept so the timer it owns lives as long as the app.
+    private GamepadNavigator? _gamepadNavigator;
 
     private TaskbarIcon? _trayIcon;
 
@@ -539,6 +541,10 @@ public partial class App : Application
             var scriptsInUse = isScreenshot ? null : ScriptPathsInUse(_mainViewModel, startupSettings);
             _ = Task.Run(() => scriptLibrary.EnsureInstalled(scriptsInUse));
         }
+
+        // Settings > Library & Art "Use a game controller in the Library": reads nothing while it is off. Not in a
+        // capture or test run, where a controller on the desk would move what is being checked.
+        if (!isScreenshot) _gamepadNavigator = new GamepadNavigator(_mainViewModel);
 
         // Constructing MainWindow initializes WPF's D3D render stack (GPU driver DLLs load
         // immediately) even if it's never shown, so skip it when starting minimized to the tray -

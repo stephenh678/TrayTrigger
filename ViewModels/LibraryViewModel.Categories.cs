@@ -99,6 +99,17 @@ public partial class LibraryViewModel
         SelectedCategory = category;
     }
 
+    /// <summary>The tab before (-1) or after (+1) the selected one, stopping at either end: a controller's LB and RB.</summary>
+    public void StepCategoryTab(int delta)
+    {
+        if (CategoryTabs.Count == 0) return;
+        int current = -1;
+        for (int i = 0; i < CategoryTabs.Count; i++)
+            if (CategoryTabs[i].IsSelected) { current = i; break; }
+        int next = Math.Clamp(current + delta, 0, CategoryTabs.Count - 1);
+        if (next != current) SelectCategoryTab(CategoryTabs[next].Name);
+    }
+
     /// <summary>Orders the list by the sort box's option and direction (see LibraryViewModel.Sorting).</summary>
     public void ApplySort()
     {

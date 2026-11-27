@@ -1,0 +1,228 @@
+﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Windows;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+using TrayTrigger.Services;
+using TrayTrigger.ViewModels;
+
+namespace TrayTrigger.Views;
+
+/// <summary>
+/// Settings > Library &amp; Art "Use a game controller in the Library" (off by default). While the Library page,
+/// Game Details or one of its prompts is the window in front, a controller moves around them:
+/// <list type="bullet">
+/// <item>D-pad or left stick: the arrow keys in the Library's views; in Game Details, to the next button that way.</item>
+/// <item>A: Enter on a game (Game Details), or presses the focused button. B: Esc (back, close, clear).</item>
+/// <item>X: plays the focused game. Menu (Start): its right-click menu. LB / RB: the previous or next category tab.</item>
+/// </list>
+/// Nothing is read while any other window (a game included) is in front, and the keys only ever go to
+/// TrayTrigger's own windows: nothing is sent to Windows or to another program.
+/// </summary>
+public sealed class GamepadNavigator
+{
+    private static readonly TimeSpan ActiveInterval = TimeSpan.FromMilliseconds(33);
+    private static readonly TimeSpan IdleInterval = TimeSpan.FromMilliseconds(250);
+
+    private readonly MainViewModel _main;
+    private readonly Func<PadState?> _read;
+    private readonly GamepadInput _input = new();
+    private readonly DispatcherTimer _timer;
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private bool _reading;
+    // The game focus was last on in the Library, to go back to when focus comes back without one (Game Details
+    // closing hands it to the window, and a tab change can take the card away).
+    private GameCardViewModel? _lastGame;
+
+    public GamepadNavigator(MainViewModel main, Func<PadState?>? read = null)
+    {
+        _main = main;
+        _read = read ?? new XInputReader().Read;
+        _timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = IdleInterval };
+        _timer.Tick += (_, _) => Tick();
+        main.SettingsVM.PropertyChanged += OnSettingChanged;
+        Apply();
+    }
+
+    private void OnSettingChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(SettingsViewModel.ControllerNavigation)) Apply();
+    }
+
+    private void Apply()
+    {
+        _reading = false;
+        if (_main.SettingsVM.ControllerNavigation) _timer.Start();
+        else _timer.Stop();
+    }
+
+    /// <summary>One reading; public so the diagnostics can step it with readings of their own.</summary>
+    public void Tick()
+    {
+        var window = TargetWindow();
+        var state = window != null ? _read() : null;
+        if (window == null || state == null)
+        {
+            _reading = false;
+            _timer.Interval = IdleInterval;
+            return;
+        }
+        _timer.Interval = ActiveInterval;
+        long now = _clock.ElapsedMilliseconds;
+        if (!_reading)
+        {
+            _input.Reset(state.Value, now);
+            _reading = true;
+            return;
+        }
+        foreach (var action in _input.Update(state.Value, now))
+        {
+            try
+            {
+                Perform(action, window);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Info("Controller", $"{action} failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>The window in front when it is one the controller works in: the main window on the Library page, Game Details, or a prompt.</summary>
+    private Window? TargetWindow()
+    {
+        if (Application.Current == null) return null;
+        var active = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+        return active switch
+        {
+            MainWindow when _main.CurrentSection == NavSection.Library => active,
+            GameDetailsDialog or ModernDialog => active,
+            _ => null,
+        };
+    }
+
+    private void Perform(PadAction action, Window window)
+    {
+        var focused = Keyboard.FocusedElement as DependencyObject;
+
+        // An open menu (the right-click menu on a game, a drop-down) takes the keys as it would from the keyboard.
+        if (IsInMenu(focused))
+        {
+            Key? key = action switch
+            {
+                PadAction.Up => Key.Up, PadAction.Down => Key.Down, PadAction.Left => Key.Left, PadAction.Right => Key.Right,
+                PadAction.Accept => Key.Enter, PadAction.Back or PadAction.Menu => Key.Escape,
+                _ => null,
+            };
+            if (key is { } k) SendKey(k);
+            return;
+        }
+
+        if (window is MainWindow main)
+        {
+            var library = main.LibraryPage;
+            bool onGame = library.IsGameFocused(focused);
+            switch (action)
+            {
+                case PadAction.Up or PadAction.Down or PadAction.Left or PadAction.Right:
+                    if (onGame) SendKey(ArrowFor(action));
+                    else FocusGames(library);
+                    break;
+                case PadAction.Accept:
+                    if (focused is ButtonBase button) Press(button);
+                    else if (onGame) SendKey(Key.Enter);
+                    else FocusGames(library);
+                    break;
+                case PadAction.Back:
+                    SendKey(Key.Escape);
+                    break;
+                case PadAction.Play:
+                    if (onGame && (focused as FrameworkElement)?.DataContext is GameCardViewModel game && game.LaunchCommand.CanExecute(null))
+                        game.LaunchCommand.Execute(null);
+                    break;
+                case PadAction.Menu:
+                    if (onGame) SendKey(Key.Apps);
+                    break;
+                case PadAction.PreviousTab or PadAction.NextTab:
+                    _main.Library.StepCategoryTab(action == PadAction.NextTab ? 1 : -1);
+                    // The tab's games are laid out first, then the first gets focus (the card that had it may be gone).
+                    _lastGame = null;
+                    library.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => FocusGames(library));
+                    break;
+            }
+            if (Keyboard.FocusedElement is FrameworkElement { DataContext: GameCardViewModel game2 } now && library.IsGameFocused(now)) _lastGame = game2;
+            return;
+        }
+
+        // Game Details and its prompts: move between their buttons and links, press one, or close.
+        switch (action)
+        {
+            case PadAction.Up or PadAction.Down or PadAction.Left or PadAction.Right:
+                if (focused is UIElement element && IsInside(element, window))
+                    element.MoveFocus(new TraversalRequest(DirectionFor(action)));
+                else
+                    window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                break;
+            case PadAction.Accept:
+                if (focused is ButtonBase button) Press(button);
+                else if (focused is not UIElement e || !IsInside(e, window)) window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                break;
+            case PadAction.Back:
+                SendKey(Key.Escape);
+                break;
+            case PadAction.Menu:
+                if (focused is UIElement && IsInside((UIElement)focused, window)) SendKey(Key.Apps);
+                break;
+        }
+    }
+
+    /// <summary>Back to the game focus was last on, if it is still in the view, else the view's first game.</summary>
+    private void FocusGames(LibraryView library)
+    {
+        library.FocusGames(_lastGame);
+    }
+
+    private static Key ArrowFor(PadAction a) => a switch { PadAction.Up => Key.Up, PadAction.Down => Key.Down, PadAction.Left => Key.Left, _ => Key.Right };
+
+    private static FocusNavigationDirection DirectionFor(PadAction a) => a switch
+    {
+        PadAction.Up => FocusNavigationDirection.Up, PadAction.Down => FocusNavigationDirection.Down,
+        PadAction.Left => FocusNavigationDirection.Left, _ => FocusNavigationDirection.Right,
+    };
+
+    private static bool IsInside(UIElement element, Window window) => Window.GetWindow(element) == window && element != window;
+
+    private static bool IsInMenu(DependencyObject? element)
+    {
+        for (var d = element; d != null; d = d is Visual ? VisualTreeHelper.GetParent(d) ?? LogicalTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+            if (d is MenuItem or ContextMenu or ComboBoxItem) return true;
+        return false;
+    }
+
+    /// <summary>Presses a button, ticks a check box or flips a switch, as a click or Space would.</summary>
+    private static void Press(ButtonBase button)
+    {
+        if (!button.IsEnabled) return;
+        var peer = UIElementAutomationPeer.CreatePeerForElement(button);
+        if (peer?.GetPattern(PatternInterface.Toggle) is IToggleProvider toggle) toggle.Toggle();
+        else if (peer?.GetPattern(PatternInterface.Invoke) is IInvokeProvider invoke) invoke.Invoke();
+    }
+
+    /// <summary>A key press and release sent to the focused element through WPF's input, as the keyboard would send it.</summary>
+    private static void SendKey(Key key)
+    {
+        var target = Keyboard.FocusedElement as DependencyObject;
+        var source = target != null ? PresentationSource.FromDependencyObject(target) : null;
+        source ??= Application.Current.Windows.OfType<Window>().Where(w => w.IsActive).Select(PresentationSource.FromVisual).FirstOrDefault();
+        if (source == null) return;
+        foreach (var routed in new[] { Keyboard.PreviewKeyDownEvent, Keyboard.PreviewKeyUpEvent })
+            InputManager.Current.ProcessInput(new KeyEventArgs(Keyboard.PrimaryDevice, source, Environment.TickCount, key) { RoutedEvent = routed });
+    }
+}

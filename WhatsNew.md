@@ -13,6 +13,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 - **Your PC beside the requirements** - Game Details shows your own parts under each of a game's PC requirements, and warns where your PC falls short.
 - **Resizable columns** - drag a column's edge in the Details List view to make it wider or narrower.
 - **Arrow keys in the Library** - Move between games with the arrow keys, Home, End, Page Up and Page Down, then Enter for details or Ctrl+Enter to play.
+- **Controller in the Library** - Turn it on in Settings > Library & Art to pick and play games with a controller or a handheld's controls.
 - **See every game's profile** - the Details List view has a Profile column, and you can sort by it.
 - **Sort by size** - Size on Disk in the Library's sort box shows which games take the most room.
 - **Repair a game** - Game Details' ... menu opens the game in its launcher, where Verify, Repair and Uninstall are.

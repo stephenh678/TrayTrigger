@@ -34,6 +34,26 @@ In the Poster Grid, Extra Large and Compact Icons views, press Tab until a game 
 
 The Details List is a list: Up and Down move a row, and Enter and Ctrl+Enter work the same.
 
+## Using a game controller
+
+Turn on **Use a game controller in the Library** in Settings > Library & Art > Library View. An Xbox-style controller, or a handheld's built-in controls (ROG Ally, Legion Go and the like), then moves around the Library and Game Details:
+
+- **D-pad or left stick** - move between games, in any view. Hold it to keep moving. The first press, when no game is picked, goes to the game you were last on, or the first.
+- **A** - open the game's Game Details. In Game Details, or on a button, it presses the button that is outlined.
+- **B** - back: closes Game Details, a menu or a prompt; in the Library it clears the selection, then the search.
+- **X** - play the game that is outlined.
+- **Menu** (the button with three lines) - the game's right-click menu. Move through it with the D-pad, A to choose, B to close.
+- **LB and RB** - the previous and next category tab.
+
+In Game Details the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld.
+
+What it doesn't do:
+
+- **Nothing is read while a game, or any other program, is in front.** The controller is read only while the Library, Game Details or one of its prompts is the window in front, so a press in a game never reaches TrayTrigger. A button already held when TrayTrigger comes to the front does nothing until it is let go.
+- **It only moves around TrayTrigger.** It sends nothing to Windows or to other programs, and it doesn't stop Steam, Game Bar or a handheld's own software from seeing the controller too.
+- **Other pages** (Tools, Activity, System, Settings, About) and the tray menu still need a mouse, touch or the keyboard.
+- **Handhelds in a mouse mode.** A handheld set to make its controls work as a mouse and keyboard (a "desktop mode") may not appear to Windows as a controller, and then this setting has nothing to read; in that mode the D-pad may already work as the arrow keys above. Switch the handheld to its controller (gamepad) mode to use this setting.
+
 ## Search and filter
 
 Three ways to find something, named for what they do. A **filter** (Library, Tools and Activity) narrows the list you are looking at to what matches. A **page search** (Settings, About and System) finds a card on any tab of that page and takes you to it. **Search everything** looks in all of them at once. Ctrl+F puts the cursor in the filter or search box of the page you are on, Ctrl+K opens Search everything, and Esc clears or closes either.

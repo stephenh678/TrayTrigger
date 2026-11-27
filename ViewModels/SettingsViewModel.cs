@@ -818,6 +818,21 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Settings > Library &amp; Art: a game controller moves around the Library and Game Details (Views.GamepadNavigator).</summary>
+    public bool ControllerNavigation
+    {
+        get => _settings.ControllerNavigation;
+        set
+        {
+            if (_settings.ControllerNavigation != value)
+            {
+                _settings.ControllerNavigation = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public bool AutoCategorizeFromSteam
     {
         get => _settings.AutoCategorizeFromSteam;

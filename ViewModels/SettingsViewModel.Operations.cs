@@ -211,6 +211,7 @@ public partial class SettingsViewModel
         OnPropertyChanged(nameof(OnlineMatchSensitivity));
         OnPropertyChanged(nameof(AutoCategorizeFromSteam));
         OnPropertyChanged(nameof(ShowCategoryTabs));
+        OnPropertyChanged(nameof(ControllerNavigation));
         OnPropertyChanged(nameof(UseVerticalPosterArt));
         OnPropertyChanged(nameof(UseSteamGridDbArt));
         OnPropertyChanged(nameof(SteamGridDbApiKey));

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TrayTrigger.Services;
 using System.Windows;
@@ -234,6 +234,39 @@ public partial class LibraryView : UserControl
         if (target == index) return;
         cards[target].Focus();
         cards[target].BringIntoView();
+    }
+
+    /// <summary>True when focus is on a game: a card or its Play button, or a Details List row.</summary>
+    internal bool IsGameFocused(DependencyObject? focused)
+    {
+        if (focused == null) return false;
+        if (CardOf(focused) != null) return true;
+        return focused is ListBoxItem item && ItemsControl.ItemsControlFromItemContainer(item) == GamesListBox;
+    }
+
+    /// <summary>
+    /// Puts focus on a game in the view on screen: <paramref name="preferred"/> when it is in the view, else the
+    /// selected Details List row (or the first row), or the first card.
+    /// </summary>
+    internal void FocusGames(GameCardViewModel? preferred = null)
+    {
+        if (GamesListBox.IsVisible)
+        {
+            if (GamesListBox.Items.Count == 0) return;
+            int index = preferred != null ? GamesListBox.Items.IndexOf(preferred) : -1;
+            if (index < 0) index = Math.Max(0, GamesListBox.SelectedIndex);
+            GamesListBox.SelectedIndex = index;
+            GamesListBox.ScrollIntoView(GamesListBox.Items[index]);
+            GamesListBox.UpdateLayout();
+            (GamesListBox.ItemContainerGenerator.ContainerFromIndex(index) as ListBoxItem)?.Focus();
+            return;
+        }
+        if (!CardScroller.IsVisible) return;
+        var cards = VisibleCards();
+        if (cards.Count == 0) return;
+        var card = cards.Find(c => c.DataContext == preferred) ?? cards[0];
+        card.Focus();
+        card.BringIntoView();
     }
 
     /// <summary>The card a focused element belongs to: the card itself, or the card around its Play button.</summary>
