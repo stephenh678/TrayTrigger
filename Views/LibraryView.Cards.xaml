@@ -352,15 +352,14 @@
     <Style x:Key="ProfilePill" TargetType="Border">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
-        <Setter Property="Padding" Value="0,2"/>
+        <!-- The same padding with or without a background, so Off lines up with the pills. -->
+        <Setter Property="Padding" Value="7,2"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Optimized}">
                 <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
-                <Setter Property="Padding" Value="7,2"/>
             </DataTrigger>
             <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Aggressive}">
                 <Setter Property="Background" Value="{DynamicResource BrushWarningWash}"/>
-                <Setter Property="Padding" Value="7,2"/>
             </DataTrigger>
         </Style.Triggers>
     </Style>
