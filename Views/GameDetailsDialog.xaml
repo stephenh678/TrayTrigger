@@ -556,12 +556,12 @@
                                         <StackPanel>
                                             <TextBlock Text="{Binding Value}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                                                        FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap"/>
-                                            <TextBlock FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{DynamicResource AppFont}"
+                                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{DynamicResource AppFont}"
                                                        TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding HasYours, Converter={StaticResource BoolToVis}}">
                                                 <Run Text="Yours:"/> <Run Text="{Binding Yours, Mode=OneWay}"/>
                                             </TextBlock>
                                             <!-- A shortfall in the warning colour, under the line it belongs to; plain text, not a NoteBar. -->
-                                            <TextBlock Text="{Binding Warning}" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushWarning}"
+                                            <TextBlock Text="{Binding Warning}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
                                                        FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" Margin="0,2,0,0"
                                                        Visibility="{Binding HasWarning, Converter={StaticResource BoolToVis}}"/>
                                         </StackPanel>
@@ -569,7 +569,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="{Binding RequirementNotes}" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSecondary}"
+                        <TextBlock Text="{Binding RequirementNotes}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                    FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" Margin="0,2,0,0"
                                    Visibility="{Binding HasRequirementNotes, Converter={StaticResource BoolToVis}}"/>
 
