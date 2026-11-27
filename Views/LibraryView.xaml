@@ -519,7 +519,10 @@
                                        </Style.Triggers>
                                    </Style>
                                </ScrollViewer.Style>
-                               <Grid>
+                               <!-- Room above and below the cards for the hover zoom: an Extra Large card grows 9px a side
+                                    into its 7px margin, and the top row was cut 2px by the scroller's edge. Not at the sides,
+                                    so the grid's gaps and edges stay as they are. -->
+                               <Grid Margin="0,4,0,4">
 
                                    <!-- ============================================================== -->
                                    <!-- VIEW 1: POSTER CARDS, NORMAL AND EXTRA LARGE                   -->

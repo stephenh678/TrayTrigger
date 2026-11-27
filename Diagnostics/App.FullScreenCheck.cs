@@ -98,6 +98,20 @@ public partial class App
             report.AppendLine($"  focus on a game: {window.LibraryPage.IsGameFocused(Keyboard.FocusedElement as DependencyObject)}");
             SaveWindowContentPng(window, Path.ChangeExtension(outPath, ".png"));
 
+            // A top-row card zoomed as the pointer does it (1.05): it must stay inside the games' scroll area, not be cut at its top.
+            if (FindVisualChildren<Border>(window.LibraryPage).FirstOrDefault(b => b.Name == "CardBorder" && b.IsVisible) is { } zoomed
+                && zoomed.RenderTransform is ScaleTransform)
+            {
+                // The card's own transform is frozen by its template: a stand-in at the zoom's size, then the original back.
+                var scroller = window.LibraryPage.CardScroller;
+                var original = zoomed.RenderTransform;
+                zoomed.RenderTransform = new ScaleTransform(1.05, 1.05);
+                Settle(window);
+                var box = zoomed.TransformToAncestor(scroller).TransformBounds(new Rect(zoomed.RenderSize));
+                report.AppendLine($"  zoomed top-row card: top {box.Top:F1} (should be 0 or more, else it is cut)");
+                zoomed.RenderTransform = original;
+            }
+
             // Another page leaves it (the Library's view stays a desktop page's business).
             main.CurrentSection = NavSection.Settings;
             Settle(window);
