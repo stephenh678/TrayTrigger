@@ -280,6 +280,24 @@ public partial class App
                             }
                         }
                     report.AppendLine($"  Settings tab: {reached.Count} controls reached, on a Browse/New button {skipped} times (should be 0)");
+                    // A drop-down (the Performance Profile): A opens it, Down moves in it, B closes it as it was.
+                    var details = Current.Windows.OfType<GameDetailsDialog>().First();
+                    foreach (bool editable in new[] { false, true })
+                    {
+                    if (FindVisual<ComboBox>(details, c => c.IsEditable == editable) is not { } profile) continue;
+                    report.AppendLine($"  {(editable ? "editable drop-down" : "drop-down")} '{System.Windows.Automation.AutomationProperties.GetName(profile)}'");
+                    {
+                        object? before = profile.SelectedItem;
+                        profile.Focus();
+                        PumpDispatcher(TimeSpan.FromMilliseconds(150));
+                        Hold(XInputReader.A);
+                        report.AppendLine($"  drop-down A  -> open {profile.IsDropDownOpen}, {Focus()}");
+                        Hold(XInputReader.DPadDown);
+                        report.AppendLine($"  Down         -> {Focus()}");
+                        Hold(XInputReader.B);
+                        report.AppendLine($"  B            -> open {profile.IsDropDownOpen}, unchanged {Equals(profile.SelectedItem, before)}");
+                    }
+                    }
                     detailsVm.SelectedTab = GameDetailsTab.Overview;
                     PumpDispatcher(TimeSpan.FromMilliseconds(300));
                 }
@@ -321,6 +339,17 @@ public partial class App
             }
         }
         ExitApplication();
+    }
+
+    private static T? FindVisual<T>(DependencyObject parent, Func<T, bool> match) where T : DependencyObject
+    {
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T found && (child as UIElement)?.IsVisible != false && match(found)) return found;
+            if (FindVisual(child, match) is { } deeper) return deeper;
+        }
+        return null;
     }
 
     /// <summary>

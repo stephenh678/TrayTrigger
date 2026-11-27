@@ -193,8 +193,19 @@ public sealed class GamepadNavigator
         var focused = Keyboard.FocusedElement as DependencyObject;
 
         // An open menu (the right-click menu on a game, a drop-down) takes the keys as it would from the keyboard.
-        if (IsInMenu(focused) || focused is ComboBox { IsDropDownOpen: true })
+        if (IsInMenu(focused) || OpenDropDownOf(focused) != null)
         {
+            // B on a drop-down the controller opened puts back what it showed: an editable one changes its choice as
+            // the D-pad moves through it, and Esc alone would keep that.
+            if (action is PadAction.Back or PadAction.Menu && _openedDropDown is { } opened && opened.Combo.IsDropDownOpen)
+            {
+                SendKey(Key.Escape);
+                opened.Combo.SelectedItem = opened.Item;
+                if (opened.Combo.IsEditable) opened.Combo.Text = opened.Text;
+                _openedDropDown = null;
+                return;
+            }
+            if (action == PadAction.Accept) _openedDropDown = null;
             Key? key = action switch
             {
                 PadAction.Up => Key.Up, PadAction.Down => Key.Down, PadAction.Left => Key.Left, PadAction.Right => Key.Right,
@@ -236,7 +247,7 @@ public sealed class GamepadNavigator
                     break;
                 case PadAction.Accept:
                     if (focused is ButtonBase button) Press(button);
-                    else if (focused is ComboBox combo) combo.IsDropDownOpen = true;
+                    else if (DropDownOf(focused) is { } combo) OpenDropDown(combo);
                     else if (onGame) SendKey(Key.Enter);
                     else if (!onTop) FocusGames(library);
                     break;
@@ -279,7 +290,8 @@ public sealed class GamepadNavigator
                 break;
             case PadAction.Accept:
                 if (focused is ButtonBase { } skipped && GetSkip(skipped)) break; // reached with Tab or the mouse: not pressed
-                if (focused is ButtonBase button) Press(button);
+                if (DropDownOf(focused) is { } dropDown) OpenDropDown(dropDown); // the D-pad then picks, A chooses, B closes
+                else if (focused is ButtonBase button) Press(button);
                 else if (inside && focused is Hyperlink) SendKey(Key.Enter); // a link opens on Enter
                 else if (!inside) window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                 break;
@@ -354,6 +366,31 @@ public sealed class GamepadNavigator
     };
 
     private static bool IsInside(DependencyObject element, Window window) => Window.GetWindow(element) == window && element != window;
+
+    // The drop-down the controller opened, and what it showed then, for B to put back.
+    private (ComboBox Combo, object? Item, string Text)? _openedDropDown;
+
+    private void OpenDropDown(ComboBox combo)
+    {
+        _openedDropDown = (combo, combo.SelectedItem, combo.Text);
+        combo.IsDropDownOpen = true;
+    }
+
+    /// <summary>A closed drop-down with focus: the ComboBox itself, or the text box inside an editable one.</summary>
+    private static ComboBox? DropDownOf(DependencyObject? focused) => focused switch
+    {
+        ComboBox { IsEnabled: true, IsDropDownOpen: false } combo => combo,
+        FrameworkElement { TemplatedParent: ComboBox { IsEnabled: true, IsDropDownOpen: false } combo } => combo,
+        _ => null,
+    };
+
+    /// <summary>An open drop-down with focus on it or in its text box (an editable one keeps focus there while open).</summary>
+    private static ComboBox? OpenDropDownOf(DependencyObject? focused) => focused switch
+    {
+        ComboBox { IsDropDownOpen: true } combo => combo,
+        FrameworkElement { TemplatedParent: ComboBox { IsDropDownOpen: true } combo } => combo,
+        _ => null,
+    };
 
     private static bool IsInMenu(DependencyObject? element)
     {
