@@ -71,6 +71,8 @@ Pick an order in the sort box: Name, Category, Favorites First, Favorites First 
 
 The Details List view's Profile column shows each game's performance profile: Optimized and Aggressive as coloured labels, Off in plain text. When the window is too narrow for every column, the Profile column is left out so the game titles keep their room; widen the window to bring it back.
 
+To change a column's width, drag the line at the right edge of its header, as in File Explorer: Category, Profile, Playtime, Last Played and Size can each be made wider or narrower. Game Title takes whatever room is left and always keeps enough for a title, so a column stops growing when the title can give no more. A column too narrow for its text shortens it with "...". Your widths are kept for next time. Double-click a column's line to put it back to its usual width, or right-click the header row and pick Reset Column Widths to put back all of them.
+
 ## Sorting by size
 
 **Size on Disk** in the sort box puts the games that take the most room first (the arrow turns it to smallest first), the same Size on disk Game Details shows. The Details List view shows each game's size in its Size column, in any sort. Each game's folder is counted once, in the background, starting half a minute after TrayTrigger starts: one game at a time, at Windows' lowest priority so it gives way to everything else, and never while a game is running. A game is counted again after you play it, and once a week, so an update shows up. Until its first count, and for a game with no folder on this PC, a game sorts last. Counting reads only the list of files and their sizes, never the files themselves, and nothing is sent anywhere.

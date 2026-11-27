@@ -1233,68 +1233,93 @@
                                <!-- Header Bar (Fixed, never scrolls out of view) -->
                                <Border Grid.Row="0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
                                        BorderThickness="0,0,0,1" Padding="11,8" Margin="0,0,6,6" CornerRadius="{DynamicResource RadiusSmall}">
-                                   <Grid>
+                                   <!-- Right-click the header row to put every column back to its width. -->
+                                   <Border.ContextMenu>
+                                       <ContextMenu>
+                                           <MenuItem Header="Reset Column Widths" Click="ResetColumnWidths_Click"/>
+                                       </ContextMenu>
+                                   </Border.ContextMenu>
+                                   <Grid x:Name="DetailsHeaderGrid">
                                        <Grid.ColumnDefinitions>
                                            <ColumnDefinition Width="42"/> <!-- Icon -->
                                            <ColumnDefinition Width="*"/>  <!-- Title -->
-                                           <ColumnDefinition Width="135"/> <!-- Category -->
+                                           <ColumnDefinition Width="{Binding CategoryWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Category: DetailsListColumns, resizable -->
                                            <ColumnDefinition Width="Auto"/> <!-- Profile: ProfileColumnCell, gone when narrow -->
-                                           <ColumnDefinition Width="110"/> <!-- Playtime -->
-                                           <ColumnDefinition Width="125"/> <!-- Last Played -->
-                                           <ColumnDefinition Width="90"/>  <!-- Size -->
+                                           <ColumnDefinition Width="{Binding PlaytimeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Playtime -->
+                                           <ColumnDefinition Width="{Binding LastPlayedWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Last Played -->
+                                           <ColumnDefinition Width="{Binding SizeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/> <!-- Size -->
                                            <ColumnDefinition Width="90"/>  <!-- Actions -->
                                        </Grid.ColumnDefinitions>
                                        <!-- Click a column to sort by it, again to reverse it, as in Explorer (LibraryViewModel.Sorting). -->
                                        <Button Grid.Column="1" Style="{StaticResource ColumnHeaderButton}" Command="{Binding Library.SortByColumnCommand}" CommandParameter="Title"
                                                AutomationProperties.Name="Sort by title" ToolTip="Sort by title; click again to reverse">
-                                           <StackPanel Orientation="Horizontal">
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="GAME TITLE" FontFamily="{DynamicResource AppFont}"/>
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Library.TitleSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
+                                           <Grid>
+                                               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                               <TextBlock Style="{StaticResource FieldLabel}" Text="GAME TITLE" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis"/>
+                                               <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding Library.TitleSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
                                                           Foreground="{DynamicResource BrushAccentText}" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                                           </StackPanel>
+                                           </Grid>
                                        </Button>
                                        <Button Grid.Column="2" Style="{StaticResource ColumnHeaderButton}" Command="{Binding Library.SortByColumnCommand}" CommandParameter="Category"
                                                AutomationProperties.Name="Sort by category" ToolTip="Sort by category; click again to reverse">
-                                           <StackPanel Orientation="Horizontal">
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="CATEGORY" FontFamily="{DynamicResource AppFont}"/>
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Library.CategorySortArrow}" FontSize="{DynamicResource FontSizeBadge}"
+                                           <Grid>
+                                               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                               <TextBlock Style="{StaticResource FieldLabel}" Text="CATEGORY" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis"/>
+                                               <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding Library.CategorySortArrow}" FontSize="{DynamicResource FontSizeBadge}"
                                                           Foreground="{DynamicResource BrushAccentText}" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                                           </StackPanel>
+                                           </Grid>
                                        </Button>
                                        <Border Grid.Column="3" Style="{StaticResource ProfileColumnCell}">
-                                           <Button Style="{StaticResource ColumnHeaderButton}" Command="{Binding Library.SortByColumnCommand}" CommandParameter="Profile"
-                                                   AutomationProperties.Name="Sort by performance profile" ToolTip="Sort by performance profile; click again to reverse">
-                                               <StackPanel Orientation="Horizontal">
-                                                   <TextBlock Style="{StaticResource FieldLabel}" Text="PROFILE" FontFamily="{DynamicResource AppFont}"/>
-                                                   <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Library.ProfileSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
-                                                              Foreground="{DynamicResource BrushAccentText}" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                                               </StackPanel>
-                                           </Button>
+                                           <Grid>
+                                               <Button Style="{StaticResource ColumnHeaderButton}" Command="{Binding Library.SortByColumnCommand}" CommandParameter="Profile"
+                                                       AutomationProperties.Name="Sort by performance profile" ToolTip="Sort by performance profile; click again to reverse">
+                                                   <Grid>
+                                                       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                       <TextBlock Style="{StaticResource FieldLabel}" Text="PROFILE" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis"/>
+                                                       <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding Library.ProfileSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
+                                                                  Foreground="{DynamicResource BrushAccentText}" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                                   </Grid>
+                                               </Button>
+                                               <Thumb Style="{StaticResource ColumnResizeGrip}" Tag="Profile" AutomationProperties.Name="Resize the Profile column"
+                                                      DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
+                                           </Grid>
                                        </Border>
                                        <Button Grid.Column="4" Style="{StaticResource ColumnHeaderButton}" Command="{Binding Library.SortByColumnCommand}" CommandParameter="Playtime"
                                                AutomationProperties.Name="Sort by playtime" ToolTip="Sort by playtime; click again to reverse">
-                                           <StackPanel Orientation="Horizontal">
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="PLAYTIME" FontFamily="{DynamicResource AppFont}"/>
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Library.PlaytimeSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
+                                           <Grid>
+                                               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                               <TextBlock Style="{StaticResource FieldLabel}" Text="PLAYTIME" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis"/>
+                                               <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding Library.PlaytimeSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
                                                           Foreground="{DynamicResource BrushAccentText}" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                                           </StackPanel>
+                                           </Grid>
                                        </Button>
                                        <Button Grid.Column="5" Style="{StaticResource ColumnHeaderButton}" Command="{Binding Library.SortByColumnCommand}" CommandParameter="LastPlayed"
                                                AutomationProperties.Name="Sort by last played" ToolTip="Sort by last played; click again to reverse">
-                                           <StackPanel Orientation="Horizontal">
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="LAST PLAYED" FontFamily="{DynamicResource AppFont}"/>
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Library.LastPlayedSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
+                                           <Grid>
+                                               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                               <TextBlock Style="{StaticResource FieldLabel}" Text="LAST PLAYED" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis"/>
+                                               <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding Library.LastPlayedSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
                                                           Foreground="{DynamicResource BrushAccentText}" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                                           </StackPanel>
+                                           </Grid>
                                        </Button>
                                        <Button Grid.Column="6" Style="{StaticResource ColumnHeaderButton}" Command="{Binding Library.SortByColumnCommand}" CommandParameter="Size"
                                                AutomationProperties.Name="Sort by size" ToolTip="Sort by size; click again to reverse">
-                                           <StackPanel Orientation="Horizontal">
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="SIZE" FontFamily="{DynamicResource AppFont}"/>
-                                               <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Library.SizeSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
+                                           <Grid>
+                                               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                               <TextBlock Style="{StaticResource FieldLabel}" Text="SIZE" FontFamily="{DynamicResource AppFont}" TextTrimming="CharacterEllipsis"/>
+                                               <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" Text="{Binding Library.SizeSortArrow}" FontSize="{DynamicResource FontSizeBadge}"
                                                           Foreground="{DynamicResource BrushAccentText}" Margin="5,0,0,0" VerticalAlignment="Center"/>
-                                           </StackPanel>
+                                           </Grid>
                                        </Button>
+                                       <!-- The handles on the right edge of each resizable column (DetailsListColumns, LibraryView.Columns.cs). Profile's is in its cell. -->
+                                       <Thumb Grid.Column="2" Style="{StaticResource ColumnResizeGrip}" Tag="Category" AutomationProperties.Name="Resize the Category column"
+                                              DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
+                                       <Thumb Grid.Column="4" Style="{StaticResource ColumnResizeGrip}" Tag="Playtime" AutomationProperties.Name="Resize the Playtime column"
+                                              DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
+                                       <Thumb Grid.Column="5" Style="{StaticResource ColumnResizeGrip}" Tag="LastPlayed" AutomationProperties.Name="Resize the Last Played column"
+                                              DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
+                                       <Thumb Grid.Column="6" Style="{StaticResource ColumnResizeGrip}" Tag="Size" AutomationProperties.Name="Resize the Size column"
+                                              DragDelta="ColumnGrip_DragDelta" DragCompleted="ColumnGrip_DragCompleted" MouseDoubleClick="ColumnGrip_MouseDoubleClick"/>
                                        <TextBlock Style="{StaticResource FieldLabel}" Grid.Column="7" Text="ACTIONS" FontFamily="{DynamicResource AppFont}"
                                                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                    </Grid>
@@ -1354,11 +1379,11 @@
                                                    <Grid.ColumnDefinitions>
                                                        <ColumnDefinition Width="42"/>
                                                        <ColumnDefinition Width="*"/>
-                                                       <ColumnDefinition Width="135"/>
+                                                       <ColumnDefinition Width="{Binding CategoryWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
                                                        <ColumnDefinition Width="Auto"/>
-                                                       <ColumnDefinition Width="110"/>
-                                                       <ColumnDefinition Width="125"/>
-                                                       <ColumnDefinition Width="90"/>
+                                                       <ColumnDefinition Width="{Binding PlaytimeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
+                                                       <ColumnDefinition Width="{Binding LastPlayedWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
+                                                       <ColumnDefinition Width="{Binding SizeWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
                                                        <ColumnDefinition Width="90"/>
                                                    </Grid.ColumnDefinitions>
 
@@ -1422,8 +1447,8 @@
 
                                                    <!-- Category Pill -->
                                                    <Border Grid.Column="2" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
-                                                           CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                       <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBadge}" 
+                                                           CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2" Margin="0,0,8,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                       <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBadge}" TextTrimming="CharacterEllipsis" 
                                                                   Foreground="{DynamicResource BrushTextSecondary}" 
                                                                   FontFamily="{DynamicResource AppFont}"/>
                                                    </Border>
@@ -1438,17 +1463,17 @@
                                                    <!-- Playtime -->
                                                    <TextBlock Grid.Column="4" Text="{Binding ListPlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                               Foreground="{DynamicResource BrushTextSecondary}" 
-                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
+                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
 
                                                    <!-- Last Played -->
                                                    <TextBlock Grid.Column="5" Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                               Foreground="{DynamicResource BrushTextMuted}" 
-                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
+                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
 
                                                    <!-- Size on disk, from the background count behind the Largest First sort -->
                                                    <TextBlock Grid.Column="6" Text="{Binding ListSizeDisplay}" FontSize="{DynamicResource FontSizeBody}"
                                                               Foreground="{DynamicResource BrushTextMuted}"
-                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
+                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
 
                                                    <!-- Action Buttons -->
                                                    <StackPanel Grid.Column="7" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

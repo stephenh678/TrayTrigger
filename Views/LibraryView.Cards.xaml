@@ -301,11 +301,46 @@
     <!-- Optimized and Aggressive are pills; Off is plain muted text, so the  -->
     <!-- tuned games stand out down the column.                               -->
     <!-- ==================================================================== -->
-    <!-- The column's cell, in the header and in every row: 90 wide, and gone while the Library is
+    <!-- The column's cell, in the header and in every row: its width (DetailsListColumns), and gone while the Library is
          narrower than 1100, so a half-screen window keeps room for the game titles (the column
          is Auto, so it closes up with its cells). -->
+    <!-- ==================================================================== -->
+    <!-- DETAILS LIST COLUMN HANDLES                                          -->
+    <!-- On the right edge of a resizable column's header: a faint line that  -->
+    <!-- brightens under the mouse and turns accent while dragging, like the  -->
+    <!-- divider between categories and collections. The drag is in          -->
+    <!-- LibraryView.Columns.cs.                                              -->
+    <!-- ==================================================================== -->
+    <Style x:Key="ColumnResizeGrip" TargetType="Thumb">
+        <Setter Property="Width" Value="11"/>
+        <Setter Property="Margin" Value="0,-8,-6,-8"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Cursor" Value="SizeWE"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="ToolTip" Value="Drag to resize. Double-click to reset."/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Border x:Name="Line" Width="1" Height="16" Background="{DynamicResource BrushBorder}" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushBorderStrong}"/>
+                            <Setter TargetName="Line" Property="Width" Value="2"/>
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushAccent}"/>
+                            <Setter TargetName="Line" Property="Width" Value="2"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="ProfileColumnCell" TargetType="Border">
-        <Setter Property="Width" Value="90"/>
+        <Setter Property="Width" Value="{Binding ProfileWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource WidthBelowConverter}, ConverterParameter=1100}" Value="True">

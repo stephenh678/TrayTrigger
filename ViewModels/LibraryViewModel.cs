@@ -176,6 +176,11 @@ public partial class LibraryViewModel : ViewModelBase
         _getSteamGridDbApiKeyOrNull = getSteamGridDbApiKeyOrNull;
 
         (_selectedSortOption, _settings.LastSortReversed) = MigrateSortOption(_settings.LastSortOption, _settings.LastSortReversed);
+        DetailsListColumns.Instance.Attach(_settings.DetailsColumnWidths, widths =>
+        {
+            _settings.DetailsColumnWidths = widths;
+            _storageService.SaveSettings(_settings);
+        });
         _settings.LastSortOption = _selectedSortOption;
         if (!string.IsNullOrWhiteSpace(_settings.LastCategoryFilter))
         {
