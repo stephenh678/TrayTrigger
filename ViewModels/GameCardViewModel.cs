@@ -265,15 +265,11 @@ public class GameCardViewModel : ViewModelBase
     public bool IsSteamGame => Game.IsSteamGame;
     public bool ForceSteamOverlayTag => Game.ForceSteamOverlayTag;
     public bool HasSteamOverlay => Game.HasSteamOverlay;
-    public bool IsGogGame => Game.IsGogGame;
-    public bool IsEaGame => Game.IsEaGame;
-    public bool IsEpicGame => Game.IsEpicGame;
-    public bool IsUbisoftGame => Game.IsUbisoftGame;
-    public bool IsXboxGame => Game.IsXboxGame;
-    public bool IsBattleNetGame => Game.IsBattleNetGame;
-    public bool IsRockstarGame => Game.IsRockstarGame;
-    public bool IsAmazonGame => Game.IsAmazonGame;
-    public bool IsItchGame => Game.IsItchGame;
+    /// <summary>The one launcher badge this card shows in every view (LauncherBadgePill and the
+    /// poster's logo), picked in the same order as the placeholder category.</summary>
+    public LauncherBadge LauncherBadge => LauncherLogos.BadgeFor(Game);
+    public string LauncherLogoUri => LauncherLogos.PackUriFor(LauncherBadge);
+    public string LauncherBadgeLabel => LauncherLogos.ShortLabelFor(LauncherBadge);
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
@@ -509,6 +505,9 @@ public class GameCardViewModel : ViewModelBase
     public ICommand ToggleDlssOverrideCommand { get; }
 
     // Check marks for the cascading quick-setting submenus.
+    /// <summary>Details List's Profile column: the pill's colour and its words.</summary>
+    public PerformanceProfileMode PerformanceProfile => Game.PerformanceProfile;
+    public string ListProfileLabel => Game.PerformanceProfile.ToString();
     public bool ProfileIsOff => Game.PerformanceProfile == PerformanceProfileMode.Off;
     public bool ProfileIsOptimized => Game.PerformanceProfile == PerformanceProfileMode.Optimized;
     public bool ProfileIsAggressive => Game.PerformanceProfile == PerformanceProfileMode.Aggressive;
@@ -573,6 +572,8 @@ public class GameCardViewModel : ViewModelBase
 
     private void NotifyQuickSettingsChanged()
     {
+        OnPropertyChanged(nameof(PerformanceProfile));
+        OnPropertyChanged(nameof(ListProfileLabel));
         OnPropertyChanged(nameof(ProfileIsOff));
         OnPropertyChanged(nameof(ProfileIsOptimized));
         OnPropertyChanged(nameof(ProfileIsAggressive));
@@ -652,15 +653,9 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsSteamGame));
         OnPropertyChanged(nameof(ForceSteamOverlayTag));
         OnPropertyChanged(nameof(HasSteamOverlay));
-        OnPropertyChanged(nameof(IsGogGame));
-        OnPropertyChanged(nameof(IsEaGame));
-        OnPropertyChanged(nameof(IsEpicGame));
-        OnPropertyChanged(nameof(IsUbisoftGame));
-        OnPropertyChanged(nameof(IsXboxGame));
-        OnPropertyChanged(nameof(IsBattleNetGame));
-        OnPropertyChanged(nameof(IsRockstarGame));
-        OnPropertyChanged(nameof(IsAmazonGame));
-        OnPropertyChanged(nameof(IsItchGame));
+        OnPropertyChanged(nameof(LauncherBadge));
+        OnPropertyChanged(nameof(LauncherLogoUri));
+        OnPropertyChanged(nameof(LauncherBadgeLabel));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));

@@ -529,18 +529,54 @@
                         </Style>
                     </Border.Style>
                     <StackPanel>
-                        <!-- The buttons first, so they keep their width and the title is what wraps when the card is narrow. -->
+                        <!-- The switch first, so it keeps its width and the title is what wraps when the card is narrow.
+                             The same segmented switch as the System and About pages, so the list showing is the lit one. -->
                         <DockPanel Margin="0,0,0,10" LastChildFill="True">
-                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="10,0,0,0">
-                                <Button Content="Minimum" Command="{Binding ShowMinReqsCommand}"
-                                        Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,6,0"/>
-                                <Button Content="Recommended" Command="{Binding ShowRecReqsCommand}"
-                                        Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
-                            </StackPanel>
+                            <Border DockPanel.Dock="Right" Margin="10,0,0,0" VerticalAlignment="Center"
+                                    Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusControl}" Padding="2">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Minimum" Command="{Binding ShowMinReqsCommand}" Padding="10,3"
+                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsShowingMinimumReqs}"/>
+                                    <Button Content="Recommended" Command="{Binding ShowRecReqsCommand}" Padding="10,3" Margin="2,0,0,0"
+                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsShowingRecommendedReqs}"/>
+                                </StackPanel>
+                            </Border>
                             <TextBlock Text="PC SYSTEM REQUIREMENTS" Style="{StaticResource CardLabel}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                         </DockPanel>
+
+                        <!-- Steam's lines as rows, like the Details card: the label, the text, then this PC's part and,
+                             only where the PC is sure to fall short, a warning. Never a "meets it": see SystemRequirements. -->
+                        <ItemsControl ItemsSource="{Binding RequirementRows}" Focusable="False"
+                                      Visibility="{Binding HasRequirementRows, Converter={StaticResource BoolToVis}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type services:RequirementRow}">
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Label}" Style="{StaticResource DetailLabel}" VerticalAlignment="Top" TextWrapping="Wrap"/>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Value}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
+                                                       FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap"/>
+                                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{DynamicResource AppFont}"
+                                                       TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding HasYours, Converter={StaticResource BoolToVis}}">
+                                                <Run Text="Yours:"/> <Run Text="{Binding Yours, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <!-- A shortfall in the warning colour, under the line it belongs to; plain text, not a NoteBar. -->
+                                            <TextBlock Text="{Binding Warning}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
+                                                       FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                       Visibility="{Binding HasWarning, Converter={StaticResource BoolToVis}}"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{Binding RequirementNotes}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                   FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Visibility="{Binding HasRequirementNotes, Converter={StaticResource BoolToVis}}"/>
+
+                        <!-- A list the card can't split into rows: Steam's text as it is. -->
                         <TextBlock Text="{Binding CurrentRequirementsText}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
-                                   FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" LineHeight="19"/>
+                                   FontFamily="{DynamicResource AppFont}" TextWrapping="Wrap" LineHeight="19"
+                                   Visibility="{Binding ShowRequirementsText, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>
                 </Border>
                     </StackPanel>

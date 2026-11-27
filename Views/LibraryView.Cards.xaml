@@ -233,4 +233,162 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
+
+    <!-- ==================================================================== -->
+    <!-- LAUNCHER BADGE PILL (Tiles and Details List)                         -->
+    <!-- One pill per card from GameCardViewModel.LauncherBadge: the logo, the -->
+    <!-- short name and the launcher's colours. A new launcher needs a        -->
+    <!-- LauncherBadge value, its logo and label in LauncherLogos, and a      -->
+    <!-- trigger here only if it has its own colours.                         -->
+    <!-- ==================================================================== -->
+    <Style x:Key="LauncherBadgePill" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Steam}">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Gog}">
+                <Setter Property="Background" Value="{DynamicResource BrushBadgePurpleWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ea}">
+                <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ubisoft}">
+                <Setter Property="Background" Value="{DynamicResource BrushWarningWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Xbox}">
+                <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.BattleNet}">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- The pill's name. Same size and weight as App.xaml's BadgeText. -->
+    <Style x:Key="LauncherBadgeText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBadge}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Text" Value="{Binding LauncherBadgeLabel}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Steam}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Gog}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushBadgePurple}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ea}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushSuccessText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ubisoft}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushGold}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Xbox}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushSuccessText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.BattleNet}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushInfoText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Local}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushTextSoft}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- ==================================================================== -->
+    <!-- PERFORMANCE PROFILE (Details List's Profile column)                  -->
+    <!-- Optimized and Aggressive are pills; Off is plain muted text, so the  -->
+    <!-- tuned games stand out down the column.                               -->
+    <!-- ==================================================================== -->
+    <!-- The column's cell, in the header and in every row: its width (DetailsListColumns), and gone while the Library is
+         narrower than 1100, so a half-screen window keeps room for the game titles (the column
+         is Auto, so it closes up with its cells). -->
+    <!-- ==================================================================== -->
+    <!-- DETAILS LIST COLUMN HANDLES                                          -->
+    <!-- On the right edge of a resizable column's header: a clear line that  -->
+    <!-- brightens under the mouse and turns accent while dragging, like the  -->
+    <!-- divider between categories and collections. The drag is in          -->
+    <!-- LibraryView.Columns.cs.                                              -->
+    <!-- ==================================================================== -->
+    <Style x:Key="ColumnResizeGrip" TargetType="Thumb">
+        <Setter Property="Width" Value="11"/>
+        <!-- The line sits 5 px inside the column's right edge, clear of the next header's first letter. -->
+        <Setter Property="Margin" Value="0,-8,0,-8"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Cursor" Value="SizeWE"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="ToolTip" Value="Drag to resize. Double-click to reset."/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Border x:Name="Line" Width="1" Height="22" Background="{DynamicResource BrushBorderStrong}" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushTextMuted}"/>
+                            <Setter TargetName="Line" Property="Width" Value="2"/>
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Line" Property="Background" Value="{DynamicResource BrushAccent}"/>
+                            <Setter TargetName="Line" Property="Width" Value="2"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ProfileColumnCell" TargetType="Border">
+        <Setter Property="Width" Value="{Binding ProfileWidth, Source={x:Static vm:DetailsListColumns.Instance}}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource WidthBelowConverter}, ConverterParameter=1100}" Value="True">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="ProfilePill" TargetType="Border">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <!-- The same padding with or without a background, so Off lines up with the pills. -->
+        <Setter Property="Padding" Value="7,2"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Optimized}">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Aggressive}">
+                <Setter Property="Background" Value="{DynamicResource BrushWarningWash}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="ProfilePillText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBadge}"/>
+        <Setter Property="Text" Value="{Binding ListProfileLabel}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Optimized}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding PerformanceProfile}" Value="{x:Static models:PerformanceProfileMode.Aggressive}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushGold}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The pill's logo; a Local pill is the name alone. -->
+    <Style x:Key="LauncherBadgeLogo" TargetType="Image">
+        <Setter Property="Source" Value="{Binding LauncherLogoUri}"/>
+        <Setter Property="Height" Value="11"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Local}">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
 </ResourceDictionary>

@@ -100,6 +100,8 @@ public class AppSettings
     public bool ShowCategoryTabs { get; set; } = true;
     /// <summary>The categories' share of the Library's tab row when categories and collections can't both fit, set by dragging the divider between them.</summary>
     public double LibraryTabSplit { get; set; } = LibraryTabRowLayout.DefaultSplit;
+    /// <summary>Details List column widths the user dragged away from their defaults, by column (DetailsListColumns).</summary>
+    public Dictionary<string, double> DetailsColumnWidths { get; set; } = new();
     public string LastSortOption { get; set; } = "Name";
     /// <summary>The Library's sort runs the other way from <see cref="LastSortOption"/>'s own direction (Z to A, smallest first, ...).</summary>
     public bool LastSortReversed { get; set; }

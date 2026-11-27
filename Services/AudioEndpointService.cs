@@ -40,7 +40,41 @@ internal static class AudioEndpointService
     private interface IMMDevice
     {
         int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object instance);
+        int OpenPropertyStore(int access, out IPropertyStore store);
     }
+
+    [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IPropertyStore
+    {
+        int GetCount(out uint count);
+        int GetAt(uint index, out PropertyKey key);
+        int GetValue(ref PropertyKey key, out PropVariant value);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PropertyKey
+    {
+        public Guid FormatId;
+        public int PropertyId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PropVariant
+    {
+        public ushort Type;
+        public ushort Reserved1, Reserved2, Reserved3;
+        public IntPtr Value;
+        public IntPtr Value2;
+    }
+
+    [DllImport("ole32.dll")]
+    private static extern int PropVariantClear(ref PropVariant value);
+
+    private const int VtLpwstr = 31;
+    private const int StgmRead = 0;
+    // PKEY_Device_FriendlyName: "Speakers (Realtek USB Audio)", as the volume flyout names the device.
+    private static readonly Guid DeviceFriendlyNameFormat = new("A45C254E-DF1C-4EFD-8020-67D146A850E0");
+    private const int DeviceFriendlyNameId = 14;
 
     [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IAudioEndpointVolume
@@ -108,6 +142,54 @@ internal static class AudioEndpointService
         {
             LoggingService.Warn("Audio", $"Could not set the default playback device's mute state: {ex.Message}");
             return false;
+        }
+    }
+
+    /// <summary>The default playback device's name, as the volume flyout shows it; empty when there is none.</summary>
+    internal static string GetDefaultRenderName()
+    {
+        try
+        {
+            var type = Type.GetTypeFromCLSID(MMDeviceEnumeratorClsid);
+            if (type == null || Activator.CreateInstance(type) is not IMMDeviceEnumerator enumerator) return "";
+            try
+            {
+                if (enumerator.GetDefaultAudioEndpoint(EDataFlowRender, ERoleConsole, out IMMDevice device) != 0 || device == null) return "";
+                try
+                {
+                    if (device.OpenPropertyStore(StgmRead, out IPropertyStore store) != 0 || store == null) return "";
+                    try
+                    {
+                        var key = new PropertyKey { FormatId = DeviceFriendlyNameFormat, PropertyId = DeviceFriendlyNameId };
+                        if (store.GetValue(ref key, out PropVariant value) != 0) return "";
+                        try
+                        {
+                            return value.Type == VtLpwstr ? Marshal.PtrToStringUni(value.Value) ?? "" : "";
+                        }
+                        finally
+                        {
+                            PropVariantClear(ref value);
+                        }
+                    }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(store);
+                    }
+                }
+                finally
+                {
+                    Marshal.ReleaseComObject(device);
+                }
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(enumerator);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("Audio", $"Could not read the default playback device's name: {ex.Message}");
+            return "";
         }
     }
 

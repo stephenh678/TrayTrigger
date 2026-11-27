@@ -3606,6 +3606,13 @@ public partial class App
                 return;
             }
 
+            // --test-column-drag <out.txt>: the Details List column handles dragged step by step (App.ColumnDragCheck.cs).
+            if (e.Args[i].Equals("--test-column-drag", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunColumnDragCheck(e.Args[i + 1]);
+                return;
+            }
+
             // --test-layout-audit <out.txt>: text cut off and elements clipped on each page and dialog (App.LayoutAudit.cs).
             if (e.Args[i].Equals("--test-layout-audit", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {
@@ -4048,6 +4055,13 @@ public partial class App
                 });
                 vm.Details = sampleDetails;
                 vm.IsLoading = false;
+                // "recommended": the requirements card on its Recommended list.
+                if (e.Args.Any(a => a.Equals("recommended", StringComparison.OrdinalIgnoreCase))) vm.IsShowingRecommendedReqs = true;
+                // The requirements card's "Yours" lines come from a background read; let it finish so the capture shows them.
+                var pcRead = vm.LoadPcSummaryAsync();
+                var pcFrame = new System.Windows.Threading.DispatcherFrame();
+                pcRead.ContinueWith(_ => pcFrame.Continue = false, TaskScheduler.Default);
+                System.Windows.Threading.Dispatcher.PushFrame(pcFrame);
 
                 var dlg = new GameDetailsDialog(vm);
                 WaitForHero(dlg);

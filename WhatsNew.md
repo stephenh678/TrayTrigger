@@ -10,6 +10,9 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 - **itch.io** - Scan for Games now finds games installed with the itch app, and starts them without the app needing to be open.
 - **Sort by any column** - click a column header in the Details List view to sort by it, and again to reverse it.
 - **Reverse any sort** - the arrow beside the sort box, in the Library and on the Tools page, turns the order round.
+- **Your PC beside the requirements** - Game Details shows your own parts under each of a game's PC requirements, and warns where your PC falls short.
+- **Resizable columns** - drag a column's edge in the Details List view to make it wider or narrower.
+- **See every game's profile** - the Details List view has a Profile column, and you can sort by it.
 - **Sort by size** - Size on Disk in the Library's sort box shows which games take the most room.
 - **Repair a game** - Game Details' ... menu opens the game in its launcher, where Verify, Repair and Uninstall are.
 - **One line for categories and collections** - Collections now sit beside the category tabs. When they don't both fit, drag the divider between them to give either side more room.

@@ -7,7 +7,15 @@ The Game Details window (click a game card) is the page for one game. It opens o
 
 ## The Overview
 
-On the left: the synopsis, the three newest Steam news posts (with a PATCH tag on patch notes and a link to the rest), and last the PC system requirements, with buttons for the minimum and the recommended.
+On the left: the synopsis, the three newest Steam news posts (with a PATCH tag on patch notes and a link to the rest), and last the PC system requirements, with a switch for the minimum and the recommended.
+
+### PC system requirements
+
+The requirements card shows Steam's list one line per part: OS, Processor, Memory, Graphics, DirectX, Storage and Sound card, with any notes underneath. Minimum or Recommended at the top picks the list; the one showing is highlighted. Under each line, "Yours" shows this PC's part: your Windows, processor and core count, the memory installed, the graphics card games use and its memory (built-in graphics, which borrows the PC's memory, shows no figure), the newest DirectX that card runs, where the game is installed (or, for a game its launcher says isn't installed, the free space on your roomiest drive), and your default playback device.
+
+TrayTrigger never says your PC meets a requirement. It only warns, in the warning colour, where it is sure your PC falls short: less memory or graphics memory than the line states, a graphics card without the DirectX version the line asks for (a card that runs DirectX 12 at all counts as DirectX 12), too little free space on every drive for a game its launcher says isn't installed, or Windows 10 where the line asks for Windows 11 only. The processor and graphics card are never judged, only shown beside the game's: telling whether one chip is fast enough for another needs a benchmark list that is often wrong, so that comparison is yours to make. Many games also run fine below their minimum.
+
+Your PC's parts are read on this PC and never sent anywhere: the hardware once per run, the free space and playback device each time you open Game Details. A game whose Steam text has no lines the card recognises shows that text as it is.
 
 On the right, in this order:
 

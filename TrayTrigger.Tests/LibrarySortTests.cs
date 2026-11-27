@@ -30,6 +30,17 @@ public class LibrarySortTests
     }
 
     [Fact]
+    public void Profile_IsStrongestFirst_OrReversed_WithProfileOffLastBothWays()
+    {
+        GameEntry With(string name, PerformanceProfileMode mode) => new() { Name = name, PerformanceProfile = mode };
+        var games = new[] { With("B Off", PerformanceProfileMode.Off), With("Opt", PerformanceProfileMode.Optimized),
+            With("A Off", PerformanceProfileMode.Off), With("Agg", PerformanceProfileMode.Aggressive) };
+
+        Assert.Equal(["Agg", "Opt", "A Off", "B Off"], Sorted(LibraryViewModel.SortPerformanceProfile, false, games));
+        Assert.Equal(["Opt", "Agg", "A Off", "B Off"], Sorted(LibraryViewModel.SortPerformanceProfile, true, games));
+    }
+
+    [Fact]
     public void Playtime_AndLastPlayed_KeepNeverPlayedLast()
     {
         var day = new DateTime(2026, 11, 1);
@@ -64,6 +75,7 @@ public class LibrarySortTests
     [Theory]
     [InlineData(LibraryViewModel.ColumnTitle, LibraryViewModel.SortAlphabetical)]
     [InlineData(LibraryViewModel.ColumnCategory, LibraryViewModel.SortCategory)]
+    [InlineData(LibraryViewModel.ColumnProfile, LibraryViewModel.SortPerformanceProfile)]
     [InlineData(LibraryViewModel.ColumnPlaytime, LibraryViewModel.SortCumulativePlaytime)]
     [InlineData(LibraryViewModel.ColumnLastPlayed, LibraryViewModel.SortMostRecentlyPlayed)]
     [InlineData(LibraryViewModel.ColumnSize, LibraryViewModel.SortLargestFirst)]
@@ -93,6 +105,7 @@ public class LibrarySortTests
     [InlineData("Largest First (Size on Disk)", false, LibraryViewModel.SortLargestFirst, false)]
     [InlineData("Favorites First (Recent)", true, LibraryViewModel.SortFavoritesFirstRecent, true)]
     [InlineData("Playtime", true, LibraryViewModel.SortCumulativePlaytime, true)]
+    [InlineData("Performance Profile", true, LibraryViewModel.SortPerformanceProfile, true)]
     [InlineData("Nonsense", true, LibraryViewModel.SortAlphabetical, false)]
     [InlineData(null, false, LibraryViewModel.SortAlphabetical, false)]
     public void ASavedSort_OpensInTheSameOrder_UnderItsNewName(string? saved, bool savedReversed, string option, bool reversed)

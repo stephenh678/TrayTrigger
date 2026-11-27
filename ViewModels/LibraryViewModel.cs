@@ -102,7 +102,8 @@ public partial class LibraryViewModel : ViewModelBase
         SortFavoritesFirstRecent,
         SortMostRecentlyPlayed,
         SortCumulativePlaytime,
-        SortLargestFirst
+        SortLargestFirst,
+        SortPerformanceProfile
     };
     public ICollectionView FilteredGames { get; }
 
@@ -175,6 +176,11 @@ public partial class LibraryViewModel : ViewModelBase
         _getSteamGridDbApiKeyOrNull = getSteamGridDbApiKeyOrNull;
 
         (_selectedSortOption, _settings.LastSortReversed) = MigrateSortOption(_settings.LastSortOption, _settings.LastSortReversed);
+        DetailsListColumns.Instance.Attach(_settings.DetailsColumnWidths, widths =>
+        {
+            _settings.DetailsColumnWidths = widths;
+            _storageService.SaveSettings(_settings);
+        });
         _settings.LastSortOption = _selectedSortOption;
         if (!string.IsNullOrWhiteSpace(_settings.LastCategoryFilter))
         {
@@ -543,7 +549,11 @@ public partial class LibraryViewModel : ViewModelBase
             onRangeSelect: OnCardRangeSelect,
             // The quick settings change the game entry and nothing else, so this is the narrow
             // save - no settings.json rewrite for a menu tick.
-            onQuickSettingChanged: _ => SaveGamesOnly(),
+            onQuickSettingChanged: _ =>
+            {
+                SaveGamesOnly();
+                RefreshAfterQuickSetting();
+            },
             onToggleDlssOverride: card => _ = ToggleDlssOverrideAsync(card),
             onLaunchWithoutChanges: card => { if (!HasSelection) LaunchGame(card, withoutChanges: true); },
             onCreateShortcut: CreateGameShortcut,
