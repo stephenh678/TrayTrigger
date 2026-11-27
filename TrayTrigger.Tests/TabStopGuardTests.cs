@@ -36,6 +36,25 @@ public class TabStopGuardTests
 
     private static bool IsGroup(XElement e) => e.Attributes().Any(a => a.Name.LocalName == "FocusGroup.IsGroup" && a.Value == "True");
 
+    // The windows a controller works in (GamepadNavigator): Game Details and its Settings tab, and what the Library opens.
+    private static readonly string[] ControllerWindows =
+        { "GameDetailsDialog.xaml", "GameEditPanel.xaml", "LibraryView.xaml", "QuickInputDialog.xaml", "CollectionsDialog.xaml", "GameMatchPickerDialog.xaml" };
+
+    [Fact]
+    public void ControllerSkipsEveryButtonThatOpensAWindowsPicker()
+    {
+        // Browse..., Choose image and New script open Windows' own file pickers, which a controller can't work or close.
+        var opensPicker = new Regex(@"\{Binding (\w+\.)?(Browse\w*|Choose\w*|New\w*Script)Command\}");
+        var missing = ControllerWindows
+            .Select(name => Path.Combine(RepoRoot, "Views", name))
+            .SelectMany(file => XDocument.Load(file).Descendants()
+                .Where(e => (string?)e.Attribute("Command") is { } command && opensPicker.IsMatch(command))
+                .Where(e => !e.Attributes().Any(a => a.Name.LocalName == "GamepadNavigator.Skip" && a.Value == "True"))
+                .Select(e => $"{Path.GetFileName(file)}: {(string?)e.Attribute("Command")}"))
+            .ToList();
+        Assert.True(missing.Count == 0, "Add views:GamepadNavigator.Skip=\"True\" to: " + string.Join(", ", missing));
+    }
+
     [Fact]
     public void EveryRowOfTabs_IsOneTabStop()
     {

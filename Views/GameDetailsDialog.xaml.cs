@@ -176,4 +176,10 @@ public partial class GameDetailsDialog : Window
     {
         Close();
     }
+
+    /// <summary>Puts focus on Play, for the controller: A opens Game Details, A again plays.</summary>
+    internal void FocusPlay()
+    {
+        if (PlayButton.IsVisible && PlayButton.IsEnabled) PlayButton.Focus();
+    }
 }

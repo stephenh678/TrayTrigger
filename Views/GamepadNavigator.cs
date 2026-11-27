@@ -46,6 +46,18 @@ public sealed class GamepadNavigator
     private GameCardViewModel? _lastGame;
     // The control last used in the bar above the games, to go back to when Up leaves the games again.
     private IInputElement? _lastTop;
+    // The window read last, to see Game Details come to the front.
+    private Window? _lastWindow;
+
+    /// <summary>
+    /// A button the controller passes over: one that opens Windows' own file or folder picker (Browse..., Choose
+    /// image, New script), which a controller can't work or close. It still clicks, and Tab still reaches it.
+    /// </summary>
+    public static readonly DependencyProperty SkipProperty = DependencyProperty.RegisterAttached(
+        "Skip", typeof(bool), typeof(GamepadNavigator), new PropertyMetadata(false));
+
+    public static bool GetSkip(DependencyObject d) => (bool)d.GetValue(SkipProperty);
+    public static void SetSkip(DependencyObject d, bool value) => d.SetValue(SkipProperty, value);
 
     public GamepadNavigator(MainViewModel main, Func<PadState?>? read = null)
     {
@@ -100,11 +112,23 @@ public sealed class GamepadNavigator
         var state = window != null ? _read() : null;
         if (window == null || state == null)
         {
+            _lastWindow = window;
             _reading = false;
             _timer.Interval = IdleInterval;
             return;
         }
         _timer.Interval = ActiveInterval;
+        // Game Details just came to the front with nothing in it focused (opened with A, or from the keyboard):
+        // Play, so A again plays. Not when focus is already inside it (it came back to the front, or a prompt closed).
+        if (window != _lastWindow)
+        {
+            _lastWindow = window;
+            if (window is GameDetailsDialog details && !(Keyboard.FocusedElement is DependencyObject f && IsInside(f, details)))
+            {
+                MarkKeyboardAsLastInput();
+                details.FocusPlay();
+            }
+        }
         long now = _clock.ElapsedMilliseconds;
         if (!_reading)
         {
@@ -251,8 +275,10 @@ public sealed class GamepadNavigator
                 if (inside && focused is UIElement element) element.MoveFocus(request);
                 else if (inside && focused is ContentElement content) content.MoveFocus(request);
                 else window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                SkipPast(request.FocusNavigationDirection, inside ? focused : null);
                 break;
             case PadAction.Accept:
+                if (focused is ButtonBase { } skipped && GetSkip(skipped)) break; // reached with Tab or the mouse: not pressed
                 if (focused is ButtonBase button) Press(button);
                 else if (inside && focused is Hyperlink) SendKey(Key.Enter); // a link opens on Enter
                 else if (!inside) window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
@@ -296,6 +322,20 @@ public sealed class GamepadNavigator
             case PadAction.Back or PadAction.Menu:
                 SendKey(Key.Escape);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// After a move: on past any button marked <see cref="SkipProperty"/>, the same way. If there is nothing past it,
+    /// focus goes back to where it was (or, with nowhere to go back to, stays put).
+    /// </summary>
+    private static void SkipPast(FocusNavigationDirection direction, DependencyObject? from)
+    {
+        for (int i = 0; i < 10 && Keyboard.FocusedElement is UIElement now && GetSkip(now); i++)
+        {
+            if (now.MoveFocus(new TraversalRequest(direction)) && !ReferenceEquals(Keyboard.FocusedElement, now)) continue;
+            if (from is IInputElement back) Keyboard.Focus(back);
+            return;
         }
     }
 

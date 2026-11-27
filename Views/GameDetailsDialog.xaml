@@ -234,7 +234,7 @@
                         <!-- Actions -->
                         <DockPanel Margin="0,12,0,0" LastChildFill="True">
                             <WrapPanel Orientation="Horizontal">
-                                <Button AutomationProperties.Name="Play" Command="{Binding LaunchGameCommand}"
+                                <Button x:Name="PlayButton" AutomationProperties.Name="Play" Command="{Binding LaunchGameCommand}"
                                         Style="{StaticResource ModernAccentButton}" Padding="22,8" Margin="0,0,10,6"
                                         FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSubhead}"
                                         ToolTip="Launch this game">

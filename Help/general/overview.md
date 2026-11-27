@@ -72,7 +72,7 @@ Turn on **Use a game controller in the Library** in Settings > Library & Art > L
 
 On a PlayStation controller, Cross is A, Circle is B, Square is X, Options is Menu, and L1 and R1 are LB and RB.
 
-In Game Details the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld.
+Game Details opens with Play selected, so A on a game and A again plays it. There the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld, and the controller passes over its Browse..., Choose image and New script buttons: they open Windows' own file pickers, which a controller can't use.
 
 What it doesn't do:
 

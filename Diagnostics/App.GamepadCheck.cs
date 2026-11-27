@@ -252,10 +252,36 @@ public partial class App
             {
                 timed.Stop();
                 report.AppendLine($"  in front: {Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)?.GetType().Name ?? "none"}");
+                report.AppendLine($"  on open      -> {Focus()} (should be Play)");
                 for (int i = 0; i < 3; i++)
                 {
                     Hold(XInputReader.DPadDown);
                     report.AppendLine($"  Down         -> {Focus()}");
+                }
+                // The Settings tab, walked with the D-pad: it must never land on a Browse... or New script button
+                // (they open Windows' file pickers, which a controller can't work or close).
+                if (Current.Windows.OfType<GameDetailsDialog>().FirstOrDefault() is { DataContext: GameDetailsViewModel detailsVm })
+                {
+                    detailsVm.SelectedTab = GameDetailsTab.Settings;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(400));
+                    var reached = new System.Collections.Generic.HashSet<object>();
+                    int skipped = 0;
+                    foreach (var dir in new[] { XInputReader.DPadDown, XInputReader.DPadRight, XInputReader.DPadDown, XInputReader.DPadLeft })
+                        for (int i = 0; i < 12; i++)
+                        {
+                            pad = new PadState(dir, 0, 0);
+                            PumpDispatcher(TimeSpan.FromMilliseconds(90));
+                            pad = default;
+                            PumpDispatcher(TimeSpan.FromMilliseconds(90));
+                            if (Keyboard.FocusedElement is DependencyObject now)
+                            {
+                                reached.Add(now);
+                                if (GamepadNavigator.GetSkip(now)) skipped++;
+                            }
+                        }
+                    report.AppendLine($"  Settings tab: {reached.Count} controls reached, on a Browse/New button {skipped} times (should be 0)");
+                    detailsVm.SelectedTab = GameDetailsTab.Overview;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
                 }
                 Hold(XInputReader.B);
                 foreach (var dlg in Current.Windows.OfType<GameDetailsDialog>().ToList())
