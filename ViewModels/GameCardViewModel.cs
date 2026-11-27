@@ -265,15 +265,11 @@ public class GameCardViewModel : ViewModelBase
     public bool IsSteamGame => Game.IsSteamGame;
     public bool ForceSteamOverlayTag => Game.ForceSteamOverlayTag;
     public bool HasSteamOverlay => Game.HasSteamOverlay;
-    public bool IsGogGame => Game.IsGogGame;
-    public bool IsEaGame => Game.IsEaGame;
-    public bool IsEpicGame => Game.IsEpicGame;
-    public bool IsUbisoftGame => Game.IsUbisoftGame;
-    public bool IsXboxGame => Game.IsXboxGame;
-    public bool IsBattleNetGame => Game.IsBattleNetGame;
-    public bool IsRockstarGame => Game.IsRockstarGame;
-    public bool IsAmazonGame => Game.IsAmazonGame;
-    public bool IsItchGame => Game.IsItchGame;
+    /// <summary>The one launcher badge this card shows in every view (LauncherBadgePill and the
+    /// poster's logo), picked in the same order as the placeholder category.</summary>
+    public LauncherBadge LauncherBadge => LauncherLogos.BadgeFor(Game);
+    public string LauncherLogoUri => LauncherLogos.PackUriFor(LauncherBadge);
+    public string LauncherBadgeLabel => LauncherLogos.ShortLabelFor(LauncherBadge);
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
@@ -652,15 +648,9 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsSteamGame));
         OnPropertyChanged(nameof(ForceSteamOverlayTag));
         OnPropertyChanged(nameof(HasSteamOverlay));
-        OnPropertyChanged(nameof(IsGogGame));
-        OnPropertyChanged(nameof(IsEaGame));
-        OnPropertyChanged(nameof(IsEpicGame));
-        OnPropertyChanged(nameof(IsUbisoftGame));
-        OnPropertyChanged(nameof(IsXboxGame));
-        OnPropertyChanged(nameof(IsBattleNetGame));
-        OnPropertyChanged(nameof(IsRockstarGame));
-        OnPropertyChanged(nameof(IsAmazonGame));
-        OnPropertyChanged(nameof(IsItchGame));
+        OnPropertyChanged(nameof(LauncherBadge));
+        OnPropertyChanged(nameof(LauncherLogoUri));
+        OnPropertyChanged(nameof(LauncherBadgeLabel));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));

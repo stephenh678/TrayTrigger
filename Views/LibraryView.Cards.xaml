@@ -233,4 +233,79 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
+
+    <!-- ==================================================================== -->
+    <!-- LAUNCHER BADGE PILL (Tiles and Details List)                         -->
+    <!-- One pill per card from GameCardViewModel.LauncherBadge: the logo, the -->
+    <!-- short name and the launcher's colours. A new launcher needs a        -->
+    <!-- LauncherBadge value, its logo and label in LauncherLogos, and a      -->
+    <!-- trigger here only if it has its own colours.                         -->
+    <!-- ==================================================================== -->
+    <Style x:Key="LauncherBadgePill" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Steam}">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Gog}">
+                <Setter Property="Background" Value="{DynamicResource BrushBadgePurpleWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ea}">
+                <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ubisoft}">
+                <Setter Property="Background" Value="{DynamicResource BrushWarningWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Xbox}">
+                <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.BattleNet}">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- The pill's name. Same size and weight as App.xaml's BadgeText. -->
+    <Style x:Key="LauncherBadgeText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBadge}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Text" Value="{Binding LauncherBadgeLabel}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Steam}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Gog}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushBadgePurple}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ea}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushSuccessText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Ubisoft}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushGold}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Xbox}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushSuccessText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.BattleNet}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushInfoText}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Local}">
+                <Setter Property="Foreground" Value="{DynamicResource BrushTextSoft}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- The pill's logo; a Local pill is the name alone. -->
+    <Style x:Key="LauncherBadgeLogo" TargetType="Image">
+        <Setter Property="Source" Value="{Binding LauncherLogoUri}"/>
+        <Setter Property="Height" Value="11"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding LauncherBadge}" Value="{x:Static services:LauncherBadge.Local}">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
 </ResourceDictionary>
