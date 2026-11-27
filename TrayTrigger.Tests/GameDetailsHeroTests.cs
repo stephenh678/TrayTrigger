@@ -301,9 +301,9 @@ public class GameDetailsHeroTests : IDisposable
     }
 
     [Theory]
-    [InlineData(920, 297)]    // the window as it opens: the whole 3840x1240 banner
+    [InlineData(920, 230)]    // the window as it opens: with the tabs under it, the backdrop is about the banner's 3.1:1
     [InlineData(600, 210)]    // narrower: the floor that holds the name and the buttons
-    [InlineData(1400, 320)]   // wider: the ceiling that leaves the page below room to work
+    [InlineData(1400, 300)]   // wider: the ceiling that leaves the page below room to work
     [InlineData(double.NaN, 210)]
     public void TheHero_GrowsWithTheWindow_BetweenAFloorAndACeiling(double width, double expected)
     {

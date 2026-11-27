@@ -104,22 +104,18 @@
         </Grid.RowDefinitions>
 
         <!-- ============================================================== -->
-        <!-- 1. HERO: THE GAME'S ART BEHIND ITS NAME, FIGURES AND ACTIONS   -->
-        <!-- The same on both tabs, so the top of the page never moves when you switch. -->
+        <!-- 1. HERO: THE GAME'S ART AS THE TOP OF THE PAGE                 -->
+        <!-- The art runs edge to edge behind the name, the figures and the tabs, and fades into the window's own
+             background, so it reads as the page's backdrop rather than a box on it. The same on both tabs, so the top
+             of the page never moves when you switch. -->
         <!-- ============================================================== -->
-        <Border Grid.Row="0" Margin="0,0,0,12" CornerRadius="{DynamicResource RadiusCard}" BorderThickness="1"
-                BorderBrush="{DynamicResource BrushBorder}" Background="{DynamicResource BrushBackground}"
-                MinHeight="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource RatioHeightConverter}, ConverterParameter='0.323,210,320'}">
-            <!-- The banners are about 3.1:1 (3840x1240, 1920x620), so the hero keeps that shape, between 210 and 320: at the window's opening
-                 size the whole banner shows; wider than that, the art is cropped from the bottom, under the fade, and the page below keeps its room. -->
-            <Border.Clip>
-                <MultiBinding Converter="{StaticResource RoundedClipConverter}"><Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}"/><Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/><Binding Path="CornerRadius" RelativeSource="{RelativeSource Self}"/><Binding Path="BorderThickness" RelativeSource="{RelativeSource Self}"/></MultiBinding>
-            </Border.Clip>
-            <Grid>
-                <!-- Until the game's banner is found (or when there is none): its atmosphere, the blurred poster
-                     (RAWG's screenshot when that source is showing). A brush, not an Image: a picture would size
-                     the hero to itself, and a brush takes no room. -->
-                <Border Style="{StaticResource HeroFallbackLayer}">
+        <!-- The backdrop: rows 0 and 1 (the hero and the tabs), out to the window's edges past the page's margin. -->
+        <Grid Grid.Row="0" Grid.RowSpan="2" Margin="-20,-16,-20,0" IsHitTestVisible="False">
+            <!-- Until the game's banner is found (or when there is none): its atmosphere, the blurred poster
+                 (RAWG's screenshot when that source is showing), dimmed toward the window's colour. A brush, not an
+                 Image: a picture would size the hero to itself, and a brush takes no room. -->
+            <Border Style="{StaticResource HeroFallbackLayer}" ClipToBounds="True">
+                <Border Margin="-40">
                     <Border.Background>
                         <ImageBrush ImageSource="{Binding AmbientImage}" Stretch="UniformToFill"/>
                     </Border.Background>
@@ -127,34 +123,45 @@
                         <BlurEffect Radius="28" RenderingBias="Performance"/>
                     </Border.Effect>
                 </Border>
-                <Border Style="{StaticResource HeroFallbackLayer}" Background="{DynamicResource BrushScrim}"/>
+            </Border>
+            <Border Style="{StaticResource HeroFallbackLayer}" Background="{DynamicResource BrushSurface}" Opacity="0.55"/>
 
-                <!-- The game's banner, from Steam or SteamGridDB, kept sharp and to the right -->
-                <Border Style="{StaticResource HeroBannerLayer}" RenderOptions.BitmapScalingMode="HighQuality">
-                    <Border.Background>
-                        <ImageBrush ImageSource="{Binding HeroImage}" Stretch="UniformToFill" AlignmentX="Right" AlignmentY="Top"/>
-                    </Border.Background>
-                </Border>
-                <!-- The page's own background fades in from the left and up from the bottom, so the name, the buttons and the figures stay readable on any art and any theme. -->
-                <Border Style="{StaticResource HeroBannerLayer}" Background="{DynamicResource BrushBackground}" Opacity="0.96">
-                    <Border.OpacityMask>
-                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                            <GradientStop Color="{DynamicResource ColorMask}" Offset="0"/>
-                            <GradientStop Color="{DynamicResource ColorMask}" Offset="0.2"/>
-                            <GradientStop Color="Transparent" Offset="0.85"/>
-                        </LinearGradientBrush>
-                    </Border.OpacityMask>
-                </Border>
-                <Border Style="{StaticResource HeroBannerLayer}" Background="{DynamicResource BrushBackground}" Opacity="0.9">
-                    <Border.OpacityMask>
-                        <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                            <GradientStop Color="Transparent" Offset="0.3"/>
-                            <GradientStop Color="{DynamicResource ColorMask}" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.OpacityMask>
-                </Border>
+            <!-- The game's banner, from Steam or SteamGridDB, kept sharp and to the right -->
+            <Border Style="{StaticResource HeroBannerLayer}" RenderOptions.BitmapScalingMode="HighQuality">
+                <Border.Background>
+                    <ImageBrush ImageSource="{Binding HeroImage}" Stretch="UniformToFill" AlignmentX="Right" AlignmentY="Top"/>
+                </Border.Background>
+            </Border>
 
-                <Grid Margin="20,16">
+            <!-- The window's own colour comes in from the left, so the name and the buttons read on any art and any theme... -->
+            <Border Background="{DynamicResource BrushSurface}" Opacity="0.9">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                        <GradientStop Color="{DynamicResource ColorMask}" Offset="0"/>
+                        <GradientStop Color="{DynamicResource ColorMask}" Offset="0.12"/>
+                        <GradientStop Color="Transparent" Offset="0.7"/>
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+            </Border>
+            <!-- ...and up from the bottom, where the art fades into the page under the tabs: fully the window's colour
+                 by the time the cards start, so there is no edge. -->
+            <Border Background="{DynamicResource BrushSurface}">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="Transparent" Offset="0.35"/>
+                        <GradientStop Color="{DynamicResource ColorMask}" Offset="0.97"/>
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+            </Border>
+        </Grid>
+
+        <!-- The hero's own content over the backdrop. A little taller as the window gets wider, between 210 and 300, so
+             the backdrop (this and the tabs) keeps about the banners' 3.1:1 shape: at the window's opening size the whole
+             banner shows; wider than that, it is cropped from the bottom, where it fades out anyway. -->
+        <Border Grid.Row="0" Margin="0,0,0,12"
+                MinHeight="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource RatioHeightConverter}, ConverterParameter='0.25,210,300'}">
+            <Grid>
+                <Grid Margin="0,16,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/> <!-- Hero poster -->
                         <ColumnDefinition Width="*"/>    <!-- Name, actions, figures -->
@@ -222,23 +229,8 @@
                             </Border>
                         </WrapPanel>
 
-                        <!-- Actions, and the figures TrayTrigger records for the game -->
+                        <!-- Actions -->
                         <DockPanel Margin="0,12,0,0" LastChildFill="True">
-                            <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="16,0,0,0">
-                                <StackPanel Margin="22,0,0,0">
-                                    <TextBlock Text="Played" Style="{StaticResource HeroFigureLabel}"/>
-                                    <TextBlock Text="{Binding PlayedStat}" Style="{StaticResource HeroFigureValue}"/>
-                                </StackPanel>
-                                <StackPanel Margin="22,0,0,0">
-                                    <TextBlock Text="Last played" Style="{StaticResource HeroFigureLabel}"/>
-                                    <TextBlock Text="{Binding LastPlayedStat}" Style="{StaticResource HeroFigureValue}"/>
-                                </StackPanel>
-                                <StackPanel Margin="22,0,0,0">
-                                    <TextBlock Text="Profile" Style="{StaticResource HeroFigureLabel}"/>
-                                    <TextBlock Text="{Binding ProfileStat}" Style="{StaticResource HeroFigureValue}"/>
-                                </StackPanel>
-                            </WrapPanel>
-
                             <WrapPanel Orientation="Horizontal">
                                 <Button AutomationProperties.Name="Play" Command="{Binding LaunchGameCommand}"
                                         Style="{StaticResource ModernAccentButton}" Padding="22,8" Margin="0,0,10,6"
@@ -269,14 +261,12 @@
                                         <TextBlock Text="Force Close" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button AutomationProperties.Name="{Binding FavoriteButtonLabel}" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
-                                        Margin="0,0,10,6" VerticalAlignment="Center"/>
                                 <!-- The actions a player reaches for rarely: playing without TrayTrigger's settings, the
                                      launcher's own Verify, Repair and Uninstall (Open in <launcher>), the files, store
                                      pages, and Remove. -->
                                 <Button x:Name="MoreButton" AutomationProperties.Name="More actions" Click="OpenMenu_Click"
                                         Style="{StaticResource ModernOutlineButton}" Padding="12,8" Margin="0,0,0,6" FontSize="{DynamicResource FontSizeBody}"
-                                        ToolTip="Play Without Changes, the game's launcher and files, store pages, and Remove from library">
+                                        ToolTip="Play Without Changes, the game's launcher and files, store pages, Favorites, and Remove from library">
                                     <TextBlock Text="&#xE712;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center"/>
                                     <Button.ContextMenu>
                                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
@@ -297,6 +287,7 @@
                                             <MenuItem Header="Open the PCGamingWiki Page" Command="{Binding OpenPcGamingWikiCommand}"
                                                       Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"/>
                                             <Separator/>
+                                            <MenuItem Header="{Binding FavoriteButtonLabel}" Command="{Binding ToggleFavoriteCommand}"/>
                                             <MenuItem Header="Remove from Library" Command="{Binding DeleteGameCommand}" Foreground="{DynamicResource BrushDanger}"/>
                                         </ContextMenu>
                                     </Button.ContextMenu>
@@ -311,14 +302,31 @@
         <!-- ============================================================== -->
         <!-- 2. TABS                                                        -->
         <!-- ============================================================== -->
-        <Border Grid.Row="1" Margin="0,0,0,14" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1"
-                Visibility="{Binding CanEdit, Converter={StaticResource BoolToVis}}">
-            <StackPanel Orientation="Horizontal">
+        <!-- The tabs on the left, and on the right the figures TrayTrigger records for the game, their values on the tabs' line. -->
+        <Border Grid.Row="1" Margin="0,0,0,14" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1">
+            <DockPanel>
+            <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="16,0,0,8">
+                <StackPanel Margin="22,0,0,0">
+                    <TextBlock Text="Played" Style="{StaticResource HeroFigureLabel}"/>
+                    <TextBlock Text="{Binding PlayedStat}" Style="{StaticResource HeroFigureValue}"/>
+                </StackPanel>
+                <StackPanel Margin="22,0,0,0">
+                    <TextBlock Text="Last played" Style="{StaticResource HeroFigureLabel}"/>
+                    <TextBlock Text="{Binding LastPlayedStat}" Style="{StaticResource HeroFigureValue}"/>
+                </StackPanel>
+                <StackPanel Margin="22,0,0,0">
+                    <TextBlock Text="Profile" Style="{StaticResource HeroFigureLabel}"/>
+                    <TextBlock Text="{Binding ProfileStat}" Style="{StaticResource HeroFigureValue}"/>
+                </StackPanel>
+            </WrapPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom"
+                        Visibility="{Binding CanEdit, Converter={StaticResource BoolToVis}}">
                 <Button Content="Overview" Command="{Binding SelectTabCommand}" CommandParameter="Overview"
                         Style="{StaticResource UnderlineTabButton}" Tag="{Binding IsOverviewTab}"/>
                 <Button Content="Settings" Command="{Binding SelectTabCommand}" CommandParameter="Settings" Margin="22,0,0,0"
                         Style="{StaticResource UnderlineTabButton}" Tag="{Binding IsSettingsTab}"/>
             </StackPanel>
+            </DockPanel>
         </Border>
 
         <!-- ============================================================== -->
