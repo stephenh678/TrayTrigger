@@ -160,6 +160,7 @@ public sealed class GamepadNavigator
 
     private void Perform(PadAction action, Window window)
     {
+        MarkKeyboardAsLastInput();
         var focused = Keyboard.FocusedElement as DependencyObject;
 
         // An open menu (the right-click menu on a game, a drop-down) takes the keys as it would from the keyboard.
@@ -318,6 +319,29 @@ public sealed class GamepadNavigator
         var peer = UIElementAutomationPeer.CreatePeerForElement(button);
         if (peer?.GetPattern(PatternInterface.Toggle) is IToggleProvider toggle) toggle.Toggle();
         else if (peer?.GetPattern(PatternInterface.Invoke) is IInvokeProvider invoke) invoke.Invoke();
+    }
+
+    // InputManager.MostRecentInputDevice has an internal setter only; null if a later WPF drops it.
+    private static readonly System.Reflection.MethodInfo? SetMostRecentInputDevice =
+        typeof(InputManager).GetProperty(nameof(InputManager.MostRecentInputDevice))?.GetSetMethod(nonPublic: true);
+    private static bool _ringUnavailableLogged;
+
+    /// <summary>
+    /// WPF draws the focus ring only while the keyboard was the last input, and keys sent through its input manager
+    /// don't count as that, so focus moved from the controller showed no ring and you couldn't see where you were.
+    /// The keyboard is made the last input before each press, as the controller stands in for it; the mouse, used
+    /// again, hides the ring as it always does.
+    /// </summary>
+    private static void MarkKeyboardAsLastInput()
+    {
+        if (InputManager.Current.MostRecentInputDevice is KeyboardDevice) return;
+        if (SetMostRecentInputDevice == null)
+        {
+            if (!_ringUnavailableLogged) LoggingService.Info("Controller", "Can't show the focus ring for the controller in this WPF version");
+            _ringUnavailableLogged = true;
+            return;
+        }
+        SetMostRecentInputDevice.Invoke(InputManager.Current, new object[] { Keyboard.PrimaryDevice });
     }
 
     /// <summary>A key press and release sent to the focused element through WPF's input, as the keyboard would send it.</summary>

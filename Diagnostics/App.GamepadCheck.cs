@@ -53,7 +53,12 @@ public partial class App
                 string where = Window.GetWindow(f)?.GetType().Name ?? "a popup";
                 string game = f.DataContext is GameCardViewModel g ? $" game {games.IndexOf(g)}" : "";
                 string text = (f as ContentControl)?.Content as string ?? System.Windows.Automation.AutomationProperties.GetName(f);
-                return $"{f.GetType().Name} '{f.Name}' {text}{game} in {where}";
+                // The focus ring is an adorner WPF draws only while the keyboard is the last input: without it nothing shows where focus is.
+                var nav = typeof(KeyboardNavigation).GetProperty("Current", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                var adorner = nav?.GetType().GetField("_focusVisualAdornerCache", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(nav) as System.Windows.Documents.Adorner;
+                bool ring = adorner != null && ReferenceEquals(adorner.AdornedElement, f) && adorner.IsVisible;
+                string last = InputManager.Current.MostRecentInputDevice?.GetType().Name ?? "none";
+                return $"{f.GetType().Name} '{f.Name}' {text}{game} in {where} [{(ring ? "ring" : "NO RING")}, last {last}]";
             }
             void Press(string label, ushort buttons, short lx = 0)
             {
