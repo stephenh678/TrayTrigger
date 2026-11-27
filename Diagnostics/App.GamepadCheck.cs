@@ -138,6 +138,45 @@ public partial class App
             input.ShowDialog();
             report.AppendLine($"  closed, DialogResult={(input.DialogResult?.ToString() ?? "null")}");
 
+            // The same through the navigator's own timer, as a real controller is read: Game Details opened with A must
+            // go on being read (a DispatcherTimer doesn't fire again until its Tick returns, and A opens it modally).
+            report.AppendLine("## Game Details through the timer");
+            main.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModePosterGrid;
+            Settle(window);
+            window.LibraryPage.FocusGames();
+            Settle(window);
+            void Hold(ushort buttons)
+            {
+                pad = new PadState(buttons, 0, 0);
+                PumpDispatcher(TimeSpan.FromMilliseconds(200));
+                pad = default;
+                PumpDispatcher(TimeSpan.FromMilliseconds(200));
+            }
+            var timed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            timed.Tick += (_, _) =>
+            {
+                timed.Stop();
+                report.AppendLine($"  in front: {Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)?.GetType().Name ?? "none"}");
+                for (int i = 0; i < 3; i++)
+                {
+                    Hold(XInputReader.DPadDown);
+                    report.AppendLine($"  Down         -> {Focus()}");
+                }
+                Hold(XInputReader.B);
+                foreach (var dlg in Current.Windows.OfType<GameDetailsDialog>().ToList())
+                {
+                    report.AppendLine("  Game Details still open after B: closing it");
+                    dlg.Close();
+                }
+            };
+            navigator.RunTimerForTest(true);
+            PumpDispatcher(TimeSpan.FromMilliseconds(200));
+            timed.Start();
+            Hold(XInputReader.A);
+            PumpDispatcher(TimeSpan.FromSeconds(4), () => !Current.Windows.OfType<GameDetailsDialog>().Any() && !timed.IsEnabled);
+            navigator.RunTimerForTest(false);
+            report.AppendLine($"  Game Details open: {Current.Windows.OfType<GameDetailsDialog>().Any()}");
+
             File.WriteAllText(outPath, report.ToString());
         }
         catch (Exception ex)
@@ -160,6 +199,31 @@ public partial class App
                 }
             }
         }
+        ExitApplication();
+    }
+
+    /// <summary>
+    /// --test-controllers &lt;out.txt&gt; [seconds]: reads the real controllers for a few seconds (5 by default), XInput
+    /// and PlayStation on their own and as the navigator combines them, and lists each change. Press buttons while it
+    /// runs to see what they read as.
+    /// </summary>
+    private void RunControllersCheck(string outPath, int seconds)
+    {
+        var report = new StringBuilder();
+        var xinput = new XInputReader();
+        var playStation = new PlayStationReader();
+        var combined = GamepadNavigator.Combine(xinput.Read, playStation.Read);
+        string? last = null;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        while (clock.Elapsed < TimeSpan.FromSeconds(seconds))
+        {
+            string Show(PadState? s) => s is { } p ? $"buttons {p.Buttons:X4} stick {p.LeftX},{p.LeftY}" : "none";
+            string line = $"XInput {Show(xinput.Read())} | PlayStation {Show(playStation.Read())} | combined {Show(combined())}";
+            if (line != last) report.AppendLine($"{clock.ElapsedMilliseconds,6} ms  {line}");
+            last = line;
+            System.Threading.Thread.Sleep(33);
+        }
+        File.WriteAllText(outPath, report.ToString());
         ExitApplication();
     }
 }

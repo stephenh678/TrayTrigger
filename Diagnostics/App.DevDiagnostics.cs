@@ -3627,6 +3627,13 @@ public partial class App
                 return;
             }
 
+            // --test-controllers <out.txt> [seconds]: what the real controllers report, XInput and PlayStation (App.GamepadCheck.cs).
+            if (e.Args[i].Equals("--test-controllers", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunControllersCheck(e.Args[i + 1], i + 2 < e.Args.Length && int.TryParse(e.Args[i + 2], out int seconds) ? seconds : 5);
+                return;
+            }
+
             // --test-tab-order <out.txt>: every Tab stop in the Library's views and Game Details (App.TabOrderCheck.cs).
             if (e.Args[i].Equals("--test-tab-order", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

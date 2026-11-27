@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -25,7 +26,8 @@ namespace TrayTrigger.Views;
 /// <item>A: Enter on a game (Game Details), or presses the focused button. B: Esc (back, close, clear).</item>
 /// <item>X: plays the focused game. Menu (Start): its right-click menu. LB / RB: the previous or next category tab.</item>
 /// </list>
-/// Nothing is read while any other window (a game included) is in front, and the keys only ever go to
+/// Xbox controllers and handhelds are read through XInput, PlayStation controllers (DualShock 4, DualSense) through
+/// HID. Nothing is read while any other window (a game included) is in front, and the keys only ever go to
 /// TrayTrigger's own windows: nothing is sent to Windows or to another program.
 /// </summary>
 public sealed class GamepadNavigator
@@ -46,7 +48,7 @@ public sealed class GamepadNavigator
     public GamepadNavigator(MainViewModel main, Func<PadState?>? read = null)
     {
         _main = main;
-        _read = read ?? new XInputReader().Read;
+        _read = read ?? Combine(new XInputReader().Read, new PlayStationReader().Read);
         _timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = IdleInterval };
         _timer.Tick += (_, _) => Tick();
         main.SettingsVM.PropertyChanged += OnSettingChanged;
@@ -62,6 +64,27 @@ public sealed class GamepadNavigator
     {
         _reading = false;
         if (_main.SettingsVM.ControllerNavigation) _timer.Start();
+        else _timer.Stop();
+    }
+
+    /// <summary>
+    /// Xbox controllers (and handhelds) through XInput and PlayStation controllers through HID, as one: the buttons
+    /// held on either, and the stick of the first that has one pushed. Null only when neither has a controller.
+    /// </summary>
+    internal static Func<PadState?> Combine(Func<PadState?> first, Func<PadState?> second) => () =>
+    {
+        PadState? a = first(), b = second();
+        if (a is not { } x) return b;
+        if (b is not { } y) return x;
+        bool xStick = x.LeftX != 0 || x.LeftY != 0;
+        return new PadState((ushort)(x.Buttons | y.Buttons), xStick ? x.LeftX : y.LeftX, xStick ? x.LeftY : y.LeftY);
+    };
+
+    /// <summary>Runs the navigator's own timer whatever the setting says, for the diagnostics.</summary>
+    internal void RunTimerForTest(bool run)
+    {
+        _reading = false;
+        if (run) _timer.Start();
         else _timer.Stop();
     }
 
@@ -84,8 +107,19 @@ public sealed class GamepadNavigator
             _reading = true;
             return;
         }
+        var actions = _input.Update(state.Value, now);
+        if (actions.Count == 0) return;
+        // Acted on just after this reading, not inside it: a DispatcherTimer doesn't fire again until its Tick has
+        // returned, and A on a game opens Game Details modally, so a press acted on in here would leave the
+        // controller unread for as long as Game Details stayed open.
+        window.Dispatcher.BeginInvoke(DispatcherPriority.Input, () => PerformAll(actions, window));
+    }
+
+    private void PerformAll(IReadOnlyList<PadAction> actions, Window window)
+    {
+        if (TargetWindow() != window) return; // another window came to the front in between
         int reading = ++_readings;
-        foreach (var action in _input.Update(state.Value, now))
+        foreach (var action in actions)
         {
             try
             {

@@ -1091,7 +1091,7 @@
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
                             <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,0" TextWrapping="Wrap">
-                                <Run Text="An Xbox-style controller, or a handheld's built-in controls, moves around the Library and Game Details while TrayTrigger is the window in front: the D-pad or left stick moves, A opens or presses, B goes back, X plays, Menu opens a game's menu, and LB and RB switch category tabs. Nothing is read while a game or any other window is in front."/>
+                                <Run Text="An Xbox or PlayStation controller, or a handheld's built-in controls, moves around the Library and Game Details while TrayTrigger is the window in front: the D-pad or left stick moves, A opens or presses, B goes back, X plays, Menu opens a game's menu, and LB and RB switch category tabs. Nothing is read while a game or any other window is in front."/>
                                 <Hyperlink Style="{StaticResource InlineHelpLink}" CommandParameter="general/overview" AutomationProperties.Name="Learn more about using a controller">Learn more</Hyperlink>
                             </TextBlock>
 

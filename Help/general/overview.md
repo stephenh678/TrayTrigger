@@ -55,7 +55,7 @@ The Details List is a list: Up and Down move a row, and Enter and Ctrl+Enter wor
 
 ## Using a game controller
 
-Turn on **Use a game controller in the Library** in Settings > Library & Art > Library View. An Xbox-style controller, or a handheld's built-in controls (ROG Ally, Legion Go and the like), then moves around the Library and Game Details, and the windows they open:
+Turn on **Use a game controller in the Library** in Settings > Library & Art > Library View. An Xbox controller, a PlayStation controller (DualShock 4, DualSense, DualSense Edge; wired or Bluetooth), or a handheld's built-in controls (ROG Ally, Legion Go and the like), then moves around the Library and Game Details, and the windows they open:
 
 - **D-pad or left stick** - move between games, in any view. Hold it to keep moving. The first press, when no game is picked, goes to the game you were last on, or the first.
 - **A** - open the game's Game Details. In Game Details, or on a button, it presses the button that is outlined.
@@ -64,12 +64,14 @@ Turn on **Use a game controller in the Library** in Settings > Library & Art > L
 - **Menu** (the button with three lines) - the game's right-click menu. Move through it with the D-pad, A to choose, B to close.
 - **LB and RB** - the previous and next category tab.
 
+On a PlayStation controller, Cross is A, Circle is B, Square is X, Options is Menu, and L1 and R1 are LB and RB.
+
 In Game Details the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld.
 
 What it doesn't do:
 
 - **Nothing is read while a game, or any other program, is in front.** The controller is read only while the Library, Game Details or a window they opened (Change Category, Collections, a prompt) is the window in front, so a press in a game never reaches TrayTrigger. A button already held when TrayTrigger comes to the front does nothing until it is let go.
-- **It only moves around TrayTrigger.** It sends nothing to Windows or to other programs, and it doesn't stop Steam, Game Bar or a handheld's own software from seeing the controller too.
+- **It only moves around TrayTrigger.** It sends nothing to Windows or to other programs, and it doesn't stop Steam, Game Bar or a handheld's own software from seeing the controller too. Nothing is sent to a PlayStation controller either: its lights, rumble and mode are left as they are.
 - **Other pages** (Tools, Activity, System, Settings, About) and the tray menu still need a mouse, touch or the keyboard.
 - **Handhelds in a mouse mode.** A handheld set to make its controls work as a mouse and keyboard (a "desktop mode") may not appear to Windows as a controller, and then this setting has nothing to read; in that mode the D-pad may already work as the arrow keys above. Switch the handheld to its controller (gamepad) mode to use this setting.
 
