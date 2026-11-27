@@ -22,6 +22,18 @@ These three are under Settings > Launching > Launching Games.
 - **Keep game launchers minimized when launching a game** asks Steam, GOG Galaxy and Epic to start quietly, so only the game opens. See How a game is launched.
 - **Show a launch popup by the tray icon** shows a small popup by the clock when a game is started from the tray or a hotkey: what it is waiting for, and the reason if the launch fails. See How the tray menu works.
 
+## Using the Library from the keyboard
+
+In the Poster Grid, Extra Large and Compact Icons views, press Tab until a game has its outline, then:
+
+- **Arrow keys** move to the next game, as in File Explorer. Left and Right carry on to the row above or below; Down from a row with nothing under it goes to the last game.
+- **Home** and **End** go to the first and last game, and **Page Up** and **Page Down** move a screenful of rows.
+- **Enter** opens Game Details, and **Ctrl+Enter** plays the game.
+- **The menu key** (or Shift+F10) opens the game's right-click menu, or the batch menu when the game is one of several selected.
+- **Tab** also reaches the game's Play button; the arrow keys from there move to the next game, as from the game itself.
+
+The Details List is a list: Up and Down move a row, and Enter and Ctrl+Enter work the same.
+
 ## Search and filter
 
 Three ways to find something, named for what they do. A **filter** (Library, Tools and Activity) narrows the list you are looking at to what matches. A **page search** (Settings, About and System) finds a card on any tab of that page and takes you to it. **Search everything** looks in all of them at once. Ctrl+F puts the cursor in the filter or search box of the page you are on, Ctrl+K opens Search everything, and Esc clears or closes either.

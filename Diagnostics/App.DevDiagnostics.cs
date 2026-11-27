@@ -3613,6 +3613,13 @@ public partial class App
                 return;
             }
 
+            // --test-card-keys <out.txt>: arrow keys, Home, End and Page Down in each card view (App.CardKeysCheck.cs).
+            if (e.Args[i].Equals("--test-card-keys", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunCardKeysCheck(e.Args[i + 1]);
+                return;
+            }
+
             // --test-layout-audit <out.txt>: text cut off and elements clipped on each page and dialog (App.LayoutAudit.cs).
             if (e.Args[i].Equals("--test-layout-audit", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

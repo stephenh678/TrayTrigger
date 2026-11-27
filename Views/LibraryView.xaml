@@ -460,7 +460,7 @@
                            </Border>
 
                            <!-- ScrollViewer for WrapPanel Views (View 1: Poster Cards & View 2: Compact Icons) -->
-                           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                           <ScrollViewer x:Name="CardScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PreviewKeyDown="OnCardGridKeyDown">
                                <ScrollViewer.Style>
                                    <Style TargetType="ScrollViewer">
                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -484,7 +484,7 @@
                                    <!-- them for the larger pair. Compact Icons and the Details List    -->
                                    <!-- are different designs and stay separate.                        -->
                                    <!-- ============================================================== -->
-                                   <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
+                                   <ItemsControl x:Name="PosterItems" ItemsSource="{Binding FilteredGames}" Focusable="False">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>
@@ -1028,7 +1028,7 @@
                                    <!-- ============================================================== -->
                                    <!-- VIEW 2: COMPACT ICONS VIEW                                     -->
                                    <!-- ============================================================== -->
-                                   <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
+                                   <ItemsControl x:Name="IconItems" ItemsSource="{Binding FilteredGames}" Focusable="False">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>
