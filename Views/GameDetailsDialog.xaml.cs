@@ -52,6 +52,7 @@ public partial class GameDetailsDialog : Window
             Activate();
             _ = _viewModel.LoadInstallDriveAsync();
             _ = _viewModel.LoadInstallSizeAsync();
+            _ = _viewModel.LoadPcSummaryAsync();
         };
         Closed += (s, e) => _viewModel.StopBackgroundWork();
     }

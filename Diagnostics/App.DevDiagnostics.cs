@@ -4048,6 +4048,13 @@ public partial class App
                 });
                 vm.Details = sampleDetails;
                 vm.IsLoading = false;
+                // "recommended": the requirements card on its Recommended list.
+                if (e.Args.Any(a => a.Equals("recommended", StringComparison.OrdinalIgnoreCase))) vm.IsShowingRecommendedReqs = true;
+                // The requirements card's "Yours" lines come from a background read; let it finish so the capture shows them.
+                var pcRead = vm.LoadPcSummaryAsync();
+                var pcFrame = new System.Windows.Threading.DispatcherFrame();
+                pcRead.ContinueWith(_ => pcFrame.Continue = false, TaskScheduler.Default);
+                System.Windows.Threading.Dispatcher.PushFrame(pcFrame);
 
                 var dlg = new GameDetailsDialog(vm);
                 WaitForHero(dlg);

@@ -184,7 +184,7 @@ public partial class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasPlayModes));
                 OnPropertyChanged(nameof(GenresDisplay));
                 OnPropertyChanged(nameof(HasRequirements));
-                OnPropertyChanged(nameof(CurrentRequirementsText));
+                NotifyRequirementsChanged();
                 OnPropertyChanged(nameof(HasNews));
                 OnPropertyChanged(nameof(NewsItems));
                 OnPropertyChanged(nameof(StoreUrl));
@@ -520,8 +520,7 @@ public partial class GameDetailsViewModel : ViewModelBase
             if (_isShowingRecommendedReqs != value)
             {
                 _isShowingRecommendedReqs = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(CurrentRequirementsText));
+                NotifyRequirementsChanged();
             }
         }
     }
