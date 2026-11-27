@@ -564,6 +564,12 @@ public partial class GameDetailsViewModel : ViewModelBase
 
     public ICommand OpenPcGamingWikiCommand { get; }
 
+    /// <summary>An itch.io game's page on itch.io, from the receipt the itch app keeps (itch has no page address
+    /// built from the game's id alone).</summary>
+    public bool HasItchPage => Game.IsItchGame && Uri.TryCreate(Game.ItchUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+    public ICommand OpenItchPageCommand { get; }
+
     public ICommand LaunchGameCommand { get; }
     /// <summary>Play Without Changes, from the ... menu: the game starts once with none of its settings applied.</summary>
     public ICommand LaunchWithoutChangesCommand { get; }
@@ -584,7 +590,7 @@ public partial class GameDetailsViewModel : ViewModelBase
     /// <summary>"Open in Steam" and so on: the launcher's own page for the game, where it keeps Verify, Repair and
     /// Uninstall (see <see cref="LauncherPages"/>). Null, which hides the item, for a game with no launcher or one
     /// whose launcher isn't installed. Read when the page opens.</summary>
-    public string? OpenInLauncherLabel { get; }
+    public string? OpenInLauncherLabel { get; private set; }
     public bool HasOpenInLauncher => OpenInLauncherLabel != null;
     public ICommand OpenInLauncherCommand { get; }
 
@@ -682,6 +688,7 @@ public partial class GameDetailsViewModel : ViewModelBase
         VerifyFilesCommand = new RelayCommand(() => SteamScannerService.VerifyGameFiles(Game.SteamAppId!), () => CanVerifyFiles);
         OpenFileLocationCommand = new RelayCommand(() => GameFolder.Open(Game, "GameDetails"));
         OpenPcGamingWikiCommand = new RelayCommand(() => ExecuteOpenUrl(PcGamingWikiUrl), () => HasPcGamingWikiPage);
+        OpenItchPageCommand = new RelayCommand(() => ExecuteOpenUrl(Game.ItchUrl), () => HasItchPage);
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
         OpenNewsHubCommand = new RelayCommand(() => ExecuteOpenUrl(NewsHubUrl), () => HasNewsHub);
         ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);

@@ -563,7 +563,7 @@ public sealed class BackupService
         return roots;
     }
 
-    /// <summary>Where GOG Galaxy, the EA app, Epic, Ubisoft Connect, the Rockstar Games Launcher and Amazon Games say each game is installed now.</summary>
+    /// <summary>Where GOG Galaxy, the EA app, Epic, Ubisoft Connect, the Rockstar Games Launcher, Amazon Games and the itch app say each game is installed now.</summary>
     private static IReadOnlyDictionary<(LauncherPlatform, string), (string, string?)> ReadLauncherInstalls()
     {
         var installs = new Dictionary<(LauncherPlatform, string), (string, string?)>();
@@ -587,6 +587,8 @@ public sealed class BackupService
         Read(LauncherPlatform.Ubisoft, () => new UbisoftScannerService().ScanInstalledGames([]).Select(g => (g.GameId, g.InstallDir, g.ExePath)));
         Read(LauncherPlatform.Rockstar, () => new RockstarScannerService().ScanInstalledGames([]).Select(g => (g.GameId, g.InstallDir, g.ExePath)));
         Read(LauncherPlatform.Amazon, () => new AmazonScannerService().ScanInstalledGames([]).Select(g => (g.GameId, g.InstallDir, g.ExePath)));
+        // An itch game's working folder is its exe's (see ImportItchGamesAsync), so that is the folder handed back.
+        Read(LauncherPlatform.Itch, () => new ItchScannerService().ScanInstalledGames([]).Select(g => (g.GameId, Path.GetDirectoryName(g.ExePath) ?? g.InstallDir, g.ExePath)));
         return installs;
     }
 }

@@ -7,6 +7,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 ## 2.0.0
 
 - **Amazon Games** - Scan for Games now finds your Amazon Games and launches them through the Amazon Games app.
+- **itch.io** - Scan for Games now finds games installed with the itch app, and starts them without the app needing to be open.
 - **Repair a game** - Game Details' ... menu opens the game in its launcher, where Verify, Repair and Uninstall are.
 - **One line for categories and collections** - Collections now sit beside the category tabs. When they don't both fit, drag the divider between them to give either side more room.
 - **Tab arrows** - When the tabs don't fit, arrows at each end scroll them.

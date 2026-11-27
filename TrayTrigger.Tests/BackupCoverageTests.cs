@@ -34,6 +34,7 @@ public class BackupCoverageTests
         ["library-cache.json"] = "the new Epic launcher's own cache, read for game titles; not TrayTrigger's",
         ["installerdata.xml"] = "Ubisoft Connect's own file, which TrayTrigger only reads",
         ["fuel.json"] = "each Amazon game's own file in its install folder, read for the game's exe; not TrayTrigger's",
+        ["preferences.json"] = "the itch app's own settings, read for its install locations; not TrayTrigger's",
     };
 
     private static string RepoRoot

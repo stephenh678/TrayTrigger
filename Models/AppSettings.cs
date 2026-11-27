@@ -44,6 +44,7 @@ public class AppSettings
     public bool BattleNetIntegrationEnabled { get; set; } = true;
     public bool RockstarIntegrationEnabled { get; set; } = true;
     public bool AmazonIntegrationEnabled { get; set; } = true;
+    public bool ItchIntegrationEnabled { get; set; } = true;
     /// <summary>
     /// "Keep game launchers minimized when launching a game": each launcher's own start-quietly switch.
     /// Steam cold-starts with -silent, Epic gets its silent launch link, and GOG Galaxy starts with

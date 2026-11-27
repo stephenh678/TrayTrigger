@@ -99,7 +99,7 @@ public partial class App
         Dialog("Collections", new CollectionsDialog("Collections", "Pick a collection, or type a new one, and press Add.", new[] { new TrayTrigger.ViewModels.CollectionChoice("Co-op", true), new TrayTrigger.ViewModels.CollectionChoice("Kids", null) }, _ => null, "No collections yet.", "Not in any collection."));
         Dialog("Edit Tool", new ToolEditDialog(new ToolEntry { Name = "Audit Tool", TargetPath = @"C:\Windows\notepad.exe" }, new[] { "Mods" }, _iconExtractorService));
         Dialog("Edit Theme", new ThemeEditDialog(new TrayTrigger.ViewModels.ThemeEditorViewModel(TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance)));
-        Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new(), new(), new()));
+        Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new(), new(), new(), new()));
         Dialog("Welcome", new WelcomeDialog());
 
         File.WriteAllText(outPath, report.ToString());

@@ -173,6 +173,7 @@ public sealed class LibraryFilterViewModel : FilterFlyoutViewModel
         (LauncherPlatform.BattleNet, "Battle.net"),
         (LauncherPlatform.Rockstar, "Rockstar"),
         (LauncherPlatform.Amazon, "Amazon Games"),
+        (LauncherPlatform.Itch, "itch.io"),
     ];
 
     /// <summary>
@@ -192,6 +193,7 @@ public sealed class LibraryFilterViewModel : FilterFlyoutViewModel
         if (game.IsBattleNetGame) return LauncherPlatform.BattleNet;
         if (game.IsRockstarGame) return LauncherPlatform.Rockstar;
         if (game.IsAmazonGame) return LauncherPlatform.Amazon;
+        if (game.IsItchGame) return LauncherPlatform.Itch;
         return null;
     }
 

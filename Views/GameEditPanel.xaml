@@ -384,19 +384,23 @@
                                                 Visibility="{Binding CanConvertToLocal, Converter={StaticResource BoolToVis}}"
                                                 Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="{DynamicResource FontSizeBody}"/>
                                     </DockPanel>
-                                    <!-- Hidden for Xbox / Game Pass entries (a GDK exe can't run outside its package) and Battle.net
-                                         entries (the game needs the sign-in token only the client passes). -->
+                                    <!-- Hidden for Xbox / Game Pass entries (a GDK exe can't run outside its package), Battle.net
+                                         entries (the game needs the sign-in token only the client passes) and itch.io entries
+                                         (always launched directly). -->
                                     <StackPanel Visibility="{Binding CanOfferLaunchDirectly, Converter={StaticResource BoolToVis}}">
                                         <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
                                                   Style="{StaticResource ModernCheckBox}"/>
                                         <TextBlock Text="{Binding LaunchDirectlyHint}"
                                                    FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     </StackPanel>
-                                    <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
-                                              Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"
-                                              ToolTip="For Steam, this also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears."/>
-                                    <TextBlock Text="Frees the memory a client keeps after you stop playing. Leave it off if you keep the client open for downloads or chat."
-                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                    <!-- Hidden for itch.io entries: the itch app isn't involved in starting the game. -->
+                                    <StackPanel Visibility="{Binding CanOfferCloseLauncher, Converter={StaticResource BoolToVis}}">
+                                        <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"
+                                                  ToolTip="For Steam, this also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears."/>
+                                        <TextBlock Text="Frees the memory a client keeps after you stop playing. Leave it off if you keep the client open for downloads or chat."
+                                                   FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 

@@ -35,6 +35,7 @@ public partial class ImportCoordinator : ViewModelBase
     private readonly BattleNetScannerService _battleNetScannerService;
     private readonly RockstarScannerService _rockstarScannerService;
     private readonly AmazonScannerService _amazonScannerService;
+    private readonly ItchScannerService _itchScannerService;
     private readonly PlatformLookupService _platformLookup;
     private readonly SteamSearchService _steamSearchService;
     private readonly SteamMetadataService _steamMetadataService;
@@ -64,7 +65,7 @@ public partial class ImportCoordinator : ViewModelBase
 
     public bool CanRefreshAllPosters => !IsRefreshingAllPosters;
 
-    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<DiscoveredBattleNetGame>, List<DiscoveredRockstarGame>, List<DiscoveredAmazonGame>, List<GameCandidate>>? RequestScanResultsPicker;
+    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<DiscoveredBattleNetGame>, List<DiscoveredRockstarGame>, List<DiscoveredAmazonGame>, List<DiscoveredItchGame>, List<GameCandidate>>? RequestScanResultsPicker;
     public event Action<string, List<GameCandidate>>? RequestCandidatePicker;
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
     /// <summary>
@@ -99,10 +100,12 @@ public partial class ImportCoordinator : ViewModelBase
         AppSettings settings,
         Func<string?> getSteamGridDbApiKeyOrNull,
         RockstarScannerService? rockstarScannerService = null,
-        AmazonScannerService? amazonScannerService = null)
+        AmazonScannerService? amazonScannerService = null,
+        ItchScannerService? itchScannerService = null)
     {
         _rockstarScannerService = rockstarScannerService ?? new RockstarScannerService();
         _amazonScannerService = amazonScannerService ?? new AmazonScannerService();
+        _itchScannerService = itchScannerService ?? new ItchScannerService();
         _library = library;
         _shortcutService = shortcutService;
         _iconExtractorService = iconExtractorService;
@@ -126,7 +129,7 @@ public partial class ImportCoordinator : ViewModelBase
         _ubisoftScannerService = ubisoftScannerService;
         _xboxScannerService = xboxScannerService;
         _battleNetScannerService = battleNetScannerService;
-        _platformLookup = new PlatformLookupService(steamScannerService, gogScannerService, eaScannerService, epicScannerService, ubisoftScannerService, xboxScannerService, battleNetScannerService, _rockstarScannerService, _amazonScannerService);
+        _platformLookup = new PlatformLookupService(steamScannerService, gogScannerService, eaScannerService, epicScannerService, ubisoftScannerService, xboxScannerService, battleNetScannerService, _rockstarScannerService, _amazonScannerService, _itchScannerService);
         _steamSearchService = steamSearchService;
         _steamMetadataService = steamMetadataService;
         _storageService = storageService;
@@ -751,8 +754,9 @@ public partial class ImportCoordinator : ViewModelBase
         public List<DiscoveredBattleNetGame> BattleNet { get; } = [];
         public List<DiscoveredRockstarGame> Rockstar { get; } = [];
         public List<DiscoveredAmazonGame> Amazon { get; } = [];
+        public List<DiscoveredItchGame> Itch { get; } = [];
 
-        public bool IsEmpty => Steam.Count == 0 && Gog.Count == 0 && Ea.Count == 0 && Epic.Count == 0 && Ubisoft.Count == 0 && Xbox.Count == 0 && BattleNet.Count == 0 && Rockstar.Count == 0 && Amazon.Count == 0;
+        public bool IsEmpty => Steam.Count == 0 && Gog.Count == 0 && Ea.Count == 0 && Epic.Count == 0 && Ubisoft.Count == 0 && Xbox.Count == 0 && BattleNet.Count == 0 && Rockstar.Count == 0 && Amazon.Count == 0 && Itch.Count == 0;
 
         // Every exe path that led to a given platform record ("Steam|440" -> {the dropped exe,
         // the record's own exe}) - so an existing Local entry can be matched by whichever exe
@@ -832,6 +836,12 @@ public partial class ImportCoordinator : ViewModelBase
                 Remember("Amazon", a.GameId, a.ExePath, sourceExePath);
                 if (!Amazon.Any(g => g.GameId.Equals(a.GameId, StringComparison.OrdinalIgnoreCase)))
                     Amazon.Add(a.ExePath == null ? a with { ExePath = sourceExePath, IconPath = a.IconPath ?? sourceExePath } : a);
+            }
+            else if (match.Itch is { } i)
+            {
+                Remember("itch.io", i.GameId, i.ExePath, sourceExePath);
+                if (!Itch.Any(g => g.GameId.Equals(i.GameId, StringComparison.OrdinalIgnoreCase)))
+                    Itch.Add(i.ExePath == null ? i with { ExePath = sourceExePath, IconPath = i.IconPath ?? sourceExePath } : i);
             }
         }
     }
@@ -986,6 +996,17 @@ public partial class ImportCoordinator : ViewModelBase
                 if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.AmazonCategory;
             });
 
+        upgraded += UpgradeBucket(buckets.Itch, "itch.io", d => d.GameId, null,
+            (game, d) =>
+            {
+                game.IsItchGame = true;
+                game.ImportedFrom = LauncherPlatform.Itch;
+                game.ItchGameId = d.GameId;
+                game.ItchUrl ??= d.StoreUrl;
+                if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = Path.GetDirectoryName(game.ExecutablePath) ?? d.InstallDir;
+                if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.ItchCategory;
+            });
+
         if (upgraded > 0)
         {
             _library.RebuildCategories();
@@ -1057,7 +1078,7 @@ public partial class ImportCoordinator : ViewModelBase
         // before any leg runs, so they can't be duplicated by the ID-only dedup in the legs.
         var linked = new Dictionary<string, int>();
         int upgraded = 0;
-        foreach (var (platform, before) in new[] { ("Steam", buckets.Steam.Count), ("GOG", buckets.Gog.Count), ("EA", buckets.Ea.Count), ("Epic", buckets.Epic.Count), ("Ubisoft", buckets.Ubisoft.Count), ("Xbox", buckets.Xbox.Count), ("Battle.net", buckets.BattleNet.Count), ("Rockstar", buckets.Rockstar.Count), ("Amazon", buckets.Amazon.Count) })
+        foreach (var (platform, before) in new[] { ("Steam", buckets.Steam.Count), ("GOG", buckets.Gog.Count), ("EA", buckets.Ea.Count), ("Epic", buckets.Epic.Count), ("Ubisoft", buckets.Ubisoft.Count), ("Xbox", buckets.Xbox.Count), ("Battle.net", buckets.BattleNet.Count), ("Rockstar", buckets.Rockstar.Count), ("Amazon", buckets.Amazon.Count), ("itch.io", buckets.Itch.Count) })
         {
             linked[platform] = before;
         }
@@ -1071,6 +1092,7 @@ public partial class ImportCoordinator : ViewModelBase
         linked["Battle.net"] -= buckets.BattleNet.Count;
         linked["Rockstar"] -= buckets.Rockstar.Count;
         linked["Amazon"] -= buckets.Amazon.Count;
+        linked["itch.io"] -= buckets.Itch.Count;
 
         int steamAdded = buckets.Steam.Count > 0 ? await ImportSteamGamesAsync(buckets.Steam, announceProgress: false) : 0;
         int gogAdded = buckets.Gog.Count > 0 ? await ImportGogGamesAsync(buckets.Gog, announceProgress: false) : 0;
@@ -1081,13 +1103,14 @@ public partial class ImportCoordinator : ViewModelBase
         int battleNetAdded = buckets.BattleNet.Count > 0 ? await ImportBattleNetGamesAsync(buckets.BattleNet, announceProgress: false) : 0;
         int rockstarAdded = buckets.Rockstar.Count > 0 ? await ImportRockstarGamesAsync(buckets.Rockstar, announceProgress: false) : 0;
         int amazonAdded = buckets.Amazon.Count > 0 ? await ImportAmazonGamesAsync(buckets.Amazon, announceProgress: false) : 0;
+        int itchAdded = buckets.Itch.Count > 0 ? await ImportItchGamesAsync(buckets.Itch, announceProgress: false) : 0;
 
-        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0 || battleNetAdded < 0 || rockstarAdded < 0 || amazonAdded < 0)
+        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0 || battleNetAdded < 0 || rockstarAdded < 0 || amazonAdded < 0 || itchAdded < 0)
         {
             return new PlatformImportResult(-1, upgraded, string.Empty);
         }
 
-        var parts = new List<string>(10);
+        var parts = new List<string>(11);
         void Describe(string platform, int added)
         {
             if (added > 0) parts.Add($"{added} via {platform}");
@@ -1102,8 +1125,9 @@ public partial class ImportCoordinator : ViewModelBase
         Describe("Battle.net", battleNetAdded);
         Describe("Rockstar", rockstarAdded);
         Describe("Amazon", amazonAdded);
+        Describe("itch.io", itchAdded);
 
-        return new PlatformImportResult(steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded + battleNetAdded + rockstarAdded + amazonAdded, upgraded, string.Join(", ", parts));
+        return new PlatformImportResult(steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded + battleNetAdded + rockstarAdded + amazonAdded + itchAdded, upgraded, string.Join(", ", parts));
     }
 
     private void AddGameBrowse()

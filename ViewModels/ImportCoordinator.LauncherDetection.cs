@@ -41,6 +41,7 @@ public partial class ImportCoordinator
         Probe(Views.DetectedLauncher.BattleNet, "Battle.net", () => _battleNetScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
         Probe(Views.DetectedLauncher.Rockstar, "Rockstar Games Launcher", () => _rockstarScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
         Probe(Views.DetectedLauncher.Amazon, "Amazon Games", () => _amazonScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Itch, "itch.io", () => _itchScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
 
         LastProbedLaunchers = probed;
         LoggingService.Info("ImportCoordinator", detected.Count == 0
@@ -84,6 +85,7 @@ public partial class ImportCoordinator
         Views.DetectedLauncher.BattleNet => _settings.BattleNetIntegrationEnabled,
         Views.DetectedLauncher.Rockstar => _settings.RockstarIntegrationEnabled,
         Views.DetectedLauncher.Amazon => _settings.AmazonIntegrationEnabled,
+        Views.DetectedLauncher.Itch => _settings.ItchIntegrationEnabled,
         _ => false
     };
 
@@ -154,7 +156,7 @@ public partial class ImportCoordinator
         // and skipped, not deleted), so they must not count towards "something to scan".
         bool anySteamLibrary = _settings.SteamIntegrationEnabled && enabledLocations.Any(l => l.Source == ScanLocationSource.Steam);
         bool anyManualFolder = enabledLocations.Any(l => l.Source != ScanLocationSource.Steam);
-        if (!anySteamLibrary && !anyManualFolder && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled && !_settings.XboxIntegrationEnabled && !_settings.BattleNetIntegrationEnabled && !_settings.RockstarIntegrationEnabled && !_settings.AmazonIntegrationEnabled)
+        if (!anySteamLibrary && !anyManualFolder && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled && !_settings.XboxIntegrationEnabled && !_settings.BattleNetIntegrationEnabled && !_settings.RockstarIntegrationEnabled && !_settings.AmazonIntegrationEnabled && !_settings.ItchIntegrationEnabled)
         {
             if (!silent)
             {
@@ -217,6 +219,10 @@ public partial class ImportCoordinator
                 .Where(g => g.Game.IsAmazonGame && !string.IsNullOrEmpty(g.Game.AmazonGameId))
                 .Select(g => g.Game.AmazonGameId!)
                 .ToList();
+            var existingItchGameIds = _library.Games
+                .Where(g => g.Game.IsItchGame && !string.IsNullOrEmpty(g.Game.ItchGameId))
+                .Select(g => g.Game.ItchGameId!)
+                .ToList();
             var existingExePaths = new HashSet<string>(_library.Games.Select(g => g.Game.ExecutablePath), StringComparer.OrdinalIgnoreCase);
             // Which entry holds each App ID, for the log only: "already in library" is no answer when
             // the user cannot see the game - it may be hidden, or a folder entry matched to that ID.
@@ -256,6 +262,9 @@ public partial class ImportCoordinator
             var ignoredAmazonGameIds = new HashSet<string>(
                 _settings.IgnoredGamePaths.Where(p => p.AmazonGameId != null).Select(p => p.AmazonGameId!),
                 StringComparer.OrdinalIgnoreCase);
+            var ignoredItchGameIds = new HashSet<string>(
+                _settings.IgnoredGamePaths.Where(p => p.ItchGameId != null).Select(p => p.ItchGameId!),
+                StringComparer.OrdinalIgnoreCase);
 
             var steamLocations = _settings.SteamIntegrationEnabled
                 ? enabledLocations.Where(l => l.Source == ScanLocationSource.Steam).ToList()
@@ -269,6 +278,7 @@ public partial class ImportCoordinator
             bool battleNetEnabled = _settings.BattleNetIntegrationEnabled;
             bool rockstarEnabled = _settings.RockstarIntegrationEnabled;
             bool amazonEnabled = _settings.AmazonIntegrationEnabled;
+            bool itchEnabled = _settings.ItchIntegrationEnabled;
 
             // Each platform's scan hits its own independent registry/filesystem locations, so
             // they run concurrently rather than one after another.
@@ -362,6 +372,11 @@ public partial class ImportCoordinator
                 () => _amazonScannerService.ScanInstalledGames(existingAmazonGameIds),
                 g => g.Name, g => g.GameId, g => g.IsAlreadyImported, g => ignoredAmazonGameIds.Contains(g.GameId), g => g.ExePath, existingExePaths));
 
+            // Same again - the receipt in each itch install folder pins its game id and title.
+            var itchTask = Task.Run(() => OfferedBy("itch.io", itchEnabled,
+                () => _itchScannerService.ScanInstalledGames(existingItchGameIds),
+                g => g.Name, g => g.GameId, g => g.IsAlreadyImported, g => ignoredItchGameIds.Contains(g.GameId), g => g.ExePath, existingExePaths));
+
             // "Platform|ID" of every platform-tagged game already in the library, so a folder
             // candidate that resolves to one of them (e.g. a GOG game found under a manual
             // "C:\GOG Games" scan location) isn't offered as new just because its exe path
@@ -378,6 +393,7 @@ public partial class ImportCoordinator
                 if (!string.IsNullOrEmpty(g.BattleNetUid)) existingPlatformKeys.Add($"Battle.net|{g.BattleNetUid}");
                 if (!string.IsNullOrEmpty(g.RockstarGameId)) existingPlatformKeys.Add($"Rockstar|{g.RockstarGameId}");
                 if (!string.IsNullOrEmpty(g.AmazonGameId)) existingPlatformKeys.Add($"Amazon|{g.AmazonGameId}");
+                if (!string.IsNullOrEmpty(g.ItchGameId)) existingPlatformKeys.Add($"itch.io|{g.ItchGameId}");
             }
 
             var folderTask = Task.Run(() =>
@@ -414,9 +430,9 @@ public partial class ImportCoordinator
                 return folderResults;
             });
 
-            await Task.WhenAll(steamTask, gogTask, eaTask, epicTask, ubisoftTask, xboxTask, battleNetTask, rockstarTask, amazonTask, folderTask).ConfigureAwait(true);
-            var (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, folderCandidates) =
-                (steamTask.Result, gogTask.Result, eaTask.Result, epicTask.Result, ubisoftTask.Result, xboxTask.Result, battleNetTask.Result, rockstarTask.Result, amazonTask.Result, folderTask.Result);
+            await Task.WhenAll(steamTask, gogTask, eaTask, epicTask, ubisoftTask, xboxTask, battleNetTask, rockstarTask, amazonTask, itchTask, folderTask).ConfigureAwait(true);
+            var (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates) =
+                (steamTask.Result, gogTask.Result, eaTask.Result, epicTask.Result, ubisoftTask.Result, xboxTask.Result, battleNetTask.Result, rockstarTask.Result, amazonTask.Result, itchTask.Result, folderTask.Result);
 
             // A game a platform scan already found in this run must not be listed a second time
             // as a folder candidate (a manual scan location that overlaps a launcher's install
@@ -431,20 +447,21 @@ public partial class ImportCoordinator
             runPlatformKeys.UnionWith(battleNetGames.Select(g => $"Battle.net|{g.Uid}"));
             runPlatformKeys.UnionWith(rockstarGames.Select(g => $"Rockstar|{g.GameId}"));
             runPlatformKeys.UnionWith(amazonGames.Select(g => $"Amazon|{g.GameId}"));
+            runPlatformKeys.UnionWith(itchGames.Select(g => $"itch.io|{g.GameId}"));
             folderCandidates = folderCandidates
                 .Where(c => c.Platform == null || !runPlatformKeys.Contains(PlatformKey(c.Platform)))
                 .DistinctBy(c => c.Platform != null ? PlatformKey(c.Platform) : c.ExePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            LoggingService.Verbose("ImportCoordinator", $"Scan found new games - Steam {steamGames.Count}, GOG {gogGames.Count}, EA {eaGames.Count}, Epic {epicGames.Count}, Ubisoft {ubisoftGames.Count}, Xbox {xboxGames.Count}, Battle.net {battleNetGames.Count}, Rockstar {rockstarGames.Count}, Amazon {amazonGames.Count}, folders {folderCandidates.Count}.");
+            LoggingService.Verbose("ImportCoordinator", $"Scan found new games - Steam {steamGames.Count}, GOG {gogGames.Count}, EA {eaGames.Count}, Epic {epicGames.Count}, Ubisoft {ubisoftGames.Count}, Xbox {xboxGames.Count}, Battle.net {battleNetGames.Count}, Rockstar {rockstarGames.Count}, Amazon {amazonGames.Count}, itch.io {itchGames.Count}, folders {folderCandidates.Count}.");
 
-            if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && xboxGames.Count == 0 && battleNetGames.Count == 0 && rockstarGames.Count == 0 && amazonGames.Count == 0 && folderCandidates.Count == 0)
+            if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && xboxGames.Count == 0 && battleNetGames.Count == 0 && rockstarGames.Count == 0 && amazonGames.Count == 0 && itchGames.Count == 0 && folderCandidates.Count == 0)
             {
                 _library.AnnounceImportResult("No new games found.");
                 return;
             }
 
-            int foundCount = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + rockstarGames.Count + amazonGames.Count + folderCandidates.Count;
+            int foundCount = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + rockstarGames.Count + amazonGames.Count + itchGames.Count + folderCandidates.Count;
             _library.StatusMessage = $"Found {foundCount} new game(s).";
             // Only the scan TrayTrigger ran by itself: a scan the user started shows its results.
             if (silent)
@@ -453,7 +470,7 @@ public partial class ImportCoordinator
                     $"The startup scan found {foundCount} new {(foundCount == 1 ? "game" : "games")}",
                     detail: "Add them with Scan for Games on the Library page.", groupKey: ScanFoundActivityKey);
             }
-            RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, folderCandidates);
+            RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates);
         }
         finally
         {

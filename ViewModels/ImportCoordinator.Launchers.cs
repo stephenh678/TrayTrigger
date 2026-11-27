@@ -13,7 +13,7 @@ using TrayTrigger.Views;
 
 namespace TrayTrigger.ViewModels;
 
-/// <summary>Scan locations and the launcher imports: Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net, Rockstar and Amazon.</summary>
+/// <summary>Scan locations and the launcher imports: Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net, Rockstar, Amazon and itch.io.</summary>
 public partial class ImportCoordinator
 {
     public bool IsScanLocation(string path)
@@ -43,9 +43,9 @@ public partial class ImportCoordinator
     /// off back-to-back (fire-and-forget) makes the second one see the first still in flight and
     /// silently no-op instead of importing anything.
     /// </summary>
-    public async Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<DiscoveredAmazonGame> amazonGames, List<GameCandidate> folderCandidates)
+    public async Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<DiscoveredAmazonGame> amazonGames, List<DiscoveredItchGame> itchGames, List<GameCandidate> folderCandidates)
     {
-        int total = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + rockstarGames.Count + amazonGames.Count + folderCandidates.Count;
+        int total = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + rockstarGames.Count + amazonGames.Count + itchGames.Count + folderCandidates.Count;
         if (total == 0) return;
 
         // announceProgress: false on every leg - each one's own "Importing N..."/"Imported N!"
@@ -53,7 +53,7 @@ public partial class ImportCoordinator
         // "Importing 1..." followed by "Importing 2...") instead of one steady running total.
         _library.StatusMessage = $"Importing {total} game(s)...";
 
-        int steamAdded, gogAdded, eaAdded, epicAdded, ubisoftAdded, xboxAdded, battleNetAdded, rockstarAdded, amazonAdded, folderAdded;
+        int steamAdded, gogAdded, eaAdded, epicAdded, ubisoftAdded, xboxAdded, battleNetAdded, rockstarAdded, amazonAdded, itchAdded, folderAdded;
 
         // One save and one hotkey rebuild for the whole selection instead of one per platform.
         using (BeginCommitBatch())
@@ -67,22 +67,23 @@ public partial class ImportCoordinator
             battleNetAdded = battleNetGames.Count > 0 ? await ImportBattleNetGamesAsync(battleNetGames, announceProgress: false) : 0;
             rockstarAdded = rockstarGames.Count > 0 ? await ImportRockstarGamesAsync(rockstarGames, announceProgress: false) : 0;
             amazonAdded = amazonGames.Count > 0 ? await ImportAmazonGamesAsync(amazonGames, announceProgress: false) : 0;
+            itchAdded = itchGames.Count > 0 ? await ImportItchGamesAsync(itchGames, announceProgress: false) : 0;
             folderAdded = folderCandidates.Count > 0 ? await ImportBatchGamesAsync(folderCandidates, announceProgress: false) : 0;
         }
 
         // -1 means that leg's import threw (already logged) rather than everything just being a
         // duplicate - don't let a real failure hide behind the same reassuring "already in your
         // library" text a legitimate all-duplicates result gets.
-        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0 || battleNetAdded < 0 || rockstarAdded < 0 || amazonAdded < 0 || folderAdded < 0)
+        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0 || battleNetAdded < 0 || rockstarAdded < 0 || amazonAdded < 0 || itchAdded < 0 || folderAdded < 0)
         {
-            int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(gogAdded, 0) + Math.Max(eaAdded, 0) + Math.Max(epicAdded, 0) + Math.Max(ubisoftAdded, 0) + Math.Max(xboxAdded, 0) + Math.Max(battleNetAdded, 0) + Math.Max(rockstarAdded, 0) + Math.Max(amazonAdded, 0) + Math.Max(folderAdded, 0);
+            int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(gogAdded, 0) + Math.Max(eaAdded, 0) + Math.Max(epicAdded, 0) + Math.Max(ubisoftAdded, 0) + Math.Max(xboxAdded, 0) + Math.Max(battleNetAdded, 0) + Math.Max(rockstarAdded, 0) + Math.Max(amazonAdded, 0) + Math.Max(itchAdded, 0) + Math.Max(folderAdded, 0);
             _library.AnnounceImportResult(addedSoFar > 0
                 ? $"Imported {addedSoFar} game(s), but part of the import failed - check the log for details."
                 : "Import failed - check the log for details.");
             return;
         }
 
-        int addedTotal = steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded + battleNetAdded + rockstarAdded + amazonAdded + folderAdded;
+        int addedTotal = steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded + battleNetAdded + rockstarAdded + amazonAdded + itchAdded + folderAdded;
         _library.AnnounceImportResult(addedTotal > 0
             ? $"Imported {addedTotal} game(s)!"
             : "All selected games are already in your library.");
@@ -401,6 +402,28 @@ public partial class ImportCoordinator
                 AmazonGameId = d.GameId,
                 Category = LibraryConstants.AmazonCategory,
                 WorkingDirectory = d.InstallDir
+            }, IconSourceOf(d.IconPath, d.ExePath)),
+            d => d.Name, announceProgress);
+
+    /// <param name="announceProgress">See the matching parameter on <see cref="ImportBatchGamesAsync"/>.</param>
+    /// <returns>The number of games actually added; 0 if none (e.g. all were duplicates); -1 if the import itself threw (logged separately - callers should not treat this the same as "0, all duplicates").</returns>
+    public async Task<int> ImportItchGamesAsync(List<DiscoveredItchGame> discoveredGames, bool announceProgress = true) =>
+        await ImportDiscoveredAsync(discoveredGames, "itch.io", "ImportItchGames",
+            (g, d) => SameId(g.ItchGameId, d.GameId),
+            d => (new GameEntry
+            {
+                Name = d.Name,
+                // Always launched from this exe (see GameEntry.IsItchGame).
+                ExecutablePath = d.ExePath ?? string.Empty,
+                IsItchGame = true,
+                ImportedFrom = LauncherPlatform.Itch,
+                ItchGameId = d.GameId,
+                ItchUrl = d.StoreUrl,
+                Category = LibraryConstants.ItchCategory,
+                // The exe's own folder, which is where the itch app starts it too: an itch game's exe often
+                // sits a folder or two below the install, and some games find their files from the working
+                // folder. The session is tracked under it.
+                WorkingDirectory = Path.GetDirectoryName(d.ExePath) ?? d.InstallDir
             }, IconSourceOf(d.IconPath, d.ExePath)),
             d => d.Name, announceProgress);
 }

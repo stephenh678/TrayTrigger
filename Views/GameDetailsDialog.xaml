@@ -282,6 +282,8 @@
                                                       Visibility="{Binding CanOpenFileLocation, Converter={StaticResource BoolToVis}}"/>
                                             <MenuItem Header="Open the Steam Store Page" Command="{Binding OpenStorePageCommand}"
                                                       Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"/>
+                                            <MenuItem Header="Open the itch.io Page" Command="{Binding OpenItchPageCommand}"
+                                                      Visibility="{Binding HasItchPage, Converter={StaticResource BoolToVis}}"/>
                                             <MenuItem Header="Open This Game on RAWG" Command="{Binding OpenRawgPageCommand}"
                                                       Visibility="{Binding HasRawgPage, Converter={StaticResource BoolToVis}}"/>
                                             <MenuItem Header="Open the PCGamingWiki Page" Command="{Binding OpenPcGamingWikiCommand}"

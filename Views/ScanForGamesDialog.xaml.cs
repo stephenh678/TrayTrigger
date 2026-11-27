@@ -13,13 +13,13 @@ namespace TrayTrigger.Views;
 /// </summary>
 public partial class ScanForGamesDialog : Window
 {
-    public ScanForGamesDialog(MainViewModel mainViewModel, List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<DiscoveredAmazonGame> amazonGames, List<GameCandidate> folderCandidates)
+    public ScanForGamesDialog(MainViewModel mainViewModel, List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<DiscoveredAmazonGame> amazonGames, List<DiscoveredItchGame> itchGames, List<GameCandidate> folderCandidates)
     {
         InitializeComponent();
         TrayTrigger.Services.WindowSizeMemory.Attach(this, "ScanForGames");
         WindowThemeService.PrepareForFirstShow(this);
 
-        var vm = new ScanForGamesViewModel(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, folderCandidates,
+        var vm = new ScanForGamesViewModel(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, rockstarGames, amazonGames, itchGames, folderCandidates,
             onIgnoreCandidate: c => mainViewModel.IgnoreGamePath(c.ExePath, c.Name),
             onIgnoreSteamGame: g => mainViewModel.IgnoreSteamGame(g.AppId, g.Name),
             onIgnoreGogGame: g => mainViewModel.IgnoreGogGame(g.GameId, g.Name),
@@ -29,11 +29,12 @@ public partial class ScanForGamesDialog : Window
             onIgnoreXboxGame: g => mainViewModel.IgnoreXboxGame(g.Aumid, g.Name),
             onIgnoreBattleNetGame: g => mainViewModel.IgnoreBattleNetGame(g.Uid, g.Name),
             onIgnoreRockstarGame: g => mainViewModel.IgnoreRockstarGame(g.GameId, g.Name),
-            onIgnoreAmazonGame: g => mainViewModel.IgnoreAmazonGame(g.GameId, g.Name));
+            onIgnoreAmazonGame: g => mainViewModel.IgnoreAmazonGame(g.GameId, g.Name),
+            onIgnoreItchGame: g => mainViewModel.IgnoreItchGame(g.GameId, g.Name));
 
-        vm.ImportConfirmed += (selectedSteamGames, selectedGogGames, selectedEaGames, selectedEpicGames, selectedUbisoftGames, selectedXboxGames, selectedBattleNetGames, selectedRockstarGames, selectedAmazonGames, selectedFolderCandidates) =>
+        vm.ImportConfirmed += (selectedSteamGames, selectedGogGames, selectedEaGames, selectedEpicGames, selectedUbisoftGames, selectedXboxGames, selectedBattleNetGames, selectedRockstarGames, selectedAmazonGames, selectedItchGames, selectedFolderCandidates) =>
         {
-            _ = mainViewModel.ImportScanResultsAsync(selectedSteamGames, selectedGogGames, selectedEaGames, selectedEpicGames, selectedUbisoftGames, selectedXboxGames, selectedBattleNetGames, selectedRockstarGames, selectedAmazonGames, selectedFolderCandidates);
+            _ = mainViewModel.ImportScanResultsAsync(selectedSteamGames, selectedGogGames, selectedEaGames, selectedEpicGames, selectedUbisoftGames, selectedXboxGames, selectedBattleNetGames, selectedRockstarGames, selectedAmazonGames, selectedItchGames, selectedFolderCandidates);
         };
 
         Owner = WindowHelper.ActiveOwner();

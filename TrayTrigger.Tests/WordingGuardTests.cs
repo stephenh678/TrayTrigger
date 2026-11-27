@@ -30,6 +30,9 @@ public class WordingGuardTests
         "Where this info comes from",
     };
 
+    // Names their owners write in lower case, which stay that way in a Title Case label.
+    private static readonly HashSet<string> LowerCaseNames = new(StringComparer.Ordinal) { "itch.io" };
+
     [Fact]
     public void OldNamesForPuttingBack_AreGone()
     {
@@ -165,7 +168,7 @@ public class WordingGuardTests
         if (NotCommands.Contains(label)) return true;
         string command = Regex.Replace(label, @"\([^)]*\)", string.Empty).Replace("_", string.Empty);
         var words = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return words.Skip(1).All(w => SmallWords.Contains(w) || !char.IsLower(w[0]));
+        return words.Skip(1).All(w => SmallWords.Contains(w) || LowerCaseNames.Contains(w) || !char.IsLower(w[0]));
     }
 
     private static int LineOf(string text, int index) => text.AsSpan(0, index).Count('\n') + 1;

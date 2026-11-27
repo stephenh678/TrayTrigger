@@ -34,10 +34,11 @@ public class ScannedGameItemViewModel : ViewModelBase
     public DiscoveredBattleNetGame? BattleNetGame { get; }
     public DiscoveredRockstarGame? RockstarGame { get; }
     public DiscoveredAmazonGame? AmazonGame { get; }
+    public DiscoveredItchGame? ItchGame { get; }
     public GameCandidate? FolderCandidate { get; }
 
-    public string Name => SteamGame?.Name ?? GogGame?.Name ?? EaGame?.Name ?? EpicGame?.Name ?? UbisoftGame?.Name ?? XboxGame?.Name ?? BattleNetGame?.Name ?? RockstarGame?.Name ?? AmazonGame?.Name ?? FolderCandidate!.Name;
-    public string PathDisplay => SteamGame?.InstallDir ?? GogGame?.InstallDir ?? EaGame?.InstallDir ?? EpicGame?.InstallDir ?? UbisoftGame?.InstallDir ?? XboxGame?.InstallDir ?? BattleNetGame?.InstallDir ?? RockstarGame?.InstallDir ?? AmazonGame?.InstallDir ?? FolderCandidate!.DisplayPath;
+    public string Name => SteamGame?.Name ?? GogGame?.Name ?? EaGame?.Name ?? EpicGame?.Name ?? UbisoftGame?.Name ?? XboxGame?.Name ?? BattleNetGame?.Name ?? RockstarGame?.Name ?? AmazonGame?.Name ?? ItchGame?.Name ?? FolderCandidate!.Name;
+    public string PathDisplay => SteamGame?.InstallDir ?? GogGame?.InstallDir ?? EaGame?.InstallDir ?? EpicGame?.InstallDir ?? UbisoftGame?.InstallDir ?? XboxGame?.InstallDir ?? BattleNetGame?.InstallDir ?? RockstarGame?.InstallDir ?? AmazonGame?.InstallDir ?? ItchGame?.InstallDir ?? FolderCandidate!.DisplayPath;
 
     /// <summary>Pack URI to the same launcher logo used on poster cards and the first-launch
     /// picker - a folder-scanned candidate has no launcher, so it gets the generic "Local Games"
@@ -51,6 +52,7 @@ public class ScannedGameItemViewModel : ViewModelBase
         : BattleNetGame != null ? "pack://application:,,,/Assets/LauncherLogos/battlenet.png"
         : RockstarGame != null ? "pack://application:,,,/Assets/LauncherLogos/rockstar_games.png"
         : AmazonGame != null ? "pack://application:,,,/Assets/LauncherLogos/amazon_games.png"
+        : ItchGame != null ? "pack://application:,,,/Assets/LauncherLogos/itchio.png"
         : "pack://application:,,,/Assets/LauncherLogos/local_games.png";
 
     /// <summary>Raised when the user clicks "Ignore" - the parent VM removes this row and persists the ignore.</summary>
@@ -139,6 +141,13 @@ public class ScannedGameItemViewModel : ViewModelBase
         LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(amazonGame.IconPath));
     }
 
+    public ScannedGameItemViewModel(DiscoveredItchGame itchGame)
+    {
+        IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
+        ItchGame = itchGame;
+        LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(itchGame.IconPath));
+    }
+
     public ScannedGameItemViewModel(GameCandidate candidate)
     {
         IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
@@ -181,7 +190,7 @@ public class ScanForGamesViewModel : ViewModelBase
     public ObservableCollection<ScannedGameItemViewModel> Results { get; } = new();
     public ICollectionView FilteredResults { get; }
 
-    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<DiscoveredBattleNetGame>, List<DiscoveredRockstarGame>, List<DiscoveredAmazonGame>, List<GameCandidate>>? ImportConfirmed;
+    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<DiscoveredBattleNetGame>, List<DiscoveredRockstarGame>, List<DiscoveredAmazonGame>, List<DiscoveredItchGame>, List<GameCandidate>>? ImportConfirmed;
     public event Action? RequestClose;
 
     public ICommand SelectAllCommand { get; }
@@ -199,11 +208,13 @@ public class ScanForGamesViewModel : ViewModelBase
     private readonly Action<DiscoveredBattleNetGame> _onIgnoreBattleNetGame;
     private readonly Action<DiscoveredRockstarGame> _onIgnoreRockstarGame;
     private readonly Action<DiscoveredAmazonGame> _onIgnoreAmazonGame;
+    private readonly Action<DiscoveredItchGame> _onIgnoreItchGame;
 
-    public ScanForGamesViewModel(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<DiscoveredAmazonGame> amazonGames, List<GameCandidate> folderCandidates,
-        Action<GameCandidate> onIgnoreCandidate, Action<DiscoveredSteamGame> onIgnoreSteamGame, Action<DiscoveredGogGame> onIgnoreGogGame, Action<DiscoveredEaGame> onIgnoreEaGame, Action<DiscoveredEpicGame> onIgnoreEpicGame, Action<DiscoveredUbisoftGame> onIgnoreUbisoftGame, Action<DiscoveredXboxGame> onIgnoreXboxGame, Action<DiscoveredBattleNetGame> onIgnoreBattleNetGame, Action<DiscoveredRockstarGame> onIgnoreRockstarGame, Action<DiscoveredAmazonGame> onIgnoreAmazonGame)
+    public ScanForGamesViewModel(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<DiscoveredRockstarGame> rockstarGames, List<DiscoveredAmazonGame> amazonGames, List<DiscoveredItchGame> itchGames, List<GameCandidate> folderCandidates,
+        Action<GameCandidate> onIgnoreCandidate, Action<DiscoveredSteamGame> onIgnoreSteamGame, Action<DiscoveredGogGame> onIgnoreGogGame, Action<DiscoveredEaGame> onIgnoreEaGame, Action<DiscoveredEpicGame> onIgnoreEpicGame, Action<DiscoveredUbisoftGame> onIgnoreUbisoftGame, Action<DiscoveredXboxGame> onIgnoreXboxGame, Action<DiscoveredBattleNetGame> onIgnoreBattleNetGame, Action<DiscoveredRockstarGame> onIgnoreRockstarGame, Action<DiscoveredAmazonGame> onIgnoreAmazonGame, Action<DiscoveredItchGame> onIgnoreItchGame)
     {
         _onIgnoreAmazonGame = onIgnoreAmazonGame;
+        _onIgnoreItchGame = onIgnoreItchGame;
         _onIgnoreBattleNetGame = onIgnoreBattleNetGame;
         _onIgnoreRockstarGame = onIgnoreRockstarGame;
         _onIgnoreCandidate = onIgnoreCandidate;
@@ -263,6 +274,12 @@ public class ScanForGamesViewModel : ViewModelBase
             Results.Add(item);
         }
         foreach (var g in amazonGames)
+        {
+            var item = new ScannedGameItemViewModel(g);
+            item.IgnoreRequested += OnItemIgnoreRequested;
+            Results.Add(item);
+        }
+        foreach (var g in itchGames)
         {
             var item = new ScannedGameItemViewModel(g);
             item.IgnoreRequested += OnItemIgnoreRequested;
@@ -354,6 +371,10 @@ public class ScanForGamesViewModel : ViewModelBase
         {
             _onIgnoreAmazonGame(item.AmazonGame);
         }
+        else if (item.ItchGame != null)
+        {
+            _onIgnoreItchGame(item.ItchGame);
+        }
 
         item.IgnoreRequested -= OnItemIgnoreRequested;
         Results.Remove(item);
@@ -402,12 +423,13 @@ public class ScanForGamesViewModel : ViewModelBase
         var selectedBattleNet = Results.Where(r => r.IsSelected && r.BattleNetGame != null).Select(r => r.BattleNetGame!).ToList();
         var selectedRockstar = Results.Where(r => r.IsSelected && r.RockstarGame != null).Select(r => r.RockstarGame!).ToList();
         var selectedAmazon = Results.Where(r => r.IsSelected && r.AmazonGame != null).Select(r => r.AmazonGame!).ToList();
+        var selectedItch = Results.Where(r => r.IsSelected && r.ItchGame != null).Select(r => r.ItchGame!).ToList();
         var selectedFolder = Results.Where(r => r.IsSelected && r.FolderCandidate != null).Select(r => r.FolderCandidate!).ToList();
 
-        if (selectedSteam.Count > 0 || selectedGog.Count > 0 || selectedEa.Count > 0 || selectedEpic.Count > 0 || selectedUbisoft.Count > 0 || selectedXbox.Count > 0 || selectedBattleNet.Count > 0 || selectedRockstar.Count > 0 || selectedAmazon.Count > 0 || selectedFolder.Count > 0)
+        if (selectedSteam.Count > 0 || selectedGog.Count > 0 || selectedEa.Count > 0 || selectedEpic.Count > 0 || selectedUbisoft.Count > 0 || selectedXbox.Count > 0 || selectedBattleNet.Count > 0 || selectedRockstar.Count > 0 || selectedAmazon.Count > 0 || selectedItch.Count > 0 || selectedFolder.Count > 0)
         {
-            LoggingService.Info("ScanForGames", $"Confirmed import of {selectedSteam.Count} Steam game(s), {selectedGog.Count} GOG game(s), {selectedEa.Count} EA game(s), {selectedEpic.Count} Epic game(s), {selectedUbisoft.Count} Ubisoft game(s), {selectedXbox.Count} Xbox game(s), {selectedBattleNet.Count} Battle.net game(s), {selectedRockstar.Count} Rockstar game(s), {selectedAmazon.Count} Amazon game(s), and {selectedFolder.Count} folder game(s) out of {Results.Count} scan result(s).");
-            ImportConfirmed?.Invoke(selectedSteam, selectedGog, selectedEa, selectedEpic, selectedUbisoft, selectedXbox, selectedBattleNet, selectedRockstar, selectedAmazon, selectedFolder);
+            LoggingService.Info("ScanForGames", $"Confirmed import of {selectedSteam.Count} Steam game(s), {selectedGog.Count} GOG game(s), {selectedEa.Count} EA game(s), {selectedEpic.Count} Epic game(s), {selectedUbisoft.Count} Ubisoft game(s), {selectedXbox.Count} Xbox game(s), {selectedBattleNet.Count} Battle.net game(s), {selectedRockstar.Count} Rockstar game(s), {selectedAmazon.Count} Amazon game(s), {selectedItch.Count} itch.io game(s), and {selectedFolder.Count} folder game(s) out of {Results.Count} scan result(s).");
+            ImportConfirmed?.Invoke(selectedSteam, selectedGog, selectedEa, selectedEpic, selectedUbisoft, selectedXbox, selectedBattleNet, selectedRockstar, selectedAmazon, selectedItch, selectedFolder);
         }
         else
         {

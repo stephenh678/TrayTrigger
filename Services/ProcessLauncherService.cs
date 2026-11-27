@@ -1088,6 +1088,11 @@ public partial class ProcessLauncherService
                     LogDirectFallback(game, route);
                     return LaunchPlatformExeDirectly(game, route, out errorMessage, out isMissing);
 
+                // itch games are always started from their exe (see LaunchRoute.ItchDirect), tracked by
+                // install folder like the other launchers' direct launches.
+                case LaunchRoute.ItchDirect:
+                    return LaunchPlatformExeDirectly(game, route, out errorMessage, out isMissing);
+
                 default:
                     errorMessage = $"Unsupported launch route {route}.";
                     return false;

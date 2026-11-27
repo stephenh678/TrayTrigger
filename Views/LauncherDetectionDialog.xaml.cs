@@ -16,7 +16,8 @@ public enum DetectedLauncher
     Xbox,
     BattleNet,
     Rockstar,
-    Amazon
+    Amazon,
+    Itch
 }
 
 public class DetectedLauncherOption : INotifyPropertyChanged
@@ -62,6 +63,7 @@ public class DetectedLauncherOption : INotifyPropertyChanged
         DetectedLauncher.BattleNet => "battlenet.png",
         DetectedLauncher.Rockstar => "rockstar_games.png",
         DetectedLauncher.Amazon => "amazon_games.png",
+        DetectedLauncher.Itch => "itchio.png",
         _ => "steam.png"
     };
 

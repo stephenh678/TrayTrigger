@@ -115,6 +115,8 @@ public partial class GameDetailsViewModel
 
         InvalidateCoverImageCache();
         _editHost?.Saved(Game);
+        // Convert to Local Game, or a new link, changes which launcher the ... menu offers to open.
+        OpenInLauncherLabel = LauncherPages.OpenLabel(Game);
         // The banner may have been chosen, or put back to automatic, in Settings.
         _ = LoadHeroAsync(replace: true);
         // Everything the page shows can have changed: the title, the category, the poster, the figures.

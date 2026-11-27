@@ -707,9 +707,24 @@ public partial class FolderScannerService
         return true;
     }
 
+    /// <summary>
+    /// The itch app's own folder (%LocalAppData%\itch: itch-setup.exe, and itch.exe in an "app-&lt;version&gt;"
+    /// folder beside it), not a game - same reasoning as <see cref="IsSteamClientInstall"/>.
+    /// </summary>
+    internal static bool IsItchClientInstall(string dir)
+    {
+        bool setup = File.Exists(Path.Combine(dir, "itch-setup.exe"));
+        bool app = File.Exists(Path.Combine(dir, "itch.exe"))
+            && Path.GetDirectoryName(dir.TrimEnd('\\')) is { } parent && File.Exists(Path.Combine(parent, "itch-setup.exe"));
+        if (!setup && !app) return false;
+
+        LoggingService.Verbose("FolderScanner", $"Skipped itch app folder: '{dir}'");
+        return true;
+    }
+
     /// <summary>A launcher's own install folder, which a folder scan must never offer as a game.</summary>
     internal static bool IsLauncherClientInstall(string dir) =>
-        IsSteamClientInstall(dir) || IsBattleNetClientInstall(dir) || IsRockstarClientInstall(dir) || IsAmazonClientInstall(dir);
+        IsSteamClientInstall(dir) || IsBattleNetClientInstall(dir) || IsRockstarClientInstall(dir) || IsAmazonClientInstall(dir) || IsItchClientInstall(dir);
 
     private static bool ShouldPruneDirectory(string dirName)
     {

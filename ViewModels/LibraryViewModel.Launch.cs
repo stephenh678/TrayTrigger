@@ -219,6 +219,7 @@ public partial class LibraryViewModel
         : game.IsUbisoftGame ? "Ubisoft Connect"
         : game.IsRockstarGame ? "the Rockstar Games Launcher"
         : game.IsAmazonGame ? "the Amazon Games app"
+        : game.IsItchGame ? "the itch app"
         : "its launcher";
 
     private void PromptLocateMissingExecutable(GameCardViewModel card, Window? owner)

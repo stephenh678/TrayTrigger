@@ -24,6 +24,7 @@ public static class LibraryConstants
     public const string BattleNetCategory = "Battle.net";
     public const string RockstarCategory = "Rockstar";
     public const string AmazonCategory = "Amazon";
+    public const string ItchCategory = "itch.io";
 
     /// <summary>True when metadata enrichment may overwrite <paramref name="game"/>'s category with a genre.</summary>
     public static bool IsEnrichableCategory(GameEntry game) => IsEnrichableCategory(game.Category, game);
@@ -67,6 +68,7 @@ public static class LibraryConstants
          : game.IsBattleNetGame ? BattleNetCategory
          : game.IsRockstarGame ? RockstarCategory
          : game.IsAmazonGame ? AmazonCategory
+         : game.IsItchGame ? ItchCategory
          : game.HasSteamOverlay ? SteamCategory
          : null;
 }

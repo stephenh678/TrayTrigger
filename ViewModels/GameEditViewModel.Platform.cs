@@ -54,12 +54,18 @@ public partial class GameEditViewModel
         SourceGame.IsBattleNetGame ? "Battle.net" :
         SourceGame.IsRockstarGame ? "Rockstar" :
         SourceGame.IsAmazonGame ? "Amazon" :
+        SourceGame.IsItchGame ? "itch.io" :
         _isSteamGame ? "Steam" : "Local";
 
     /// <summary>"Launch this executable directly" has no meaning for a Game Pass title: a GDK exe
     /// can't run outside its package, so the launcher always activates the AUMID. Nor for a
-    /// Battle.net game, which needs the sign-in token only the client passes it.</summary>
-    public bool CanOfferLaunchDirectly => HasPlatform && !SourceGame.IsXboxGame && !SourceGame.IsBattleNetGame;
+    /// Battle.net game, which needs the sign-in token only the client passes it. Nor for an itch.io
+    /// game, which always runs its executable (see GameEntry.IsItchGame).</summary>
+    public bool CanOfferLaunchDirectly => HasPlatform && !SourceGame.IsXboxGame && !SourceGame.IsBattleNetGame && !SourceGame.IsItchGame;
+
+    /// <summary>"Close the launcher after this game exits" has nothing to close for an itch.io game, which TrayTrigger
+    /// starts without the itch app.</summary>
+    public bool CanOfferCloseLauncher => !(HasPlatform && SourceGame.IsItchGame);
 
     /// <summary>e.g. "Imported from GOG (game ID 1207658924)". Where it came from and the ID
     /// the launcher knows it by, so a wrong match is at least diagnosable.</summary>
@@ -77,6 +83,7 @@ public partial class GameEditViewModel
                     : $"{SourceGame.BattleNetUid}, launch code {SourceGame.BattleNetProgramId}")
                 : SourceGame.IsRockstarGame ? SourceGame.RockstarGameId
                 : SourceGame.IsAmazonGame ? SourceGame.AmazonGameId
+                : SourceGame.IsItchGame ? SourceGame.ItchGameId
                 // Steam's App ID has its own box in the Identity card, so it isn't repeated here.
                 : null;
             string via = SourceGame.ImportedFrom != null ? "Imported from" : "Linked to";
@@ -135,6 +142,7 @@ public partial class GameEditViewModel
         OnPropertyChanged(nameof(ConvertedNotice));
         OnPropertyChanged(nameof(PlatformDescription));
         OnPropertyChanged(nameof(CanOfferLaunchDirectly));
+        OnPropertyChanged(nameof(CanOfferCloseLauncher));
         OnPropertyChanged(nameof(CanOfferSteamLaunch));
         OnPropertyChanged(nameof(CanOfferSteamBadge));
     }

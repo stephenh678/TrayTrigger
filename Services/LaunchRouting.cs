@@ -36,6 +36,9 @@ public enum LaunchRoute
     /// <summary>amazon-games://play/&lt;product id&gt; dispatch, tracked by install directory.</summary>
     AmazonClient,
     AmazonDirect,
+    /// <summary>An itch.io game's own exe, tracked by install directory. No client variant: the itch app's
+    /// only launch link asks for confirmation first, and its games are DRM-free.</summary>
+    ItchDirect,
     /// <summary>A non-file URL whose scheme is on the allow-list: fire-and-forget, pre-launch script only.</summary>
     ProtocolUrl,
     /// <summary>A non-file URL whose scheme is NOT on the allow-list: refused.</summary>
@@ -108,6 +111,12 @@ public static class LaunchRouter
         if (game.IsAmazonGame && !string.IsNullOrWhiteSpace(game.AmazonGameId))
         {
             return !game.LaunchDirectly && clients.AmazonGamesInstalled ? LaunchRoute.AmazonClient : LaunchRoute.AmazonDirect;
+        }
+
+        // Always direct (LaunchDirectly makes no difference, and Edit Game hides it): see LaunchRoute.ItchDirect.
+        if (game.IsItchGame && !string.IsNullOrWhiteSpace(game.ItchGameId))
+        {
+            return LaunchRoute.ItchDirect;
         }
 
         // LaunchDirectly is deliberately ignored: there is no way to run a GDK exe outside its
@@ -184,6 +193,7 @@ public static class LaunchRouter
         LaunchRoute.BattleNet => "Battle.net",
         LaunchRoute.RockstarClient or LaunchRoute.RockstarDirect => "Rockstar Games Launcher",
         LaunchRoute.AmazonClient or LaunchRoute.AmazonDirect => "Amazon Games",
+        LaunchRoute.ItchDirect => "itch.io",
         LaunchRoute.ProtocolUrl => "link",
         _ => "Local"
     };

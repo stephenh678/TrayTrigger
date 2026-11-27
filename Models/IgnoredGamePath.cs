@@ -12,7 +12,7 @@ namespace TrayTrigger.Models;
 /// (Ubisoft candidates, same reasoning), <see cref="XboxAumid"/> (Xbox candidates, same
 /// reasoning), <see cref="BattleNetUid"/> (Battle.net candidates, same reasoning),
 /// <see cref="RockstarGameId"/> (Rockstar candidates, same reasoning), <see cref="AmazonGameId"/>
-/// (Amazon Games candidates, same reasoning), or
+/// (Amazon Games candidates, same reasoning), <see cref="ItchGameId"/> (itch.io candidates, same reasoning), or
 /// <see cref="FolderPath"/> (a whole folder the scanner must not look inside - added by hand in
 /// Settings for a Utilities or Mods folder under a scan location) is set, depending on where the
 /// candidate came from.
@@ -33,4 +33,5 @@ public class IgnoredGamePath
     public string? BattleNetUid { get; set; }
     public string? RockstarGameId { get; set; }
     public string? AmazonGameId { get; set; }
+    public string? ItchGameId { get; set; }
 }
