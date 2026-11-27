@@ -38,6 +38,16 @@ public class ScannedGameItemViewModel : ViewModelBase
     public GameCandidate? FolderCandidate { get; }
 
     public string Name => SteamGame?.Name ?? GogGame?.Name ?? EaGame?.Name ?? EpicGame?.Name ?? UbisoftGame?.Name ?? XboxGame?.Name ?? BattleNetGame?.Name ?? RockstarGame?.Name ?? AmazonGame?.Name ?? ItchGame?.Name ?? FolderCandidate!.Name;
+    /// <summary>"Also in your library from GOG": this Steam copy shares its App ID with another copy already in the
+    /// library, so adding it gives the game a second card. Null when there is none.</summary>
+    public string? AlsoInLibraryNote => SteamGame?.AlsoInLibraryAs switch
+    {
+        null => null,
+        "Local" => "Also in your library as a Local game",
+        string other => $"Also in your library from {other}",
+    };
+    public bool HasAlsoInLibraryNote => AlsoInLibraryNote != null;
+
     public string PathDisplay => SteamGame?.InstallDir ?? GogGame?.InstallDir ?? EaGame?.InstallDir ?? EpicGame?.InstallDir ?? UbisoftGame?.InstallDir ?? XboxGame?.InstallDir ?? BattleNetGame?.InstallDir ?? RockstarGame?.InstallDir ?? AmazonGame?.InstallDir ?? ItchGame?.InstallDir ?? FolderCandidate!.DisplayPath;
 
     /// <summary>Pack URI to the same launcher logo used on poster cards and the first-launch

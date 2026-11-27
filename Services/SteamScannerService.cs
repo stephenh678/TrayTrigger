@@ -14,7 +14,10 @@ public record DiscoveredSteamGame(
     string InstallDir,
     string? ExePath,
     string? IconPath,
-    bool IsAlreadyImported
+    bool IsAlreadyImported,
+    // Set by Scan for Games when another store's copy of the game (or a Local one) is in the library under the same
+    // App ID: "GOG", "itch.io", "Local". The scan list says so beside this Steam copy.
+    string? AlsoInLibraryAs = null
 );
 
 public partial class SteamScannerService

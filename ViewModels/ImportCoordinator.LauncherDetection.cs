@@ -180,13 +180,12 @@ public partial class ImportCoordinator
         {
             _library.StatusMessage = "Scanning for games...";
 
-            // Any entry carrying the App ID, not only Steam-launched ones: ImportSteamGamesAsync
-            // dedupes on the ID alone, so a Local entry linked by online matching was offered as
-            // new on every scan and then silently skipped when imported.
-            var existingAppIds = _library.Games
-                .Where(g => !string.IsNullOrEmpty(g.Game.SteamAppId))
-                .Select(g => g.Game.SteamAppId!)
-                .ToList();
+            // Only Steam entries: every launcher game, and many Local ones, carry an App ID too, matched online
+            // for their metadata, and a GOG or itch.io copy of a game must not hide its Steam install. Such a
+            // Steam copy is offered with a note naming the other copy (AlsoInLibraryAs); ImportSteamGamesAsync
+            // dedupes on Steam entries alone, so it is really added when ticked.
+            var existingAppIds = SteamEntryAppIds(_library.Games.Select(g => g.Game));
+            var otherCopies = OtherCopiesByAppId(_library.Games.Select(g => g.Game));
             var existingGogGameIds = _library.Games
                 .Where(g => g.Game.IsGogGame && !string.IsNullOrEmpty(g.Game.GogGameId))
                 .Select(g => g.Game.GogGameId!)
@@ -310,6 +309,8 @@ public partial class ImportCoordinator
                             string verdict = g.IsAlreadyImported ? $"already in library as {appIdHolders.GetValueOrDefault(g.AppId, "(unknown entry)")}"
                                 : ignoredAppIds.Contains(g.AppId) ? "on the ignore list"
                                 : g.ExePath != null && existingExePaths.Contains(g.ExePath) ? $"already in library (exe '{g.ExePath}')"
+                                : HasEntryInside(existingExePaths, g.InstallDir) ? $"already in library (an entry runs a program in '{g.InstallDir}')"
+                                : otherCopies.TryGetValue(g.AppId, out var other) ? $"offered (a {other} copy has the same App ID)"
                                 : "offered";
                             LoggingService.Verbose("SteamScanner", $"'{g.Name}' [{g.AppId}]: {verdict}");
                         }
@@ -320,7 +321,9 @@ public partial class ImportCoordinator
                         // again as "new" - selecting it would create a second row for the same exe.
                         steamResults = found
                             .Where(g => !g.IsAlreadyImported && !ignoredAppIds.Contains(g.AppId) &&
-                                        (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
+                                        (g.ExePath == null || !existingExePaths.Contains(g.ExePath)) &&
+                                        !HasEntryInside(existingExePaths, g.InstallDir))
+                            .Select(g => otherCopies.TryGetValue(g.AppId, out var other) ? g with { AlsoInLibraryAs = other } : g)
                             .ToList();
                     }
                 }
@@ -384,7 +387,8 @@ public partial class ImportCoordinator
             var existingPlatformKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var g in _library.Games.Select(c => c.Game))
             {
-                if (!string.IsNullOrEmpty(g.SteamAppId)) existingPlatformKeys.Add($"Steam|{g.SteamAppId}");
+                // Steam entries only, for the reason given at existingAppIds.
+                if (g.IsSteamGame && !string.IsNullOrEmpty(g.SteamAppId)) existingPlatformKeys.Add($"Steam|{g.SteamAppId}");
                 if (!string.IsNullOrEmpty(g.GogGameId)) existingPlatformKeys.Add($"GOG|{g.GogGameId}");
                 if (!string.IsNullOrEmpty(g.EaContentId)) existingPlatformKeys.Add($"EA|{g.EaContentId}");
                 if (!string.IsNullOrEmpty(g.EpicAppName)) existingPlatformKeys.Add($"Epic|{g.EpicAppName}");
@@ -422,7 +426,8 @@ public partial class ImportCoordinator
                     foreach (var c in candidates)
                     {
                         bool inLibrary = existingExePaths.Contains(c.ExePath) ||
-                                         (c.Platform != null && existingPlatformKeys.Contains(PlatformKey(c.Platform)));
+                                         (c.Platform != null && existingPlatformKeys.Contains(PlatformKey(c.Platform))) ||
+                                         (c.Platform?.Steam is { } steamCopy && HasEntryInside(existingExePaths, steamCopy.InstallDir));
                         LoggingService.Verbose("ScanForGames", $"Folders: '{c.Name}' ({c.ExePath}): {(inLibrary ? "already in library" : "offered")}");
                         if (!inLibrary) folderResults.Add(c);
                     }
@@ -482,6 +487,28 @@ public partial class ImportCoordinator
             // cards re-mark themselves when it lands.
             _ = _library.RefreshAvailabilityInBackground();
         }
+    }
+
+    /// <summary>The App IDs of the library's Steam entries: the ones a Steam install already in the library has.</summary>
+    internal static List<string> SteamEntryAppIds(IEnumerable<GameEntry> games) =>
+        games.Where(g => g.IsSteamGame && !string.IsNullOrEmpty(g.SteamAppId)).Select(g => g.SteamAppId!).ToList();
+
+    /// <summary>App ID -> the store of a copy that isn't Steam's ("GOG", "itch.io", "Local"), for the entries matched
+    /// to an App ID for their metadata: a Steam install of the same game is offered beside it, with that note.</summary>
+    internal static Dictionary<string, string> OtherCopiesByAppId(IEnumerable<GameEntry> games) =>
+        games.Where(g => !g.IsSteamGame && !string.IsNullOrEmpty(g.SteamAppId))
+            .GroupBy(g => g.SteamAppId!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().PlatformLabel, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// True when a library entry already runs a program inside <paramref name="installDir"/>: that Steam install
+    /// is in the library already, as a Local entry added before it was linked, whatever program it starts.
+    /// </summary>
+    internal static bool HasEntryInside(IEnumerable<string> exePaths, string? installDir)
+    {
+        if (string.IsNullOrWhiteSpace(installDir)) return false;
+        string folder = installDir.TrimEnd('\\', '/') + "\\";
+        return exePaths.Any(p => !string.IsNullOrEmpty(p) && p.StartsWith(folder, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

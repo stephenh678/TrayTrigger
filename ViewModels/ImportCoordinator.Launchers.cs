@@ -215,6 +215,9 @@ public partial class ImportCoordinator
 
     private static bool SameId(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>A Steam entry for <paramref name="appId"/>: what makes a Steam install a duplicate on import.</summary>
+    internal static bool IsSteamEntryFor(GameEntry game, string appId) => game.IsSteamGame && SameId(game.SteamAppId, appId);
+
     private static string IconSourceOf(string? iconPath, string? exePath) => !string.IsNullOrEmpty(iconPath) ? iconPath : (exePath ?? string.Empty);
 
     public void ImportSteamGames(List<DiscoveredSteamGame> discoveredGames) => _ = ImportSteamGamesAsync(discoveredGames);
@@ -223,7 +226,9 @@ public partial class ImportCoordinator
     /// <returns>The number of games actually added; 0 if none (e.g. all were duplicates); -1 if the import itself threw (logged separately - callers should not treat this the same as "0, all duplicates").</returns>
     public async Task<int> ImportSteamGamesAsync(List<DiscoveredSteamGame> discoveredGames, bool announceProgress = true) =>
         await ImportDiscoveredAsync(discoveredGames, "Steam", "ImportSteamGames",
-            (g, d) => SameId(g.SteamAppId, d.AppId),
+            // Steam entries only: a GOG, itch.io or Local copy matched to the same App ID for its metadata is
+            // another copy of the game, which Scan for Games offers this one beside (AlsoInLibraryAs).
+            (g, d) => IsSteamEntryFor(g, d.AppId),
             d => (new GameEntry
             {
                 Name = d.Name,

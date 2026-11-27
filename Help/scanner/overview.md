@@ -19,6 +19,8 @@ itch.io games start from their own program, the way the itch app itself starts t
 
 Turning an integration off only stops *new* games from that platform being detected. Games already in your library stay put and keep launching through their launcher - so when you turn a toggle off, TrayTrigger asks whether you'd also like to remove that platform's games from the library. Either way, installed game files are never deleted.
 
+A game installed from two stores is two cards, one for each copy. Scan for Games offers a Steam install even when another copy of the game is already in your library (from GOG, itch.io, or one you added yourself), with "Also in your library from ..." under it, so you can add it or press Ignore.
+
 Dropping a game folder or exe onto the Library, or using "Add Folder", also recognizes launcher-owned installs regardless of these toggles: a folder inside a Steam or GOG install is imported as that platform's game, not as a plain local exe. An Amazon Games desktop or Start menu shortcut is recognized too, and adds the game it starts, and so is an exe from an itch.io game's folder, wherever the itch app installed it.
 
 How each launcher is started, and how to keep it out of the way, is under How a game is launched.
