@@ -7,6 +7,7 @@ using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -17,7 +18,8 @@ namespace TrayTrigger.Views;
 
 /// <summary>
 /// Settings > Library &amp; Art "Use a game controller in the Library" (off by default). While the Library page,
-/// Game Details or one of its prompts is the window in front, a controller moves around them:
+/// Game Details or a window either of them opened (Change Category, Collections, a prompt) is the window in front,
+/// a controller moves around them:
 /// <list type="bullet">
 /// <item>D-pad or left stick: the arrow keys in the Library's views; in Game Details, to the next button that way.</item>
 /// <item>A: Enter on a game (Game Details), or presses the focused button. B: Esc (back, close, clear).</item>
@@ -82,6 +84,7 @@ public sealed class GamepadNavigator
             _reading = true;
             return;
         }
+        int reading = ++_readings;
         foreach (var action in _input.Update(state.Value, now))
         {
             try
@@ -92,19 +95,30 @@ public sealed class GamepadNavigator
             {
                 LoggingService.Info("Controller", $"{action} failed: {ex.Message}");
             }
+            // A press that opened a modal window (A on a game opens Game Details) returns only once that window
+            // closes, and the timer reads the controller inside it meanwhile. What else this old reading held is
+            // stale by then, so it is dropped rather than acted on.
+            if (_readings != reading) break;
         }
     }
 
-    /// <summary>The window in front when it is one the controller works in: the main window on the Library page, Game Details, or a prompt.</summary>
+    private int _readings;
+
+    /// <summary>
+    /// The window in front when it is one the controller works in: the main window on the Library page, Game Details
+    /// and a prompt it raises, or a window the Library opened (Change Category, Collections, Change Match, a prompt).
+    /// </summary>
     private Window? TargetWindow()
     {
         if (Application.Current == null) return null;
         var active = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
         return active switch
         {
-            MainWindow when _main.CurrentSection == NavSection.Library => active,
-            GameDetailsDialog or ModernDialog => active,
-            _ => null,
+            null or LaunchPopupWindow => null,
+            MainWindow => _main.CurrentSection == NavSection.Library ? active : null,
+            GameDetailsDialog or ModernDialog { Owner: GameDetailsDialog } => active,
+            // Opened from the Library (its windows are owned by the main window, so the page it is on decides).
+            _ => _main.CurrentSection == NavSection.Library ? active : null,
         };
     }
 
@@ -153,32 +167,36 @@ public sealed class GamepadNavigator
                 case PadAction.PreviousTab or PadAction.NextTab:
                     _main.Library.StepCategoryTab(action == PadAction.NextTab ? 1 : -1);
                     // The tab's games are laid out first, then the first gets focus (the card that had it may be gone).
+                    // Returns here: the card still focused until then must not be remembered over the reset.
                     _lastGame = null;
                     library.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => FocusGames(library));
-                    break;
+                    return;
             }
             if (Keyboard.FocusedElement is FrameworkElement { DataContext: GameCardViewModel game2 } now && library.IsGameFocused(now)) _lastGame = game2;
             return;
         }
 
-        // Game Details and its prompts: move between their buttons and links, press one, or close.
+        // Game Details, its prompts and the Library's dialogs: move between their buttons and links, press one, or close.
+        bool inside = focused != null && IsInside(focused, window);
         switch (action)
         {
             case PadAction.Up or PadAction.Down or PadAction.Left or PadAction.Right:
-                if (focused is UIElement element && IsInside(element, window))
-                    element.MoveFocus(new TraversalRequest(DirectionFor(action)));
-                else
-                    window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                var request = new TraversalRequest(DirectionFor(action));
+                // A link in text (Data from RAWG) is a ContentElement, not a UIElement: it moves on the same way.
+                if (inside && focused is UIElement element) element.MoveFocus(request);
+                else if (inside && focused is ContentElement content) content.MoveFocus(request);
+                else window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                 break;
             case PadAction.Accept:
                 if (focused is ButtonBase button) Press(button);
-                else if (focused is not UIElement e || !IsInside(e, window)) window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                else if (inside && focused is Hyperlink) SendKey(Key.Enter); // a link opens on Enter
+                else if (!inside) window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                 break;
             case PadAction.Back:
                 SendKey(Key.Escape);
                 break;
             case PadAction.Menu:
-                if (focused is UIElement && IsInside((UIElement)focused, window)) SendKey(Key.Apps);
+                if (inside) SendKey(Key.Apps);
                 break;
         }
     }
@@ -197,7 +215,7 @@ public sealed class GamepadNavigator
         PadAction.Left => FocusNavigationDirection.Left, _ => FocusNavigationDirection.Right,
     };
 
-    private static bool IsInside(UIElement element, Window window) => Window.GetWindow(element) == window && element != window;
+    private static bool IsInside(DependencyObject element, Window window) => Window.GetWindow(element) == window && element != window;
 
     private static bool IsInMenu(DependencyObject? element)
     {

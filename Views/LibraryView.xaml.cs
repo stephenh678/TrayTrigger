@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using TrayTrigger.Services;
 using System.Windows;
@@ -306,4 +306,3 @@ public partial class LibraryView : UserControl
         return rowHeight > 0 ? Math.Max(1, (int)(CardScroller.ViewportHeight / rowHeight)) : 1;
     }
 }
-

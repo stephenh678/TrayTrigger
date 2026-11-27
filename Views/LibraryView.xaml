@@ -485,7 +485,7 @@
                                    <!-- are different designs and stay separate.                        -->
                                    <!-- ============================================================== -->
                                    <!-- The games are one Tab stop: Tab lands on the game you were last on, the arrow keys move between them (OnCardGridKeyDown). -->
-                                   <ItemsControl x:Name="PosterItems" ItemsSource="{Binding FilteredGames}" Focusable="False" views:FocusGroup.IsGroup="True">
+                                   <ItemsControl x:Name="PosterItems" ItemsSource="{Binding FilteredGames}" Focusable="False" KeyboardNavigation.TabNavigation="Once">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>
@@ -1029,7 +1029,7 @@
                                    <!-- ============================================================== -->
                                    <!-- VIEW 2: COMPACT ICONS VIEW                                     -->
                                    <!-- ============================================================== -->
-                                   <ItemsControl x:Name="IconItems" ItemsSource="{Binding FilteredGames}" Focusable="False" views:FocusGroup.IsGroup="True">
+                                   <ItemsControl x:Name="IconItems" ItemsSource="{Binding FilteredGames}" Focusable="False" KeyboardNavigation.TabNavigation="Once">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>

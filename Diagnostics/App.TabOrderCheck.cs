@@ -35,6 +35,7 @@ public partial class App
         var main = _mainViewModel!;
         string modeBefore = main.SettingsVM.LibraryViewMode;
         var games = new List<GameCardViewModel>();
+        var madeFavorite = new List<GameCardViewModel>();
 
         // A walk listed in short: the count, any stop that can't be seen, then the stops (up to 30).
         void Compact(string label, Window w)
@@ -59,8 +60,8 @@ public partial class App
             games.AddRange(main.FilteredGames.Cast<GameCardViewModel>());
             report.AppendLine($"{games.Count} games; Show details on hover: {main.SettingsVM.PosterDetailsOnHover}");
 
-            // The first two games as favorites, in memory only (put back below), so their stars show and can be tried.
-            var madeFavorite = games.Take(2).Where(g => !g.Game.IsFavorite).ToList();
+            // The first two games as favorites, in memory only (put back in finally), so their stars show and can be tried.
+            madeFavorite.AddRange(games.Take(2).Where(g => !g.Game.IsFavorite));
             foreach (var g in madeFavorite) { g.Game.IsFavorite = true; g.RefreshProperties(); }
             foreach (var mode in new[] { SettingsViewModel.ViewModePosterGrid, SettingsViewModel.ViewModeCompactIcons, SettingsViewModel.ViewModeDetailsList })
             {
@@ -199,6 +200,7 @@ public partial class App
         }
         finally
         {
+            foreach (var g in madeFavorite) { g.Game.IsFavorite = false; g.RefreshProperties(); }
             main.SettingsVM.LibraryViewMode = modeBefore;
             foreach (var (file, bytes) in settingsBefore)
             {

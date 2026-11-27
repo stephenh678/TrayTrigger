@@ -121,6 +121,23 @@ public partial class App
             report.AppendLine($"  stick down   -> {Focus()}");
             Press("Up", XInputReader.DPadUp);
 
+            // A dialog the Library opens (Change Category): the controller has to work in it too, and B closes it.
+            report.AppendLine("## Change Category, opened from the Library");
+            var input = new QuickInputDialog("Change Category", "Change Category", "Select or enter a category:", "Action", new[] { "Action", "RPG" }, showAdd: true) { Owner = window };
+            var inDialog = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            inDialog.Tick += (_, _) =>
+            {
+                inDialog.Stop();
+                report.AppendLine($"  in front: {Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)?.GetType().Name ?? "none"}");
+                Press("Down", XInputReader.DPadDown);
+                Press("B", XInputReader.B);
+                if (input.IsVisible) { report.AppendLine("  still open after B: closing it"); input.Close(); }
+            };
+            inDialog.Start();
+            navigator.Tick(); // the reading before the dialog, so its first press is a fresh one
+            input.ShowDialog();
+            report.AppendLine($"  closed, DialogResult={(input.DialogResult?.ToString() ?? "null")}");
+
             File.WriteAllText(outPath, report.ToString());
         }
         catch (Exception ex)

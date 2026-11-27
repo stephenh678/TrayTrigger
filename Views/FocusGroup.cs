@@ -40,7 +40,9 @@ public static class FocusGroup
     private static void OnGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
         var group = (UIElement)sender;
-        if (e.OldFocus is DependencyObject old && IsWithin(old, group)) return;
+        // Only focus arriving from another element: with no OldFocus it is Windows putting focus back (the window
+        // activated again, a dialog closed), and it goes back to where it was.
+        if (e.OldFocus is not DependencyObject old || IsWithin(old, group)) return;
         if (Mouse.LeftButton == MouseButtonState.Pressed || Mouse.RightButton == MouseButtonState.Pressed) return;
         if (FindCurrent(group) is { } current && !ReferenceEquals(current, e.NewFocus)) current.Focus();
     }

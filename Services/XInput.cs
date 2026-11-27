@@ -39,7 +39,9 @@ public sealed class XInputReader
         public XInputGamepad Gamepad;
     }
 
+    // From System32 only, never a copy beside TrayTrigger.exe.
     [DllImport("xinput1_4.dll", EntryPoint = "XInputGetState")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern uint XInputGetState(uint userIndex, out XInputState state);
 
     /// <summary>The controllers' state, or null when none is connected (or this Windows has no XInput).</summary>

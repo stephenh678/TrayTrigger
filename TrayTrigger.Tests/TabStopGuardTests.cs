@@ -70,6 +70,7 @@ public class TabStopGuardTests
         }
         Assert.True(stops.Count == 0, "Favorite stars that can take focus (the game's menu has Favorite):\n" + string.Join("\n", stops));
         string app = File.ReadAllText(Path.Combine(RepoRoot, "App.xaml"));
-        Assert.Matches(new Regex("x:Key=\"FavoriteToggleButton\".*?<Setter Property=\"Focusable\" Value=\"False\"/>", RegexOptions.Singleline), app);
+        // Within the style itself: the match may not run past its </Style> onto another style's setter.
+        Assert.Matches(new Regex("x:Key=\"FavoriteToggleButton\"(?:(?!</Style>).)*?<Setter Property=\"Focusable\" Value=\"False\"/>", RegexOptions.Singleline), app);
     }
 }

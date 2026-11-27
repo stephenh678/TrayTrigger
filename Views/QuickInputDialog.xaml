@@ -31,7 +31,7 @@
         <DockPanel>
             <!-- Only where a name is being picked or made (Change Category): puts the typed name in the list, selected. -->
             <!-- Declared first so it docks right of the box; TabIndex puts it after the box in the Tab order, where it is read. -->
-                    <Button x:Name="AddButton" DockPanel.Dock="Right" Content="_Add" Click="AddButton_Click" Visibility="Collapsed" KeyboardNavigation.TabIndex="2"
+            <Button x:Name="AddButton" DockPanel.Dock="Right" Content="_Add" Click="AddButton_Click" Visibility="Collapsed" KeyboardNavigation.TabIndex="2"
                     Style="{StaticResource ModernOutlineButton}" MinWidth="70" Margin="10,0,0,0"/>
             <Grid>
                 <TextBox x:Name="ValueTextBox" Style="{StaticResource ModernTextBox}" Visibility="Visible"/>

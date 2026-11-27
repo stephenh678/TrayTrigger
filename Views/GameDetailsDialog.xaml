@@ -397,8 +397,7 @@
                                 <TextBlock Text="{Binding LastUpdatedCaption}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                            VerticalAlignment="Center" Margin="0,0,6,0" TextTrimming="CharacterEllipsis"
                                            Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}"/>
-                                <!-- Takes no focus: it only explains where the page's info comes from. Still a click. -->
-                                <Button x:Name="SourceButton" AutomationProperties.Name="Where this info comes from" Click="OpenMenu_Click" Focusable="False"
+                                <Button x:Name="SourceButton" AutomationProperties.Name="Where this info comes from" Click="OpenMenu_Click"
                                         Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="{DynamicResource FontSizeBody}"
                                         Foreground="{DynamicResource BrushAccentText}" ToolTip="Where this info comes from, how fresh it is, and how to change it">
                                     <StackPanel Orientation="Horizontal">
