@@ -27,6 +27,11 @@ public partial class App : Application
 
     private static Mutex? _singleInstanceMutex;
     private static EventWaitHandle? _showWindowEvent;
+    // "--couch" from a second copy: the running one opens the full-screen Library (the show event only shows the window).
+    private const string FullScreenEventName = "TrayTrigger_FullScreenLibrary_Event";
+    private static EventWaitHandle? _fullScreenEvent;
+
+    private static bool AsksForFullScreenLibrary(string[] args) => args.Any(a => a.Equals("--couch", StringComparison.OrdinalIgnoreCase));
 
     private const int MaxDispatcherExceptionsPerWindow = 3;
     private static readonly TimeSpan DispatcherExceptionWindow = TimeSpan.FromSeconds(30);
@@ -367,6 +372,12 @@ public partial class App : Application
                             bool sent = PlayRequestChannel.TrySend(playRequest, TimeSpan.FromSeconds(10));
                             Log(sent ? "Sent the play request to the existing instance." : "No existing instance took the play request.");
                         }
+                        // A copy from before the full-screen Library has no such event: it gets the usual show below.
+                        else if (AsksForFullScreenLibrary(e.Args) && EventWaitHandle.TryOpenExisting(FullScreenEventName, out var fullScreen))
+                        {
+                            using (fullScreen) fullScreen.Set();
+                            Log("Asked the existing instance for the full-screen Library.");
+                        }
                         else
                         {
                             using var evt = EventWaitHandle.OpenExisting(EventName);
@@ -405,15 +416,16 @@ public partial class App : Application
             try
             {
                 _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
+                _fullScreenEvent = new EventWaitHandle(false, EventResetMode.AutoReset, FullScreenEventName);
+                var wakeUps = new WaitHandle[] { _showWindowEvent, _fullScreenEvent };
                 var listenerThread = new Thread(() =>
                 {
                     while (!_isShuttingDown)
                     {
-                        if (_showWindowEvent.WaitOne())
-                        {
-                            if (_isShuttingDown) break;
-                            Dispatcher.Invoke(ShowMainWindow);
-                        }
+                        int which = WaitHandle.WaitAny(wakeUps);
+                        if (_isShuttingDown) break;
+                        if (which == 1) Dispatcher.Invoke(OpenFullScreenLibrary);
+                        else Dispatcher.Invoke(ShowMainWindow);
                     }
                 })
                 {
@@ -652,7 +664,7 @@ public partial class App : Application
             Log("Showing MainWindow...");
             ShowMainWindow();
             // "--couch": straight into the full-screen Library (a shortcut for a TV or a handheld).
-            if (!isScreenshot && e.Args.Any(a => a.Equals("--couch", StringComparison.OrdinalIgnoreCase)))
+            if (!isScreenshot && AsksForFullScreenLibrary(e.Args))
                 _mainViewModel.IsFullScreenLibrary = true;
         }
 
@@ -911,6 +923,7 @@ public partial class App : Application
 
             _singleInstanceMutex?.Dispose();
             _showWindowEvent?.Dispose();
+            _fullScreenEvent?.Dispose();
         }
         catch (Exception ex)
         {

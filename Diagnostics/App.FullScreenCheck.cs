@@ -26,7 +26,11 @@ public partial class App
         _skipSettingsSaveOnExit = true;
         var report = new StringBuilder();
         string settingsFile = Path.Combine(_storageService.BaseDirectory, "settings.json");
-        var settingsBefore = new[] { settingsFile, settingsFile + ".bak" }.ToDictionary(f => f, f => File.Exists(f) ? File.ReadAllBytes(f) : null);
+        string gamesFile = Path.Combine(_storageService.BaseDirectory, "games.json");
+        // The settings and the library (a collection is added below) are put back as they were.
+        var settingsBefore = new[] { settingsFile, settingsFile + ".bak", gamesFile, gamesFile + ".bak" }
+            .ToDictionary(f => f, f => File.Exists(f) ? File.ReadAllBytes(f) : null);
+        List<GameCardViewModel>? collected = null;
         var window = _mainWindow!;
         var main = _mainViewModel!;
         var settings = main.SettingsVM.Settings;
@@ -43,7 +47,11 @@ public partial class App
             main.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModePosterGrid;
             // A collection, as most libraries have one, so the tab row shares its width between two strips.
             var cards = main.FilteredGames.Cast<GameCardViewModel>().Take(2).ToList();
-            if (!main.Library.HasCollections && cards.Count > 0) main.Library.ApplyCollections(cards, new[] { "Multiplayer" }, Array.Empty<string>());
+            if (!main.Library.HasCollections && cards.Count > 0)
+            {
+                main.Library.ApplyCollections(cards, new[] { "Multiplayer" }, Array.Empty<string>());
+                collected = cards;
+            }
             Settle(window);
             int Relayouts(int ms)
             {
@@ -66,7 +74,7 @@ public partial class App
             string State() =>
                 $"window {window.WindowState}/{window.WindowStyle}/{window.ResizeMode} {window.ActualWidth:F0}x{window.ActualHeight:F0}, " +
                 $"sidebar {(sidebar.IsVisible ? "shown" : "hidden")}, header {(window.LibraryPage.FindName("LibraryAddGame") is UIElement h ? h.IsVisible.ToString() : HeaderShown(window))}, " +
-                $"view {main.SettingsVM.LibraryViewMode}, body text {Current.Resources["FontSizeBody"]}, " +
+                $"view {main.SettingsVM.LibraryViewMode} (saved {settings.LibraryViewMode}), body text {Current.Resources["FontSizeBody"]}, " +
                 $"saved placement {settings.MainWindowWidth:F0}x{settings.MainWindowHeight:F0} max {settings.MainWindowMaximized}, " +
                 $"controller reading {main.IsFullScreenLibrary || main.SettingsVM.ControllerNavigation}";
             string placementBefore = $"{settings.MainWindowLeft:F0},{settings.MainWindowTop:F0} {settings.MainWindowWidth:F0}x{settings.MainWindowHeight:F0} max {settings.MainWindowMaximized}";
@@ -118,6 +126,7 @@ public partial class App
         finally
         {
             main.IsFullScreenLibrary = false;
+            if (collected != null) main.Library.ApplyCollections(collected, Array.Empty<string>(), new[] { "Multiplayer" });
             foreach (var (file, bytes) in settingsBefore)
             {
                 try

@@ -11,7 +11,8 @@ namespace TrayTrigger;
 /// The full-screen Library (<see cref="MainViewModel.IsFullScreenLibrary"/>): the window fills the screen with no title
 /// bar, the sidebar and the Library's header are hidden, the games show as Extra Large posters, text is at least
 /// <see cref="FullScreenTextScale"/>, and the controller is read. Everything is put back as it was when it is left:
-/// the window's size and place, the view and the text size, none of which is saved while it is on.
+/// the window's size and place, the view and the text size, none of which is saved while it is on (so TrayTrigger ended
+/// meanwhile starts as it was).
 /// </summary>
 public partial class MainWindow
 {
@@ -19,7 +20,6 @@ public partial class MainWindow
     internal const double FullScreenTextScale = 1.3;
 
     private (WindowState State, WindowStyle Style, ResizeMode Resize)? _beforeFullScreen;
-    private string? _viewModeBeforeFullScreen;
 
     /// <summary>Whether the window is in the full-screen Library: its placement is not recorded meanwhile.</summary>
     internal bool IsFullScreen => _beforeFullScreen != null;
@@ -43,12 +43,8 @@ public partial class MainWindow
         CaptureWindowPlacement(); // the window as it is, kept to go back to
         _beforeFullScreen = (WindowState == WindowState.Minimized ? WindowState.Normal : WindowState, WindowStyle, ResizeMode);
 
-        var settings = _viewModel.SettingsVM;
-        if (settings.LibraryViewMode != SettingsViewModel.ViewModeExtraLarge)
-        {
-            _viewModeBeforeFullScreen = settings.LibraryViewMode;
-            settings.LibraryViewMode = SettingsViewModel.ViewModeExtraLarge;
-        }
+        // Shown, not saved: the saved view stays the user's own.
+        _viewModel.SettingsVM.ShowViewModeFor(SettingsViewModel.ViewModeExtraLarge);
         AppTypography.FullScreenMinimumScale = FullScreenTextScale;
         AppTypography.ApplyForTheme(ThemeService.Instance.Active.TextSize);
 
@@ -73,11 +69,8 @@ public partial class MainWindow
         _beforeFullScreen = null;
         WindowState = before.State;
 
-        // The view goes back unless it was changed while full screen (then the change stands).
-        var settings = _viewModel.SettingsVM;
-        if (_viewModeBeforeFullScreen is { } mode && settings.LibraryViewMode == SettingsViewModel.ViewModeExtraLarge)
-            settings.LibraryViewMode = mode;
-        _viewModeBeforeFullScreen = null;
+        // The saved view shows again; one picked while full screen was saved as it was picked, and stays.
+        _viewModel.SettingsVM.ShowViewModeFor(null);
         AppTypography.FullScreenMinimumScale = null;
         AppTypography.ApplyForTheme(ThemeService.Instance.Active.TextSize);
         LoggingService.Info("MainWindow", "Full-screen Library off");

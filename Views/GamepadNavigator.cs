@@ -49,6 +49,8 @@ public sealed class GamepadNavigator
     private IInputElement? _lastTop;
     // The window read last, to see Game Details come to the front.
     private Window? _lastWindow;
+    // A opened Game Details on a game: it opens on Play. Not when it was opened with the mouse or the keyboard.
+    private bool _detailsOpenedHere;
 
     /// <summary>
     /// A control the controller passes over: a button that opens Windows' own file or folder picker (Browse..., Choose
@@ -121,12 +123,14 @@ public sealed class GamepadNavigator
             return;
         }
         _timer.Interval = ActiveInterval;
-        // Game Details just came to the front with nothing in it focused (opened with A, or from the keyboard):
-        // Play, so A again plays. Not when focus is already inside it (it came back to the front, or a prompt closed).
+        // Game Details just came to the front, opened with A: Play, so A again plays. Not when focus is already inside
+        // it (it came back to the front, or a prompt closed), nor when it was opened with the mouse or the keyboard.
         if (window != _lastWindow)
         {
             _lastWindow = window;
-            if (window is GameDetailsDialog details && !(Keyboard.FocusedElement is DependencyObject f && IsInside(f, details)))
+            bool openedHere = _detailsOpenedHere;
+            _detailsOpenedHere = false;
+            if (openedHere && window is GameDetailsDialog details && !(Keyboard.FocusedElement is DependencyObject f && IsInside(f, details)))
             {
                 MarkKeyboardAsLastInput();
                 details.FocusPlay();
@@ -251,7 +255,12 @@ public sealed class GamepadNavigator
                 case PadAction.Accept:
                     if (focused is ButtonBase button) Press(button);
                     else if (DropDownOf(focused) is { } combo) OpenDropDown(combo);
-                    else if (onGame) SendKey(Key.Enter);
+                    else if (onGame)
+                    {
+                        _detailsOpenedHere = true; // Enter on a game opens Game Details, modally, inside this call
+                        SendKey(Key.Enter);
+                        _detailsOpenedHere = false;
+                    }
                     else if (!onTop) FocusGames(library);
                     break;
                 case PadAction.Back:
@@ -379,10 +388,15 @@ public sealed class GamepadNavigator
         return null;
     }
 
-    /// <summary>Whether an element is inside the page and shows within what the page has on screen.</summary>
+    /// <summary>
+    /// Whether an element is inside the page and shows within what the page has on screen. A link in text (a
+    /// ContentElement, with no box of its own) is measured by the text it is in.
+    /// </summary>
     private static bool IsOnScreenIn(DependencyObject element, ScrollViewer page)
     {
-        if (element is not Visual visual || !visual.IsDescendantOf(page) || element is not FrameworkElement fe) return false;
+        var d = element;
+        while (d is not null and not FrameworkElement) d = LogicalTreeHelper.GetParent(d);
+        if (d is not FrameworkElement fe || !fe.IsDescendantOf(page)) return false;
         var box = fe.TransformToAncestor(page).TransformBounds(new Rect(0, 0, fe.ActualWidth, fe.ActualHeight));
         return box.Bottom > 0 && box.Top < page.ViewportHeight;
     }
