@@ -14,6 +14,20 @@ public class GamepadInputTests
     }
 
     [Fact]
+    public void A_held_direction_says_it_is_a_repeat()
+    {
+        var input = Started();
+        Assert.Equal(new[] { PadAction.Up }, input.Update(Pad(XInputReader.DPadUp), 10));
+        Assert.False(input.LastDirectionRepeated); // the press itself
+        Assert.Equal(new[] { PadAction.Up }, input.Update(Pad(XInputReader.DPadUp), 10 + GamepadInput.RepeatDelayMs));
+        Assert.True(input.LastDirectionRepeated);
+        Assert.Empty(input.Update(Pad(), 1000));
+        Assert.False(input.LastDirectionRepeated);
+        Assert.Equal(new[] { PadAction.Up }, input.Update(Pad(XInputReader.DPadUp), 1010));
+        Assert.False(input.LastDirectionRepeated); // pressed again: a new press
+    }
+
+    [Fact]
     public void A_button_acts_once_per_press()
     {
         var input = Started();

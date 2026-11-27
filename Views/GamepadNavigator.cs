@@ -93,6 +93,9 @@ public sealed class GamepadNavigator
     /// <summary>One reading; public so the diagnostics can step it with readings of their own.</summary>
     public void Tick()
     {
+        // Every reading is counted, a press acted on or not: a press that opened a modal window drops the rest of its
+        // reading once any reading has been taken inside that window (see PerformAll), however it was closed.
+        int reading = ++_readings;
         var window = TargetWindow();
         var state = window != null ? _read() : null;
         if (window == null || state == null)
@@ -111,21 +114,21 @@ public sealed class GamepadNavigator
         }
         var actions = _input.Update(state.Value, now);
         if (actions.Count == 0) return;
+        bool repeated = _input.LastDirectionRepeated;
         // Acted on just after this reading, not inside it: a DispatcherTimer doesn't fire again until its Tick has
         // returned, and A on a game opens Game Details modally, so a press acted on in here would leave the
         // controller unread for as long as Game Details stayed open.
-        window.Dispatcher.BeginInvoke(DispatcherPriority.Input, () => PerformAll(actions, window));
+        window.Dispatcher.BeginInvoke(DispatcherPriority.Input, () => PerformAll(actions, window, reading, repeated));
     }
 
-    private void PerformAll(IReadOnlyList<PadAction> actions, Window window)
+    private void PerformAll(IReadOnlyList<PadAction> actions, Window window, int reading, bool repeated)
     {
         if (TargetWindow() != window) return; // another window came to the front in between
-        int reading = ++_readings;
         foreach (var action in actions)
         {
             try
             {
-                Perform(action, window);
+                Perform(action, window, repeated && action is PadAction.Up or PadAction.Down or PadAction.Left or PadAction.Right);
             }
             catch (Exception ex)
             {
@@ -158,7 +161,9 @@ public sealed class GamepadNavigator
         };
     }
 
-    private void Perform(PadAction action, Window window)
+    /// <param name="repeat">A direction repeated because it is held, not pressed again: it doesn't leave the games
+    /// for the bar above them, nor move between that bar's rows.</param>
+    private void Perform(PadAction action, Window window, bool repeat = false)
     {
         MarkKeyboardAsLastInput();
         var focused = Keyboard.FocusedElement as DependencyObject;
@@ -194,10 +199,15 @@ public sealed class GamepadNavigator
                     if (onGame)
                     {
                         SendKey(ArrowFor(action));
-                        // Up on the top row goes nowhere in the games: on into the bar above them (filters, sort, views).
-                        if (action == PadAction.Up && ReferenceEquals(Keyboard.FocusedElement, focused)) library.FocusTopBar(_lastTop);
+                        // Up on the top row goes nowhere in the games: a new press goes on into the bar above them
+                        // (filters, sort, views). Up held to scroll to the top stops there.
+                        if (action == PadAction.Up && !repeat && ReferenceEquals(Keyboard.FocusedElement, focused)) library.FocusTopBar(_lastTop);
                     }
-                    else if (onTop) MoveInTopBar(action, (UIElement)focused!, library);
+                    else if (onTop)
+                    {
+                        // Held, Left and Right run along the bar; Up and Down move a row only when pressed again.
+                        if (!(repeat && action is PadAction.Up or PadAction.Down)) MoveInTopBar(action, (UIElement)focused!, library);
+                    }
                     else FocusGames(library);
                     break;
                 case PadAction.Accept:

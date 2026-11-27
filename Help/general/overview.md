@@ -64,7 +64,7 @@ Turn on **Use a game controller in the Library** in Settings > Library & Art > L
 - **Menu** (the button with three lines) - the game's right-click menu. Move through it with the D-pad, A to choose, B to close.
 - **LB and RB** - the previous and next category tab.
 
-**Up from the top row of games** goes to the bar above them: Filters, Sort, the view buttons, the search box, and the Add Game, Add Folder and Scan for Games buttons. There the D-pad moves to the next control that way, and A presses a button or opens Sort; Down from the bar, or B, goes back to the games. Up again goes back to the control you used last.
+**Up from the top row of games** goes to the bar above them: Filters, Sort, the view buttons, the search box and the category tabs. There the D-pad moves to the next control that way, and A presses a button or opens Sort; Down from the bar, or B, goes back to the games. Up again goes back to the control you used last. Holding Up to scroll to the top of your games stops on the top row; press Up again to go on into the bar. Add Game, Add Folder and Scan for Games aren't reached from the controller: they open Windows' own file pickers, which a controller can't use.
 
 - **Filters** - A opens the list. The D-pad moves through it, A ticks a filter (press again to exclude, again to clear), and B closes it.
 - **Sort** - A opens it. The D-pad moves through the orders, A chooses one, and B closes it as it was.

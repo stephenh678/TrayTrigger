@@ -179,6 +179,60 @@ public partial class App
             report.AppendLine("  (back to the control last used)");
             Press("Down", XInputReader.DPadDown);
 
+            // Held directions, through the navigator's own timer (a repeat needs real time between readings): Up held
+            // to scroll to the top stops on the top row, and in the bar Up held stays on its row while Left held runs
+            // along it.
+            report.AppendLine("## Holding the D-pad");
+            void HoldFor(ushort buttons, int ms)
+            {
+                pad = new PadState(buttons, 0, 0);
+                PumpDispatcher(TimeSpan.FromMilliseconds(ms));
+                pad = default;
+                PumpDispatcher(TimeSpan.FromMilliseconds(200));
+            }
+            window.Width = 700; // narrow, so the games take more than one row
+            Settle(window);
+            window.LibraryPage.FocusGames(games.LastOrDefault());
+            Settle(window);
+            navigator.RunTimerForTest(true);
+            PumpDispatcher(TimeSpan.FromMilliseconds(200));
+            report.AppendLine($"  start        -> {Focus()}");
+            HoldFor(XInputReader.DPadUp, 1500);
+            report.AppendLine($"  Up held      -> {Focus()}");
+            HoldFor(XInputReader.DPadUp, 150);
+            report.AppendLine($"  Up again     -> {Focus()}");
+            HoldFor(XInputReader.DPadUp, 1200);
+            report.AppendLine($"  Up held      -> {Focus()}");
+            HoldFor(XInputReader.DPadLeft, 1000);
+            report.AppendLine($"  Left held    -> {Focus()}");
+            HoldFor(XInputReader.DPadDown, 150);
+            report.AppendLine($"  Down         -> {Focus()}");
+
+            // Two buttons in one reading, the first opening Game Details, which is then closed without the controller
+            // (as by the mouse): the second (Menu) is stale by then and must not open the game's menu.
+            window.Width = 1400;
+            Settle(window);
+            // RB acts wherever focus is (it steps the category tab), so a stale RB shows as a changed tab.
+            report.AppendLine("## A and RB at once, Game Details closed by the mouse");
+            window.LibraryPage.FocusGames();
+            Settle(window);
+            string tabBefore = main.SelectedCategory;
+            var closer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+            closer.Tick += (_, _) =>
+            {
+                closer.Stop();
+                foreach (var dlg in Current.Windows.OfType<GameDetailsDialog>().ToList()) dlg.Close();
+            };
+            closer.Start();
+            pad = new PadState((ushort)(XInputReader.A | XInputReader.RightShoulder), 0, 0);
+            PumpDispatcher(TimeSpan.FromSeconds(4), () => !closer.IsEnabled && !Current.Windows.OfType<GameDetailsDialog>().Any());
+            pad = default;
+            PumpDispatcher(TimeSpan.FromMilliseconds(300));
+            navigator.RunTimerForTest(false);
+            report.AppendLine($"  tab {tabBefore} -> {main.SelectedCategory} (should stay {tabBefore})");
+            main.SelectedCategory = tabBefore;
+            Settle(window);
+
             // The same through the navigator's own timer, as a real controller is read: Game Details opened with A must
             // go on being read (a DispatcherTimer doesn't fire again until its Tick returns, and A opens it modally).
             report.AppendLine("## Game Details through the timer");

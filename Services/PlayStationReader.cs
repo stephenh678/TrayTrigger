@@ -21,15 +21,19 @@ namespace TrayTrigger.Services;
 public sealed class PlayStationReader
 {
     private const ushort SonyVendorId = 0x054C;
-    private static readonly ushort[] DualShock4 = { 0x05C4, 0x09CC, 0x0BA0 };
+    // 0x0BA0 is Sony's DualShock 4 USB wireless adapter, which reports even with no controller paired to it.
+    private const ushort DualShock4Adapter = 0x0BA0;
+    private static readonly ushort[] DualShock4 = { 0x05C4, 0x09CC, DualShock4Adapter };
     private static readonly ushort[] DualSense = { 0x0CE6, 0x0DF2 };
     // Looking for a controller walks every HID device, so it is done again only this often while none is found.
-    private static readonly TimeSpan Rescan = TimeSpan.FromSeconds(2);
+    private const long RescanMs = 2000;
     private const long LetGoAfterMs = 1000;
+    private const int ReadTimeoutMs = 500;
 
     private readonly object _lock = new();
     private Device? _device;
-    private DateTime _nextScan;
+    // Environment.TickCount64, not the wall clock: setting the clock back must not put off the next look.
+    private long _nextScanMs;
     private long _lastAsked;
     private string? _announced;
 
@@ -39,7 +43,9 @@ public sealed class PlayStationReader
         public required ushort ProductId;
         public required bool Bluetooth;
         public required int ReportLength;
-        public PadState State;
+        // Null until the first report arrives: until then nothing is known of what is held, and a neutral reading
+        // would let a button already held count as a new press.
+        public PadState? State;
         public volatile bool Gone;
         public volatile bool Failed;
     }
@@ -47,21 +53,31 @@ public sealed class PlayStationReader
     /// <summary>The first Sony controller's state, or null when none is connected.</summary>
     public PadState? Read()
     {
-        Interlocked.Exchange(ref _lastAsked, Environment.TickCount64);
+        long now = Environment.TickCount64;
+        Interlocked.Exchange(ref _lastAsked, now);
         lock (_lock)
         {
             if (_device is { Gone: true } old)
             {
                 // Let go while nothing asked: back at once. Lost (unplugged, out of range): on the next scan.
-                if (!old.Failed) _nextScan = DateTime.MinValue;
+                if (!old.Failed) _nextScanMs = 0;
                 _device = null;
             }
             if (_device == null)
             {
-                var now = DateTime.UtcNow;
-                if (now < _nextScan) return null;
-                _nextScan = now + Rescan;
-                _device = Open();
+                if (now < _nextScanMs) return null;
+                _nextScanMs = now + RescanMs;
+                try
+                {
+                    _device = Open();
+                }
+                catch (Exception ex)
+                {
+                    // This runs on the UI thread, in the controller's timer: a device that can't be opened is passed
+                    // over (and looked at again on the next scan), never an error that reaches the app.
+                    LoggingService.Swallowed("Controller", ex, "looking for a PlayStation controller");
+                    _device = null;
+                }
                 if (_device == null) return null;
                 var device = _device;
                 Task.Run(() => ReadLoop(device));
@@ -73,24 +89,30 @@ public sealed class PlayStationReader
     private async Task ReadLoop(Device device)
     {
         var buffer = new byte[device.ReportLength];
+        // A timeout so a controller that goes quiet doesn't keep the device open once nothing asks. One source is
+        // reused from report to report (a new one, with its own timer, 250 times a second is waste); it is replaced
+        // only after it has fired.
+        var timeout = new CancellationTokenSource();
         try
         {
             while (Environment.TickCount64 - Interlocked.Read(ref _lastAsked) < LetGoAfterMs)
             {
                 int n;
-                // A timeout so a controller that goes quiet doesn't keep the device open once nothing asks.
-                using (var timeout = new CancellationTokenSource(500))
+                if (!timeout.TryReset())
                 {
-                    try
-                    {
-                        n = await device.Stream.ReadAsync(buffer.AsMemory(), timeout.Token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // The half-second timeout: no report in that time (nothing moved), which is normal. Go round and look
-                        // again whether anything still asks.
-                        continue;
-                    }
+                    timeout.Dispose();
+                    timeout = new CancellationTokenSource();
+                }
+                timeout.CancelAfter(ReadTimeoutMs);
+                try
+                {
+                    n = await device.Stream.ReadAsync(buffer.AsMemory(), timeout.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // The half-second timeout: no report in that time (nothing moved), which is normal. Go round and look
+                    // again whether anything still asks.
+                    continue;
                 }
                 if (n == 0)
                 {
@@ -101,14 +123,16 @@ public sealed class PlayStationReader
                     lock (_lock) device.State = state;
             }
         }
-        catch (Exception ex) when (ex is IOException or ObjectDisposedException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
-            // Unplugged, switched off or out of Bluetooth range: looked for again on the next scan.
+            // Unplugged, switched off or out of Bluetooth range (an IOException), or anything else: either way the
+            // device is done with and looked for again on the next scan, not reopened on every reading.
             device.Failed = true;
             LoggingService.Swallowed("Controller", ex, "reading the PlayStation controller");
         }
         finally
         {
+            timeout.Dispose();
             device.Gone = true;
             device.Stream.Dispose();
         }
@@ -134,6 +158,8 @@ public sealed class PlayStationReader
             _ => (-1, -1),
         };
         if (sticks < 0 || report.Length < buttons + 2) return null;
+        // The wireless adapter sets bit 2 of byte 31 while no controller is connected to it: nothing to read.
+        if (productId == DualShock4Adapter && report[0] == 0x01 && report.Length > 31 && (report[31] & 0x04) != 0) return null;
 
         byte face = report[buttons], more = report[buttons + 1];
         ushort pad = (face & 0x0F) switch // the D-pad is a hat: 0 is up, then clockwise, 8 is centred
@@ -222,7 +248,17 @@ public sealed class PlayStationReader
             _announced = path;
             LoggingService.Info("Controller", $"PlayStation controller found (product {productId:X4}, {(bluetooth ? "Bluetooth" : "USB")})");
         }
-        return new Device { Stream = new FileStream(handle, FileAccess.Read, 0, isAsync: true), ProductId = productId, Bluetooth = bluetooth, ReportLength = reportLength };
+        FileStream stream;
+        try
+        {
+            stream = new FileStream(handle, FileAccess.Read, 0, isAsync: true);
+        }
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
+        return new Device { Stream = stream, ProductId = productId, Bluetooth = bluetooth, ReportLength = reportLength };
     }
 
     private static string? InterfacePath(IntPtr set, ref SpDeviceInterfaceData data)

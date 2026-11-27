@@ -32,7 +32,7 @@
 
                        <!-- 1. Header: title and subtitle on the left; the game count and the add buttons on the right, so the
                             row below can give its whole width to the category and collection strips. -->
-                       <DockPanel x:Name="LibraryHeader" Grid.Row="0" Margin="0,0,0,14">
+                       <DockPanel Grid.Row="0" Margin="0,0,0,14">
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>

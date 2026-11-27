@@ -29,6 +29,12 @@ public sealed class GamepadInput
         (XInputReader.RightShoulder, PadAction.NextTab),
     };
 
+    /// <summary>
+    /// Whether the direction the last <see cref="Update"/> returned was a repeat of one held down, not a new press:
+    /// a held direction stays where it started (it never runs on out of the games), a new press can move on.
+    /// </summary>
+    public bool LastDirectionRepeated { get; private set; }
+
     private ushort _held;
     private PadAction? _direction;
     private bool _directionBlocked;
@@ -46,6 +52,7 @@ public sealed class GamepadInput
     public List<PadAction> Update(PadState state, long nowMs)
     {
         var actions = new List<PadAction>();
+        LastDirectionRepeated = false;
 
         var direction = DirectionOf(state);
         if (direction != _direction)
@@ -59,6 +66,7 @@ public sealed class GamepadInput
                  && nowMs - _directionSince >= RepeatDelayMs && nowMs - _lastRepeat >= RepeatIntervalMs)
         {
             _lastRepeat = nowMs;
+            LastDirectionRepeated = true;
             actions.Add(held);
         }
 

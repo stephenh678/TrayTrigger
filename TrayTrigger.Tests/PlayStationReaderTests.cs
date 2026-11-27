@@ -74,6 +74,21 @@ public class PlayStationReaderTests
     }
 
     [Fact]
+    public void Wireless_adapter_with_no_controller_is_not_read_as_one()
+    {
+        const ushort adapter = 0x0BA0;
+        var report = new byte[64];
+        report[0] = 0x01; // zeros otherwise: read as a controller, that would be D-pad Up and the stick up-left
+        report[31] = 0x04; // the adapter's "no controller connected"
+        Assert.Null(PlayStationReader.Parse(report, adapter, bluetooth: false));
+
+        report[31] = 0;
+        report[1] = report[2] = report[3] = report[4] = 0x80;
+        report[5] = 0x28; // Cross, D-pad centred
+        Assert.Equal(new PadState(XInputReader.A, 0, 0), PlayStationReader.Parse(report, adapter, false));
+    }
+
+    [Fact]
     public void Other_reports_are_ignored()
     {
         Assert.Null(PlayStationReader.Parse(new byte[] { 0x05, 0, 0 }, DualSense, true));

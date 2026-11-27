@@ -236,12 +236,15 @@ public partial class LibraryView : UserControl
         cards[target].BringIntoView();
     }
 
-    /// <summary>True when focus is on a game: a card or its Play button, or a Details List row.</summary>
-    /// <summary>Whether focus is in the rows above the games: the header's buttons, the category and collection tabs, and the search, sort, filter and view bar.</summary>
+    /// <summary>
+    /// Whether focus is in the rows the controller reaches above the games: the category and collection tabs, and the
+    /// search, sort, filter and view bar. Not the header's Add Game, Add Folder and Scan for Games: they open Windows'
+    /// own file and folder pickers, which a controller can't work or close.
+    /// </summary>
     internal bool IsInTopBar(DependencyObject? focused)
     {
         if (focused is not Visual visual) return false;
-        return visual.IsDescendantOf(LibraryHeader) || visual.IsDescendantOf(TabRow) || visual.IsDescendantOf(LibraryToolbar);
+        return visual.IsDescendantOf(TabRow) || visual.IsDescendantOf(LibraryToolbar);
     }
 
     /// <summary>Focus into the rows above the games: <paramref name="preferred"/> if it is still there and can take it, else the Filters button.</summary>
@@ -251,6 +254,7 @@ public partial class LibraryView : UserControl
         FilterFlyoutControl.FilterButton.Focus();
     }
 
+    /// <summary>True when focus is on a game: a card or its Play button, or a Details List row.</summary>
     internal bool IsGameFocused(DependencyObject? focused)
     {
         if (focused == null) return false;
