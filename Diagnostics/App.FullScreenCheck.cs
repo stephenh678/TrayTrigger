@@ -1,4 +1,4 @@
-#if DEBUG
+﻿#if DEBUG
 using System;
 using System.IO;
 using System.Linq;
@@ -41,7 +41,27 @@ public partial class App
             window.Height = 760;
             main.CurrentSection = NavSection.Library;
             main.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModePosterGrid;
+            // A collection, as most libraries have one, so the tab row shares its width between two strips.
+            var cards = main.FilteredGames.Cast<GameCardViewModel>().Take(2).ToList();
+            if (!main.Library.HasCollections && cards.Count > 0) main.Library.ApplyCollections(cards, new[] { "Multiplayer" }, Array.Empty<string>());
             Settle(window);
+            int Relayouts(int ms)
+            {
+                int count = 0;
+                // A strip's width or its arrows changing. Past 300 it is a loop: the row is hidden to end it, so the
+                // check can finish and say so instead of hanging.
+                ScrollChangedEventHandler counter = (_, e) =>
+                {
+                    if (e.ExtentWidthChange == 0 && e.ViewportWidthChange == 0) return;
+                    if (++count == 300) window.LibraryPage.TabRow.Visibility = Visibility.Collapsed;
+                };
+                window.LibraryPage.TabRow.AddHandler(ScrollViewer.ScrollChangedEvent, counter);
+                PumpDispatcher(TimeSpan.FromMilliseconds(ms));
+                window.LibraryPage.TabRow.RemoveHandler(ScrollViewer.ScrollChangedEvent, counter);
+                return count;
+            }
+            report.AppendLine($"collections {main.Library.CollectionTabs.Count}; tab row width changes at rest: {Relayouts(1500)}");
+            File.WriteAllText(outPath, report.ToString());
             var sidebar = FindVisualChildren<Border>(window).First(b => b.Width > 0 && Grid.GetColumn(b) == 0 && b.Parent == window.Content);
             string State() =>
                 $"window {window.WindowState}/{window.WindowStyle}/{window.ResizeMode} {window.ActualWidth:F0}x{window.ActualHeight:F0}, " +
@@ -85,6 +105,8 @@ public partial class App
             Press(XInputReader.Back);
             PumpDispatcher(TimeSpan.FromMilliseconds(400));
             report.AppendLine($"View again: full screen {main.IsFullScreenLibrary}: {State()}");
+            report.AppendLine($"  tab row width changes in the 3 s after (should be a few, then none; 300 is a loop): {Relayouts(1500)} then {Relayouts(1500)}");
+            window.LibraryPage.TabRow.Visibility = Visibility.Visible;
             string placementAfter = $"{settings.MainWindowLeft:F0},{settings.MainWindowTop:F0} {settings.MainWindowWidth:F0}x{settings.MainWindowHeight:F0} max {settings.MainWindowMaximized}";
             report.AppendLine($"saved placement kept: {placementBefore == placementAfter} ({placementBefore} -> {placementAfter})");
             File.WriteAllText(outPath, report.ToString());

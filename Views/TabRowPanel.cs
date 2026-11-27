@@ -1,6 +1,8 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using TrayTrigger.Services;
 
 namespace TrayTrigger.Views;
@@ -63,8 +65,8 @@ public sealed class TabRowPanel : Panel
 
         bool shown = CollectionsShown;
         _dividerWidth = shown ? Divider?.DesiredSize.Width ?? 0 : 0;
-        double categoriesNeed = Categories?.DesiredSize.Width ?? 0;
-        double collectionsNeed = shown ? Collections!.DesiredSize.Width : 0;
+        double categoriesNeed = Need(Categories);
+        double collectionsNeed = shown ? Need(Collections) : 0;
         double width = double.IsInfinity(availableSize.Width) ? categoriesNeed + _dividerWidth + collectionsNeed : availableSize.Width;
 
         IsSharing = LibraryTabRowLayout.Shares(width - _dividerWidth, categoriesNeed, collectionsNeed);
@@ -77,6 +79,32 @@ public sealed class TabRowPanel : Panel
         Categories?.Measure(new Size(_categoriesWidth, availableSize.Height));
         if (shown) Collections!.Measure(new Size(_collectionsWidth, availableSize.Height));
         return new Size(double.IsInfinity(availableSize.Width) ? width : availableSize.Width, height);
+    }
+
+    /// <summary>
+    /// The width a strip needs for its tabs: its width at no limit, less its side arrows if they show. The arrows show
+    /// only once the strip is cut, so counting them made a strip that was cut need more, then, given more, need less
+    /// with its arrows gone, and the two strips swapped widths back and forth without end whenever the row was right
+    /// at the edge of fitting both (after leaving the full-screen Library, for one: text and width change together).
+    /// </summary>
+    private static double Need(UIElement? strip)
+    {
+        if (strip == null) return 0;
+        double need = strip.DesiredSize.Width;
+        foreach (var arrow in Arrows(strip))
+            if (arrow.Visibility == Visibility.Visible) need -= arrow.DesiredSize.Width; // DesiredSize includes its margin
+        return Math.Max(0, need);
+    }
+
+    private static System.Collections.Generic.IEnumerable<RepeatButton> Arrows(DependencyObject parent)
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is RepeatButton arrow) yield return arrow;
+            else if (child is not ItemsControl) // the tabs themselves hold no arrows
+                foreach (var inner in Arrows(child)) yield return inner;
+        }
     }
 
     protected override Size ArrangeOverride(Size finalSize)
