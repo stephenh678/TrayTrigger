@@ -109,9 +109,9 @@
         <!-- ============================================================== -->
         <Border Grid.Row="0" Margin="0,0,0,12" CornerRadius="{DynamicResource RadiusCard}" BorderThickness="1"
                 BorderBrush="{DynamicResource BrushBorder}" Background="{DynamicResource BrushBackground}"
-                MinHeight="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource RatioHeightConverter}, ConverterParameter='0.24,210,260'}">
-            <!-- A little taller as the window gets wider (the art is cropped from the bottom, under the fade), between 210 and 260: a wider window
-                 grows the hero a little rather than cropping the art to a strip. -->
+                MinHeight="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource RatioHeightConverter}, ConverterParameter='0.323,210,320'}">
+            <!-- The banners are about 3.1:1 (3840x1240, 1920x620), so the hero keeps that shape, between 210 and 320: at the window's opening
+                 size the whole banner shows; wider than that, the art is cropped from the bottom, under the fade, and the page below keeps its room. -->
             <Border.Clip>
                 <MultiBinding Converter="{StaticResource RoundedClipConverter}"><Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}"/><Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/><Binding Path="CornerRadius" RelativeSource="{RelativeSource Self}"/><Binding Path="BorderThickness" RelativeSource="{RelativeSource Self}"/></MultiBinding>
             </Border.Clip>
@@ -130,7 +130,7 @@
                 <Border Style="{StaticResource HeroFallbackLayer}" Background="{DynamicResource BrushScrim}"/>
 
                 <!-- The game's banner, from Steam or SteamGridDB, kept sharp and to the right -->
-                <Border Style="{StaticResource HeroBannerLayer}">
+                <Border Style="{StaticResource HeroBannerLayer}" RenderOptions.BitmapScalingMode="HighQuality">
                     <Border.Background>
                         <ImageBrush ImageSource="{Binding HeroImage}" Stretch="UniformToFill" AlignmentX="Right" AlignmentY="Top"/>
                     </Border.Background>

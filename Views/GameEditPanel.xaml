@@ -270,10 +270,10 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                                <!-- Game Details shows the banner a little shorter than it is: the part below the line is cropped. -->
+                                                <!-- Game Details shows the whole banner at its opening size; a wider window trims it from the bottom. -->
                                                 <Border VerticalAlignment="Bottom" Height="26" Background="{DynamicResource BrushScrim}"
                                                         Visibility="{Binding HasHeroPreview, Converter={StaticResource BoolToVis}}">
-                                                    <TextBlock Text="Cropped on Game Details" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                    <TextBlock Text="Cropped on a wider window" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
                                                                FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                                 </Border>
                                             </Grid>

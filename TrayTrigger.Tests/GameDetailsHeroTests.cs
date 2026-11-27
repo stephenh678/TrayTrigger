@@ -301,13 +301,43 @@ public class GameDetailsHeroTests : IDisposable
     }
 
     [Theory]
-    [InlineData(920, 221)]    // the window as it opens
-    [InlineData(700, 210)]    // narrower: the floor that holds the name and the buttons
-    [InlineData(1400, 260)]   // wider: the ceiling that leaves the page below room to work
+    [InlineData(920, 297)]    // the window as it opens: the whole 3840x1240 banner
+    [InlineData(600, 210)]    // narrower: the floor that holds the name and the buttons
+    [InlineData(1400, 320)]   // wider: the ceiling that leaves the page below room to work
     [InlineData(double.NaN, 210)]
     public void TheHero_GrowsWithTheWindow_BetweenAFloorAndACeiling(double width, double expected)
     {
-        Assert.Equal(expected, Math.Round(TrayTrigger.Converters.RatioHeightConverter.For(width, "0.24,210,260")));
+        Assert.Equal(expected, Math.Round(TrayTrigger.Converters.RatioHeightConverter.For(width, HeroSizing())));
+    }
+
+    /// <summary>The sizing the dialog itself uses, read from its XAML so the test checks what ships.</summary>
+    private static string HeroSizing()
+    {
+        string xaml = SourceTree.Read("Views/GameDetailsDialog.xaml");
+        var match = System.Text.RegularExpressions.Regex.Match(xaml, @"RatioHeightConverter\}, ConverterParameter='([^']+)'");
+        Assert.True(match.Success, "The hero's RatioHeightConverter sizing was not found in GameDetailsDialog.xaml.");
+        return match.Groups[1].Value;
+    }
+
+    [Theory]
+    [InlineData(1600, 0)]     // SteamGridDB's smaller banner: its own size, never enlarged
+    [InlineData(3840, 0)]     // Steam's banner: its own size, sharp on a wide or high-DPI window
+    [InlineData(5000, 3840)]  // anything bigger is scaled down to Steam's size
+    public void TheBanner_IsDecodedAtItsOwnWidth_UpToSteamsSize(int width, int expected)
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"tt-hero-{Guid.NewGuid():N}.png");
+        try
+        {
+            var source = System.Windows.Media.Imaging.BitmapSource.Create(width, 4, 96, 96, System.Windows.Media.PixelFormats.Gray8, null, new byte[width * 4], width);
+            var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(source));
+            using (var file = File.Create(path)) encoder.Save(file);
+            Assert.Equal(expected, GameDetailsViewModel.HeroDecodeWidth(path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]
