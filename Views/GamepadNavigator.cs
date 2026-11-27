@@ -44,6 +44,8 @@ public sealed class GamepadNavigator
     // The game focus was last on in the Library, to go back to when focus comes back without one (Game Details
     // closing hands it to the window, and a tab change can take the card away).
     private GameCardViewModel? _lastGame;
+    // The control last used in the bar above the games, to go back to when Up leaves the games again.
+    private IInputElement? _lastTop;
 
     public GamepadNavigator(MainViewModel main, Func<PadState?>? read = null)
     {
@@ -161,7 +163,7 @@ public sealed class GamepadNavigator
         var focused = Keyboard.FocusedElement as DependencyObject;
 
         // An open menu (the right-click menu on a game, a drop-down) takes the keys as it would from the keyboard.
-        if (IsInMenu(focused))
+        if (IsInMenu(focused) || focused is ComboBox { IsDropDownOpen: true })
         {
             Key? key = action switch
             {
@@ -173,23 +175,40 @@ public sealed class GamepadNavigator
             return;
         }
 
+        // The filter list, a popup over the main window: move through it, A ticks or presses, B closes it.
+        if (window is MainWindow && focused != null && PresentationSource.FromDependencyObject(focused)?.RootVisual is { } root && root != window)
+        {
+            PerformInPopup(action, focused);
+            return;
+        }
+
         if (window is MainWindow main)
         {
             var library = main.LibraryPage;
             bool onGame = library.IsGameFocused(focused);
+            bool onTop = !onGame && library.IsInTopBar(focused);
             switch (action)
             {
                 case PadAction.Up or PadAction.Down or PadAction.Left or PadAction.Right:
-                    if (onGame) SendKey(ArrowFor(action));
+                    if (onGame)
+                    {
+                        SendKey(ArrowFor(action));
+                        // Up on the top row goes nowhere in the games: on into the bar above them (filters, sort, views).
+                        if (action == PadAction.Up && ReferenceEquals(Keyboard.FocusedElement, focused)) library.FocusTopBar(_lastTop);
+                    }
+                    else if (onTop) MoveInTopBar(action, (UIElement)focused!, library);
                     else FocusGames(library);
                     break;
                 case PadAction.Accept:
                     if (focused is ButtonBase button) Press(button);
+                    else if (focused is ComboBox combo) combo.IsDropDownOpen = true;
                     else if (onGame) SendKey(Key.Enter);
-                    else FocusGames(library);
+                    else if (!onTop) FocusGames(library);
                     break;
                 case PadAction.Back:
-                    SendKey(Key.Escape);
+                    // In the bar above the games, B goes back down to them; in the games it is Esc (clear the selection, then the search).
+                    if (onTop) FocusGames(library);
+                    else SendKey(Key.Escape);
                     break;
                 case PadAction.Play:
                     if (onGame && (focused as FrameworkElement)?.DataContext is GameCardViewModel game && game.LaunchCommand.CanExecute(null))
@@ -207,6 +226,7 @@ public sealed class GamepadNavigator
                     return;
             }
             if (Keyboard.FocusedElement is FrameworkElement { DataContext: GameCardViewModel game2 } now && library.IsGameFocused(now)) _lastGame = game2;
+            else if (Keyboard.FocusedElement is DependencyObject top && library.IsInTopBar(top)) _lastTop = Keyboard.FocusedElement;
             return;
         }
 
@@ -231,6 +251,39 @@ public sealed class GamepadNavigator
                 break;
             case PadAction.Menu:
                 if (inside) SendKey(Key.Apps);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The D-pad in the bar above the games: to the next control that way. Down past the bar goes back to the games;
+    /// any other way out of it (the sidebar, another page) is not taken, and focus stays where it was.
+    /// </summary>
+    private void MoveInTopBar(PadAction action, UIElement from, LibraryView library)
+    {
+        from.MoveFocus(new TraversalRequest(DirectionFor(action)));
+        var now = Keyboard.FocusedElement as DependencyObject;
+        if (library.IsInTopBar(now) || library.IsGameFocused(now)) return;
+        if (action == PadAction.Down) FocusGames(library);
+        else from.Focus();
+    }
+
+    /// <summary>The filter list: the D-pad moves between its controls, A ticks a filter or presses a button, B closes it (Esc).</summary>
+    private static void PerformInPopup(PadAction action, DependencyObject focused)
+    {
+        switch (action)
+        {
+            case PadAction.Up or PadAction.Down or PadAction.Left or PadAction.Right:
+                if (focused is not UIElement element) break;
+                // The panel itself holds focus when the list opens (so Esc works); the first press goes to its first control.
+                if (!KeyboardNavigation.GetIsTabStop(element)) element.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                else element.MoveFocus(new TraversalRequest(DirectionFor(action)));
+                break;
+            case PadAction.Accept:
+                if (focused is ButtonBase button) Press(button);
+                break;
+            case PadAction.Back or PadAction.Menu:
+                SendKey(Key.Escape);
                 break;
         }
     }

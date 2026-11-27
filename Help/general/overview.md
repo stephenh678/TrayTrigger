@@ -64,6 +64,12 @@ Turn on **Use a game controller in the Library** in Settings > Library & Art > L
 - **Menu** (the button with three lines) - the game's right-click menu. Move through it with the D-pad, A to choose, B to close.
 - **LB and RB** - the previous and next category tab.
 
+**Up from the top row of games** goes to the bar above them: Filters, Sort, the view buttons, the search box, and the Add Game, Add Folder and Scan for Games buttons. There the D-pad moves to the next control that way, and A presses a button or opens Sort; Down from the bar, or B, goes back to the games. Up again goes back to the control you used last.
+
+- **Filters** - A opens the list. The D-pad moves through it, A ticks a filter (press again to exclude, again to clear), and B closes it.
+- **Sort** - A opens it. The D-pad moves through the orders, A chooses one, and B closes it as it was.
+- **The search box** can be reached, but typing in it needs a keyboard, or Windows' touch keyboard on a handheld.
+
 On a PlayStation controller, Cross is A, Circle is B, Square is X, Options is Menu, and L1 and R1 are LB and RB.
 
 In Game Details the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld.
@@ -72,7 +78,7 @@ What it doesn't do:
 
 - **Nothing is read while a game, or any other program, is in front.** The controller is read only while the Library, Game Details or a window they opened (Change Category, Collections, a prompt) is the window in front, so a press in a game never reaches TrayTrigger. A button already held when TrayTrigger comes to the front does nothing until it is let go.
 - **It only moves around TrayTrigger.** It sends nothing to Windows or to other programs, and it doesn't stop Steam, Game Bar or a handheld's own software from seeing the controller too. Nothing is sent to a PlayStation controller either: its lights, rumble and mode are left as they are.
-- **Other pages** (Tools, Activity, System, Settings, About) and the tray menu still need a mouse, touch or the keyboard.
+- **The sidebar, other pages** (Tools, Activity, System, Settings, About) **and the tray menu** still need a mouse, touch or the keyboard. The D-pad never leaves the Library for the sidebar.
 - **Handhelds in a mouse mode.** A handheld set to make its controls work as a mouse and keyboard (a "desktop mode") may not appear to Windows as a controller, and then this setting has nothing to read; in that mode the D-pad may already work as the arrow keys above. Switch the handheld to its controller (gamepad) mode to use this setting.
 
 ## Search and filter

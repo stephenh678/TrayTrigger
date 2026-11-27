@@ -138,6 +138,42 @@ public partial class App
             input.ShowDialog();
             report.AppendLine($"  closed, DialogResult={(input.DialogResult?.ToString() ?? "null")}");
 
+            // Up from the top row of games into the bar above them, around it, into the filter list and the sort, and back.
+            report.AppendLine("## The bar above the games");
+            main.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModePosterGrid;
+            Settle(window);
+            window.LibraryPage.FocusGames();
+            Settle(window);
+            report.AppendLine($"  start        -> {Focus()}");
+            Press("Up", XInputReader.DPadUp);
+            Press("Left", XInputReader.DPadLeft);
+            Press("Left", XInputReader.DPadLeft);
+            if (Keyboard.FocusedElement is ComboBox)
+            {
+                string sortBefore = main.SelectedSortOption;
+                Press("A (Sort)", XInputReader.A);
+                report.AppendLine($"  sort open: {(Keyboard.FocusedElement as FrameworkElement)?.GetType().Name}");
+                Press("Down", XInputReader.DPadDown);
+                Press("B", XInputReader.B);
+                report.AppendLine($"  sort unchanged: {main.SelectedSortOption == sortBefore}");
+            }
+            Press("Right", XInputReader.DPadRight);
+            Press("Right", XInputReader.DPadRight);
+            Press("A (Filters)", XInputReader.A);
+            report.AppendLine($"  filter list open: {window.LibraryPage.FilterFlyoutControl.FilterPopup.IsOpen}");
+            Press("Down", XInputReader.DPadDown);
+            Press("Down", XInputReader.DPadDown);
+            Press("Down", XInputReader.DPadDown);
+            Press("B", XInputReader.B);
+            report.AppendLine($"  filter list open: {window.LibraryPage.FilterFlyoutControl.FilterPopup.IsOpen}");
+            Press("Up", XInputReader.DPadUp);
+            Press("Down", XInputReader.DPadDown);
+            for (int i = 0; i < 6; i++) Press("Left", XInputReader.DPadLeft); // never on into the sidebar
+            Press("B", XInputReader.B);
+            Press("Up", XInputReader.DPadUp);
+            report.AppendLine("  (back to the control last used)");
+            Press("Down", XInputReader.DPadDown);
+
             // The same through the navigator's own timer, as a real controller is read: Game Details opened with A must
             // go on being read (a DispatcherTimer doesn't fire again until its Tick returns, and A opens it modally).
             report.AppendLine("## Game Details through the timer");

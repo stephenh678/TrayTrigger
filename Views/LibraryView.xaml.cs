@@ -237,6 +237,20 @@ public partial class LibraryView : UserControl
     }
 
     /// <summary>True when focus is on a game: a card or its Play button, or a Details List row.</summary>
+    /// <summary>Whether focus is in the rows above the games: the header's buttons, the category and collection tabs, and the search, sort, filter and view bar.</summary>
+    internal bool IsInTopBar(DependencyObject? focused)
+    {
+        if (focused is not Visual visual) return false;
+        return visual.IsDescendantOf(LibraryHeader) || visual.IsDescendantOf(TabRow) || visual.IsDescendantOf(LibraryToolbar);
+    }
+
+    /// <summary>Focus into the rows above the games: <paramref name="preferred"/> if it is still there and can take it, else the Filters button.</summary>
+    internal void FocusTopBar(IInputElement? preferred)
+    {
+        if (preferred is UIElement { IsVisible: true, IsEnabled: true, Focusable: true } element && IsInTopBar(element) && element.Focus()) return;
+        FilterFlyoutControl.FilterButton.Focus();
+    }
+
     internal bool IsGameFocused(DependencyObject? focused)
     {
         if (focused == null) return false;
