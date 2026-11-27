@@ -83,6 +83,7 @@ public partial class GameMatchPickerDialog : Window
         {
             AttributionRun.Text = attributionLabel;
             AttributionTextBlock.Visibility = Visibility.Visible;
+            AttributionLink.Focusable = true;
         }
 
         Loaded += async (s, e) =>

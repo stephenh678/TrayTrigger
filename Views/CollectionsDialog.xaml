@@ -29,9 +29,10 @@
 
         <StackPanel Grid.Row="1" Margin="0,0,0,12">
             <DockPanel>
-                <Button DockPanel.Dock="Right" Content="_Add" Click="AddButton_Click"
+                <!-- Declared first so it docks right of the box; TabIndex puts it after the box in the Tab order, where it is read. -->
+            <Button DockPanel.Dock="Right" Content="_Add" Click="AddButton_Click" KeyboardNavigation.TabIndex="2"
                         Style="{StaticResource ModernOutlineButton}" MinWidth="70" Margin="10,0,0,0"/>
-                <ComboBox x:Name="NameComboBox" Style="{StaticResource ModernComboBox}" IsEditable="True"
+                <ComboBox x:Name="NameComboBox" Style="{StaticResource ModernComboBox}" IsEditable="True" KeyboardNavigation.TabIndex="1"
                           AutomationProperties.Name="Collection name" PreviewKeyDown="NameComboBox_PreviewKeyDown"/>
             </DockPanel>
             <TextBlock x:Name="ErrorTextBlock" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,6,0,0"
