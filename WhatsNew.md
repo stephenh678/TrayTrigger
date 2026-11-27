@@ -6,25 +6,12 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 2.0.0
 
-- **Amazon Games** - Scan for Games now finds your Amazon Games and launches them through the Amazon Games app.
-- **itch.io** - Scan for Games now finds games installed with the itch app, and starts them without the app needing to be open.
-- **Sort by any column** - click a column header in the Details List view to sort by it, and again to reverse it.
-- **Reverse any sort** - the arrow beside the sort box, in the Library and on the Tools page, turns the order round.
-- **Your PC beside the requirements** - Game Details shows your own parts under each of a game's PC requirements, and warns where your PC falls short.
-- **Resizable columns** - drag a column's edge in the Details List view to make it wider or narrower.
-- **Arrow keys in the Library** - Move between games with the arrow keys, Home, End, Page Up and Page Down, then Enter for details or Ctrl+Enter to play.
-- **Fewer Tab presses** - Tab moves between groups and the arrow keys move inside them, so the keyboard gets around with far fewer presses.
-- **Controller in the Library** - Turn it on in Settings > Library & Art to pick and play games with a controller or a handheld's controls.
+- **Use a game controller** - Pick and play games with an Xbox or PlayStation controller. Turn it on in Settings > Library & Art.
 - **Full-screen Library** - Your games, big, for a TV or a handheld: F11, the tray menu or the controller's View button.
-- **See every game's profile** - the Details List view has a Profile column, and you can sort by it.
-- **Sort by size** - Size on Disk in the Library's sort box shows which games take the most room.
-- **Repair a game** - Game Details' ... menu opens the game in its launcher, where Verify, Repair and Uninstall are.
-- **One line for categories and collections** - Collections now sit beside the category tabs. When they don't both fit, drag the divider between them to give either side more room.
-- **Tab arrows** - When the tabs don't fit, arrows at each end scroll them.
-- **Easier System, Settings and About pages** - Each opens on its first tab and shows one tab at a time, and cards that group settings have a clear heading. Settings has a new Launchers tab for launchers and scanning.
-- **On/off switches** - Each tweak and profile tweak has one switch that shows whether it's on. Preset and opt-in tweaks sit under their own headings.
-- **Hardware Specs at a glance** - Live readings sit in tiles at the top, and the specs are two to a row.
-- **Restore point option moved** - It is now on the Performance Preset card, beside the buttons it applies to.
+- **Amazon Games and itch.io** - Scan for Games now finds games from both.
+- **Quicker with the keyboard** - Arrow keys move between games, and Tab moves between groups instead of every button.
+- **Your PC beside the requirements** - Game Details shows your own parts under a game's PC requirements.
+- **Sort and size columns** - Click a Details List column to sort by it, or drag its edge to resize it.
 
 ## 1.8.1
 
