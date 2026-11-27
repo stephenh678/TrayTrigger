@@ -236,8 +236,7 @@
                             <WrapPanel Orientation="Horizontal">
                                 <Button x:Name="PlayButton" AutomationProperties.Name="Play" Command="{Binding LaunchGameCommand}"
                                         Style="{StaticResource ModernAccentButton}" Padding="22,8" Margin="0,0,10,6"
-                                        FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSubhead}"
-                                        ToolTip="Launch this game">
+                                        FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSubhead}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="Play" VerticalAlignment="Center"/>
