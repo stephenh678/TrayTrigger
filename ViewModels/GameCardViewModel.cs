@@ -438,6 +438,11 @@ public class GameCardViewModel : ViewModelBase
     /// <summary>The list view's Playtime column: a dash rather than a blank cell.</summary>
     public string ListPlaytimeDisplay => Game.CumulativePlaytimeMinutes > 0 ? Game.PlaytimeDisplay : "—";
     public string LastPlayedDisplay => Game.LastPlayedDisplay;
+    /// <summary>Details List's Size column: the saved size on disk, or a dash before it is counted (or with no folder).</summary>
+    public string ListSizeDisplay => Game.InstallSizeBytes is long bytes and > 0 ? InstallSizeService.Format(bytes) : "—";
+
+    /// <summary>The background count saved a new size for this game.</summary>
+    internal void NotifyInstallSizeChanged() => OnPropertyChanged(nameof(ListSizeDisplay));
 
     public BitmapImage? IconImage
     {

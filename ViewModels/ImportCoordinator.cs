@@ -192,6 +192,8 @@ public partial class ImportCoordinator : ViewModelBase
             _addedSinceRecorded.Add(entry);
         }
         _library.LoadCardHeavyStateInBackground(cards);
+        // The new games' sizes, for the Largest First sort.
+        _library.CountInstallSizesInBackground();
 
         _library.RebuildCategories();
         PersistCommittedLibrary();

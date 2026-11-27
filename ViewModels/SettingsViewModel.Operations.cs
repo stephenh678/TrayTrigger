@@ -75,6 +75,7 @@ public partial class SettingsViewModel
             nameof(AppSettings.LastCategoryFilter),
             nameof(AppSettings.LastCollectionFilter),
             nameof(AppSettings.LastSortOption),
+            nameof(AppSettings.LastSortReversed),
             // Tools page view state, the same bucket as the Library's two above.
             nameof(AppSettings.ToolsSortOption),
             nameof(AppSettings.ToolsViewMode),

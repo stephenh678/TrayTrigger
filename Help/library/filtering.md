@@ -65,6 +65,14 @@ Filters stay set between sessions, the same as the category tab and the sort ord
 
 Clear in the flyout, or Clear Filters in that message, removes every tick at once. Clear leaves the flyout open, so you can pick a different filter straight away.
 
+## Sorting
+
+Pick an order in the sort box: by name, by category, favorites first, most recently played, playtime, or size. The arrow button beside it turns the order round (Z to A, smallest first, oldest first). In the Details List view, click a column header to sort by that column, and click it again to reverse it, as in File Explorer; the sorted column shows an arrow. Games with nothing to sort by - never played, or not counted yet - stay at the end whichever way the list runs.
+
+## Sorting by size
+
+**Largest First (Size on Disk)** in the sort box puts the games that take the most room first, the same Size on disk Game Details shows. The Details List view shows each game's size in its Size column, in any sort. Each game's folder is counted once, in the background, starting half a minute after TrayTrigger starts: one game at a time, at Windows' lowest priority so it gives way to everything else, and never while a game is running. A game is counted again after you play it, and once a week, so an update shows up. Until its first count, and for a game with no folder on this PC, a game sorts last. Counting reads only the list of files and their sizes, never the files themselves, and nothing is sent anywhere.
+
 ## Details
 
 - Filtering never changes your games - it only changes what is drawn. Selecting games and then changing the filter clears the selection, so an action can never reach a game you can no longer see.

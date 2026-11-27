@@ -101,6 +101,8 @@ public class AppSettings
     /// <summary>The categories' share of the Library's tab row when categories and collections can't both fit, set by dragging the divider between them.</summary>
     public double LibraryTabSplit { get; set; } = LibraryTabRowLayout.DefaultSplit;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
+    /// <summary>The Library's sort runs the other way from <see cref="LastSortOption"/>'s own direction (Z to A, smallest first, ...).</summary>
+    public bool LastSortReversed { get; set; }
 
     /// <summary>
     /// Ticked options in the library filter flyout ("launcher:steam", "status:neverplayed"), kept

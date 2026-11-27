@@ -53,9 +53,20 @@ public partial class GameDetailsViewModel
         try
         {
             var game = Game;
+            // The size the library already counted for its Largest First sort, while it is up to date: the same
+            // count, so the page and the sort agree, and the folder isn't walked again.
+            if (!InstallSizeService.NeedsCount(game, DateTime.UtcNow))
+            {
+                InstallSize = game.InstallSizeBytes is long saved and > 0 ? InstallSizeService.Format(saved) : string.Empty;
+                return;
+            }
+
             var ct = _backgroundWork.Token;
             long? bytes = await Task.Run(() => InstallSizeService.GameRoot(game) is { } root ? InstallSizeService.MeasureCached(root, ct) : null, ct).ConfigureAwait(true);
             InstallSize = bytes is > 0 ? InstallSizeService.Format(bytes.Value) : string.Empty;
+            // Kept for the sort too; saved with the library's next write.
+            game.InstallSizeBytes = bytes;
+            game.InstallSizeCountedUtc = DateTime.UtcNow;
         }
         catch (OperationCanceledException)
         {

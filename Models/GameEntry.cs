@@ -134,6 +134,12 @@ public class GameEntry
     public int RawgId { get; set; }
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
+    /// <summary>The bytes in the game's folder when it was last counted (<see cref="Services.InstallSizeService"/>), or null
+    /// before it has been, or when it has no folder to count. For the Largest First sort and Game Details.</summary>
+    public long? InstallSizeBytes { get; set; }
+    /// <summary>When <see cref="InstallSizeBytes"/> was counted. Older than the last time the game was played, or than
+    /// <see cref="Services.InstallSizeService.RecountAfter"/>, and it is counted again.</summary>
+    public DateTime? InstallSizeCountedUtc { get; set; }
     public DateTime? LastEnrichmentAttemptUtc { get; set; }
     public PerformanceProfileMode PerformanceProfile { get; set; } = PerformanceProfileMode.Off;
 
