@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="site/assets/walkthrough.gif" width="800" alt="A walkthrough: the library of games from every launcher; picking a game in the tray menu; its page with the hero banner, play time and Steam rating; the game's details, news and setup; its profile, cores and HDR; the hero banner, poster and icon; the launch popup; and the Activity row showing what changed and that it was put back">
+  <img src="site/assets/walkthrough.gif" width="800" alt="A walkthrough: the library of games from every launcher; picking a game in the tray menu; its page with the hero banner, play time and Steam rating; its details, news and your PC beside its requirements; its profile, cores and HDR; the hero banner, poster and icon; the launch popup; the Activity row showing what changed and that it was put back; and the full-screen Library for a TV">
 </p>
 
 <p align="center">
@@ -85,13 +85,13 @@ The launch is the trigger. Pick a game, and everything you chose for it happens 
 **1. Launch.** Pick a game from the tray menu, the library, its own hotkey, or a shortcut or Stream Deck button that runs `TrayTrigger.exe --play "Game"`. It starts through its store's client, or directly.
 
 <p align="center">
-  <img src="site/assets/library-current.png" width="800" alt="The games library, a poster grid with category tabs, a row of collections and launcher badges">
+  <img src="site/assets/library-current.png" width="800" alt="The games library, a poster grid with category tabs and collections on one row, and launcher badges">
 </p>
 
 **2. Set up.** TrayTrigger notes how Windows is set, then applies the game's profile: power plan, HDR, GPU preference, CPU cores, DLSS Override. Your tools close or start, and your script runs.
 
 <p align="center">
-  <img src="site/assets/closeup-profile.png" width="638" alt="Edit Game's Performance Profile set to Aggressive, with the changes it lists">
+  <img src="site/assets/closeup-profile.png" width="710" alt="A game's Performance Profile set to Aggressive, with the changes it lists">
 </p>
 
 **3. Play.** TrayTrigger stays a tray icon. Suspend a game with Ctrl+Alt+P for a cutscene you can't pause, or close it from the tray.
@@ -103,15 +103,23 @@ The launch is the trigger. Pick a game, and everything you chose for it happens 
 Each game's Played row in Activity & History lists what the profile changed, what it skipped and why, the cores the game ran on, what your script said it did, and the tools it closed and started.
 
 <p align="center">
-  <img src="site/assets/closeup-played.png" width="800" alt="A Played Overwatch row in Activity and History: what the profile changed, what was put back, the cores the game ran on">
+  <img src="site/assets/closeup-played.png" width="800" alt="A Played The Witcher 3 row in Activity and History: what the profile changed, what was put back, what the script and tools did">
 </p>
 
 ### A page for every game
 
-Click a game for its **Game Details** page: a hero banner, your play time and the Steam rating at the top, then what the game is, what TrayTrigger changes for it, and a Settings tab to change it, all in one window.
+Click a game for its **Game Details** page: a hero banner, your play time and the Steam rating at the top, then what the game is, your PC beside its requirements, what TrayTrigger changes for it, and a Settings tab to change it, all in one window.
 
 <p align="center">
-  <img src="site/assets/game-details-overview.png" width="800" alt="Game Details for The Witcher 3: a hero banner with the title, Play, play time and the 95% positive Steam rating, then the game's description, the latest news, its details and Your setup">
+  <img src="site/assets/game-details-overview.png" width="800" alt="Game Details for The Witcher 3: a hero banner with the title, Play, play time and the 96% positive Steam rating, then the game's description, the latest news, its PC requirements beside this PC, its details, Your setup and its last session">
+</p>
+
+### Play from the couch
+
+Press **F11**, choose Full-Screen Library from the tray menu, or press **View** on a controller (once it's turned on in Settings > Library & Art): your games fill the screen as big posters for a TV or a handheld, and an Xbox or PlayStation controller (wired or Bluetooth) or a handheld's own controls pick and play them. When the game exits, TrayTrigger comes back full screen.
+
+<p align="center">
+  <img src="site/assets/fullscreen.jpg" width="800" alt="The full-screen Library at 1080p: category tabs and collections along the top, then large game posters with launcher badges, play time and last played">
 </p>
 
 ### Also in the box

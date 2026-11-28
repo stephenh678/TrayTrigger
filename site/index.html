@@ -174,7 +174,7 @@
   .contrast .temp { border-color: rgba(61, 220, 151, .4); }
 
   .walkthrough { margin: 0 auto 40px; max-width: 960px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-2); box-shadow: 0 24px 70px rgba(0,0,0,.5); }
-  .walkthrough img { width: 100%; }
+  .walkthrough img, .walkthrough video { display: block; width: 100%; height: auto; }
 
   /* feature drill-downs */
   .pillar { display: grid; grid-template-columns: 1fr 1.15fr; gap: 48px; align-items: center; }
@@ -190,7 +190,7 @@
 
   /* close-ups: one part of a window, shown no larger than it was captured so the text stays sharp */
   .closeup { width: fit-content; max-width: 100%; margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line-2); background: #1f1f27; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
-  .closeup img { width: auto; max-width: 100%; cursor: zoom-in; }
+  .closeup img { max-width: 100%; cursor: zoom-in; }
   .closeup figcaption { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; font-size: 13px; }
   .closeup-stack { display: grid; gap: 18px; justify-items: start; }
   .pillar > .closeup, .pillar > .closeup-stack { justify-self: center; }
@@ -320,8 +320,8 @@
     </div>
 
     <div class="hero-shot">
-      <div class="shot lib"><img src="assets/library-current.png" width="1382" height="871" alt="TrayTrigger's library: games from every launcher in one poster grid, with category tabs, a row of your own collections, favorites and launcher badges"></div>
-      <div class="shot tray"><img src="assets/tray-menu.png" width="370" height="665" alt="TrayTrigger's tray menu: a search box, then Recent, Favorites and game categories, one right-click away"></div>
+      <div class="shot lib"><img src="assets/library-current.png" width="1351" height="857" alt="TrayTrigger's library: games from every launcher in one poster grid, with category tabs and your own collections on one row, favorites and launcher badges"></div>
+      <div class="shot tray"><img src="assets/tray-menu.png" width="278" height="532" alt="TrayTrigger's tray menu: a search box, then Recent, Favorites and game categories, one right-click away"></div>
     </div>
     <a class="chip" href="#how">Every game one right-click away<span class="accent">See what one launch does ↓</span></a>
   </div>
@@ -345,7 +345,7 @@
 <section id="how">
   <div class="wrap">
     <div class="section-head"><div class="kicker">How it works</div><h2>One click starts it all</h2><p>The launch is the trigger. Pick a game, and everything you chose for it happens around it.</p></div>
-    <figure class="walkthrough"><picture><source srcset="assets/walkthrough.webp" type="image/webp"><img loading="lazy" src="assets/walkthrough.gif" width="1280" height="720" alt="A walkthrough: the library of games from every launcher; picking a game in the tray menu; its page with the hero banner, play time and Steam rating; the game's details, news and setup; its profile, cores and HDR; the hero banner, poster and icon; the launch popup; and the Activity row showing what changed and that it was put back"></picture></figure>
+    <figure class="walkthrough"><video id="walkthrough" autoplay muted loop playsinline preload="metadata" width="1920" height="1080" aria-label="A walkthrough: the library of games from every launcher; picking a game in the tray menu; its page with the hero banner, play time and Steam rating; its details, news and your PC beside its requirements; its profile, cores and HDR; the hero banner, poster and icon; the launch popup; the Activity row showing what changed and that it was put back; and the full-screen Library for a TV"><source src="assets/walkthrough.mp4" type="video/mp4"><picture><source srcset="assets/walkthrough.webp" type="image/webp"><img loading="lazy" src="assets/walkthrough.gif" width="1280" height="720" alt="A walkthrough: the library of games from every launcher; picking a game in the tray menu; its page with the hero banner, play time and Steam rating; its details, news and your PC beside its requirements; its profile, cores and HDR; the hero banner, poster and icon; the launch popup; the Activity row showing what changed and that it was put back; and the full-screen Library for a TV"></picture></video></figure>
     <div class="grid steps">
       <div class="step"><div class="n">01 · Launch</div><p>Pick a game from the <strong>tray menu</strong>, the library or its own hotkey. It starts through its store's client, or directly.</p></div>
       <div class="step"><div class="n">02 · Set up</div><p>TrayTrigger notes how Windows is set, then applies the game's <strong>profile</strong>: power plan, HDR, GPU preference, CPU cores, DLSS Override. Your <strong>tools</strong> close or start; your <strong>script</strong> runs.</p></div>
@@ -358,7 +358,7 @@
       <h3 style="font-size:24px">See exactly what a launch did</h3>
       <p>Each game's Played row in <strong>Activity &amp; History</strong> lists what the profile changed, what it skipped and why, the cores the game ran on, what your script said it did, and the tools it closed and started. <a href="https://github.com/stephenh678/TrayTrigger/wiki/Activity-%26-History">How Activity &amp; History works →</a></p>
     </div>
-    <figure class="closeup proof-shot"><img loading="lazy" src="assets/closeup-played.png" width="1031" height="244" alt="A Played Overwatch row in Activity and History: launched through Battle.net and Battle.net closed after; the Aggressive profile's changes including HDR on; what was skipped; put back: everything; kept on the 8 performance cores; the pre-launch script closed Dropbox and Google Drive; Discord closed and opened again after, MSI Afterburner started and closed after"></figure>
+    <figure class="closeup proof-shot"><img loading="lazy" src="assets/closeup-played.png" width="825" height="161" alt="A Played The Witcher 3 row in Activity and History: launched through Steam; the Aggressive profile's changes including HDR on; put back: everything; exempt from Windows power throttling; the pre-launch script closed Dropbox and Google Drive; MSI Afterburner started and closed after"></figure>
   </div>
 </section>
 
@@ -387,15 +387,30 @@
       </ul>
       <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-the-tray-menu-works">How the tray menu works →</a><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-a-game-is-launched">How a game is launched →</a></div>
     </div>
-    <figure class="closeup"><img loading="lazy" src="assets/closeup-launcher.png" width="632" height="260" alt="Edit Game's Launch settings for a Steam game: launch through Steam, with Close the launcher after this game exits ticked"><figcaption>Per game: close Steam, EA or Ubisoft Connect when you stop playing.</figcaption></figure>
+    <figure class="closeup"><img loading="lazy" src="assets/closeup-launcher.png" width="710" height="304" alt="A Steam game's Launch settings: linked to Steam and started through it, with Close the launcher after this game exits ticked"><figcaption>Per game: close Steam, EA or Ubisoft Connect when you stop playing.</figcaption></figure>
   </div>
 </section>
 
 <section id="game-page">
   <div class="wrap">
-    <div class="section-head"><div class="kicker">Game Details</div><h2>A page for every game</h2><p>A hero banner, your play time and the Steam rating (for games on Steam) at the top. Below it, what the game is, what TrayTrigger changes for it, and the Settings tab to change it, all in one window.</p></div>
+    <div class="section-head"><div class="kicker">Game Details</div><h2>A page for every game</h2><p>A hero banner, your play time and the Steam rating (for games on Steam) at the top. Below it, what the game is, your PC beside its requirements, what TrayTrigger changes for it, and the Settings tab to change it, all in one window.</p></div>
     <div class="closeup-stack" style="justify-items:center">
-      <figure class="closeup"><img loading="lazy" src="assets/game-details-overview.png" width="1200" height="875" alt="Game Details for The Witcher 3: a hero banner with the title, Play, play time and the 95% positive Steam rating, then the game's description, the latest news and its details"><figcaption>Overview: the game's details and news, what TrayTrigger changes for it, and its last session.</figcaption></figure>
+      <figure class="closeup"><img loading="lazy" src="assets/game-details-overview.png" width="931" height="1126" alt="Game Details for The Witcher 3: a hero banner with the title, Play, play time and the 96% positive Steam rating, then the game's description, the latest news, its PC requirements with this PC's processor, memory, graphics card and free space under each, its details, its setup and its last session"><figcaption>Overview: the game's details and news, your PC beside its requirements, what TrayTrigger changes for it, and its last session.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="couch">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">New in 2.0 · Couch &amp; TV</div><h2>Play from the couch</h2><p>The full-screen Library shows only your games, as big posters with bigger text, for a TV or a handheld. Turn it on with <strong>F11</strong>, from the tray menu, or with the controller's <strong>View</strong> button once the controller is turned on in Settings &gt; Library &amp; Art.</p></div>
+    <div class="closeup-stack" style="justify-items:center">
+      <figure class="closeup"><img loading="lazy" src="assets/fullscreen.jpg" width="1280" height="720" alt="The full-screen Library at 1080p: category tabs and collections along the top, then large game posters with launcher badges, play time and last played, the first game selected for the controller"><figcaption>The full-screen Library on a 1080p screen.</figcaption></figure>
+      <figure class="closeup"><img loading="lazy" src="assets/fullscreen-details.jpg" width="1280" height="720" alt="Game Details for The Witcher 3 as a card over the full-screen Library, which is dimmed behind it: the hero banner, Play, the description, the latest news and the game's details"><figcaption>Game Details opens as a card over the Library. Close, Esc or B takes you back.</figcaption></figure>
+    </div>
+    <div class="grid grid-3" style="margin-top:32px">
+      <div class="card"><h3>Xbox or PlayStation controller</h3><p>Wired or Bluetooth, or a handheld's own controls. The D-pad moves, A opens a game, X plays it, and LB and RB switch categories. It works in full screen by itself, and in the window once it's turned on.</p></div>
+      <div class="card"><h3>Back when you're done</h3><p>TrayTrigger stays on screen until the game's window covers it, and comes back to the front full screen when the game exits, so the TV doesn't show the desktop.</p></div>
+      <div class="card"><h3>Only moves around TrayTrigger</h3><p>The controller is read only while TrayTrigger is in front, so a press in a game never reaches it. Steam, Game Bar and a handheld's own software still see the controller too.</p></div>
     </div>
   </div>
 </section>
@@ -426,7 +441,7 @@
           <p>Set <strong>CPU Cores</strong> per game: the 3D V-Cache cores on a Ryzen X3D, the performance cores on an Intel hybrid CPU, or Auto to let TrayTrigger pick for your CPU. It uses Windows <strong>CPU Sets</strong>, not a hard affinity mask, and the game's Played row says where it ran.</p>
           <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/CPU-Cores">CPU Cores →</a></div>
         </div>
-        <figure class="closeup"><img loading="lazy" src="assets/closeup-cores.png" width="638" height="186" alt="Edit Game's CPU Cores setting on Auto, recommending the performance cores on a hybrid CPU with 8 performance and 8 efficiency cores"><figcaption>Shown on an Intel hybrid CPU. On a Ryzen X3D, Auto picks the V-Cache cores.</figcaption></figure>
+        <figure class="closeup"><img loading="lazy" src="assets/closeup-cores.png" width="710" height="177" alt="Edit Game's CPU Cores setting on Auto, recommending the performance cores on a hybrid CPU with 8 performance and 8 efficiency cores"><figcaption>Shown on an Intel hybrid CPU. On a Ryzen X3D, Auto picks the V-Cache cores.</figcaption></figure>
       </div>
 
       <div class="row" id="hdr">
@@ -437,7 +452,7 @@
           <p>Set <strong>HDR</strong> On for the games that do it well and Off for the ones that render it badly, or let the profile decide. Windows' HDR switches when the game launches and switches back when it exits. A display already in HDR is left alone.</p>
           <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Enable-HDR-(profile)">HDR per game →</a></div>
         </div>
-        <figure class="closeup"><img loading="lazy" src="assets/closeup-hdr.png" width="638" height="136" alt="Edit Game's HDR setting: On for this game, turned on at launch and back off at exit, whatever its profile"></figure>
+        <figure class="closeup"><img loading="lazy" src="assets/closeup-hdr.png" width="710" height="97" alt="Edit Game's HDR setting: On for this game, turned on at launch and back off at exit, whatever its profile"></figure>
       </div>
 
       <div class="row" id="profiles">
@@ -448,7 +463,7 @@
           <p><strong>NVIDIA DLSS Override</strong> runs a game on your driver's newer DLSS files without touching the game folder.</p>
           <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Profiles-work">How profiles work →</a><a href="https://github.com/stephenh678/TrayTrigger/wiki/NVIDIA-DLSS-Override">DLSS Override →</a></div>
         </div>
-        <figure class="closeup"><img loading="lazy" src="assets/closeup-profile.png" width="638" height="260" alt="Edit Game's Performance Profile set to Aggressive, listing what it changes: the Ultimate Plan power plan, the high-performance GPU, NVIDIA Prefer Maximum Performance, and exempting the game from power throttling, with 5 more"></figure>
+        <figure class="closeup"><img loading="lazy" src="assets/closeup-profile.png" width="710" height="224" alt="A game's Performance Profile set to Aggressive, listing what it changes: the Ultimate Plan power plan, the high-performance GPU, NVIDIA Prefer Maximum Performance, and exempting the game from power throttling, with 10 more"></figure>
       </div>
     </div>
   </div>
@@ -466,7 +481,7 @@
       </ul>
       <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Starting-and-closing-tools-with-your-games">Tools and your games →</a></div>
     </div>
-    <figure class="closeup"><img loading="lazy" src="assets/closeup-tools.png" width="1060" height="336" alt="Tools page: category tabs, a filter button, and tools such as Discord, DLSS Swapper and MSI Afterburner, with icons showing which start or close with games"></figure>
+    <figure class="closeup"><img loading="lazy" src="assets/closeup-tools.png" width="838" height="254" alt="Tools page: category tabs, a filter button, and tools such as Discord, DLSS Swapper and MSI Afterburner, with icons showing which start or close with games"></figure>
   </div>
 </section>
 
@@ -520,7 +535,7 @@
       </ul>
       <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Stutter-Check">Stutter Check →</a><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">The tweaks and their trade-offs →</a></div>
     </div>
-    <figure class="closeup"><img loading="lazy" src="assets/closeup-stutter.png" width="1023" height="240" alt="Stutter Check: 16 checks, 1 needs a look, 15 fine; two overlay apps running, NVIDIA App overlay and RivaTuner, with a Here's how button"></figure>
+    <figure class="closeup"><img loading="lazy" src="assets/closeup-stutter.png" width="826" height="427" alt="Stutter Check: 18 checks, 1 needs a look, 17 fine; Chrome uses GPU hardware acceleration and holds video memory, with a Here's how button; the 17 fine checks listed below, from overlays and memory speed to the refresh rate and the paging file"></figure>
   </div>
 </section>
 
@@ -538,7 +553,7 @@
       </ul>
       <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Themes">Themes and the theme editor →</a></div>
     </div>
-    <figure class="closeup"><img loading="lazy" src="assets/theming-editor.png" width="1600" height="751" alt="The theme editor open on the Abyssal theme: main colors, a Corners card with a different shape for tags, controls, cards and posters, a font and text size card, and a live preview of game cards beside it"><figcaption>The Abyssal theme in the editor: its own corner shapes, font and text size, with the live preview open.</figcaption></figure>
+    <figure class="closeup"><img loading="lazy" src="assets/theming-editor.png" width="1591" height="919" alt="The theme editor open on a copy of the Abyssal theme: main colors, a Corners card with a different shape for tags, controls, cards and posters, a font and text size card, and a live preview of game cards beside it"><figcaption>The Abyssal theme in the editor: its own corner shapes, font and text size, with the live preview open.</figcaption></figure>
   </div>
 </section>
 
@@ -631,6 +646,14 @@
     }
   }, { rootMargin: '-45% 0px -50% 0px' });
   for (const s of document.querySelectorAll('header[id], main section[id]')) spy.observe(s);
+
+  // With reduced motion asked for, the walkthrough waits for Play instead of starting by itself.
+  const walkthrough = document.getElementById('walkthrough');
+  if (walkthrough && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    walkthrough.removeAttribute('autoplay');
+    walkthrough.pause();
+    walkthrough.controls = true;
+  }
 
   // Native dialog provides keyboard dismissal, focus containment and restoration.
   const lightbox = document.getElementById('lightbox');

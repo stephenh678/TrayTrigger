@@ -755,14 +755,27 @@ public class GameScriptServiceTests : IDisposable
 
         svc.RunPendingPostExitScriptsOnShutdown();
 
-        // Post-exit is fire-and-forget; give cmd.exe a moment.
-        for (int i = 0; i < 50 && !File.Exists(markerA); i++) Thread.Sleep(100);
+        // Post-exit is fire-and-forget; give cmd.exe a moment. The marker exists as soon as cmd opens it, before it is
+        // written and closed, so wait until it can be deleted (a delete while cmd held it failed the release build).
+        bool deleted = false;
+        for (int i = 0; i < 50 && !deleted; i++)
+        {
+            try
+            {
+                if (File.Exists(markerA) && File.ReadAllText(markerA).Trim() == "done")
+                {
+                    File.Delete(markerA);
+                    deleted = true;
+                }
+            }
+            catch (IOException) { } // still held by cmd
+            if (!deleted) Thread.Sleep(100);
+        }
 
-        Assert.True(File.Exists(markerA));
+        Assert.True(deleted, "the tracked game's post-exit script should have written its marker");
         Assert.False(File.Exists(markerB));
 
         // Running again is a no-op: the pending list was cleared.
-        File.Delete(markerA);
         svc.RunPendingPostExitScriptsOnShutdown();
         Thread.Sleep(300);
         Assert.False(File.Exists(markerA));
