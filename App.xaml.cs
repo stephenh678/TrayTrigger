@@ -731,10 +731,34 @@ public partial class App : Application
     /// </summary>
     private void ReturnToFullScreenLibraryAfterGame()
     {
-        if (_isShuttingDown || _mainViewModel?.IsFullScreenLibrary != true) return;
-        if (_launcherService?.GetActiveSessions().Count > 0) return;
+        if (!StillReturningToFullScreen()) return;
         ShowMainWindow();
+        LoggingService.Info("App", "Game ended: the full-screen Library is brought to the front");
+        // Putting the game's settings back closes its launcher and tools over the next few seconds, and each window
+        // that closes hands the front to another one (a console, Explorer), with the taskbar over the Library. So it
+        // is brought to the front again while that settles, past Windows' focus lock, unless one of TrayTrigger's own
+        // windows (Game Details) is already in front.
+        int looks = 0;
+        var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+        settle.Tick += (_, _) =>
+        {
+            if (++looks > 4 || !StillReturningToFullScreen() || _mainWindow == null)
+            {
+                settle.Stop();
+                return;
+            }
+            if (Windows.OfType<Window>().Any(w => w.IsActive)) return;
+            var handle = new System.Windows.Interop.WindowInteropHelper(_mainWindow).Handle;
+            if (handle == IntPtr.Zero || ProcessLauncherService.ForegroundWindow() == handle) return;
+            ProcessLauncherService.ActivateWindow(handle);
+            LoggingService.Verbose("App", "The full-screen Library was brought to the front again after the game's put-back");
+        };
+        settle.Start();
     }
+
+    /// <summary>Still in the full-screen Library with no game running: coming back to the front is still wanted.</summary>
+    private bool StillReturningToFullScreen() =>
+        !_isShuttingDown && _mainViewModel?.IsFullScreenLibrary == true && !(_launcherService?.GetActiveSessions().Count > 0);
 
     public void OpenSection(NavSection section)
     {
