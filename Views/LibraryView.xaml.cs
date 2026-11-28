@@ -237,6 +237,37 @@ public partial class LibraryView : UserControl
     }
 
     /// <summary>
+    /// A click in the card views puts keyboard focus on a game, so the arrow keys carry on from there: the card clicked
+    /// (before its click opens Game Details, so focus comes back to it), or, for a click on the scroll bar or between
+    /// cards, the first game in view unless a game already has focus. Ctrl and Shift clicks only select.
+    /// </summary>
+    private void OnCardScrollerMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source) return;
+        if (CardOf(source) is { } card)
+        {
+            card.Focus();
+            return;
+        }
+        if (IsGameFocused(Keyboard.FocusedElement as DependencyObject)) return;
+        FirstCardInView()?.Focus();
+    }
+
+    /// <summary>The first card wholly inside the scroller's view, else the first partly inside it.</summary>
+    private Border? FirstCardInView()
+    {
+        Border? partly = null;
+        foreach (var card in VisibleCards())
+        {
+            var box = card.TransformToAncestor(CardScroller).TransformBounds(new Rect(card.RenderSize));
+            if (box.Bottom <= 0 || box.Top >= CardScroller.ViewportHeight) continue;
+            if (box.Top >= 0 && box.Bottom <= CardScroller.ViewportHeight) return card;
+            partly ??= card;
+        }
+        return partly;
+    }
+
+    /// <summary>
     /// Whether focus is in the rows the controller reaches above the games: the category and collection tabs, and the
     /// search, sort, filter and view bar. Not the header's Add Game, Add Folder and Scan for Games: they open Windows'
     /// own file and folder pickers, which a controller can't work or close.
