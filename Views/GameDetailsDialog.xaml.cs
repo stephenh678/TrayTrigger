@@ -38,6 +38,16 @@ public partial class GameDetailsDialog : Window
         {
             Owner = main;
         }
+        // Over the full-screen Library: a card with no title bar, over the Library dimmed behind it, so it reads as part
+        // of the TV view and not a desktop window. Close, Esc and the controller's B still close it.
+        if (Owner is MainWindow { IsFullScreen: true } fullScreen)
+        {
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            BorderThickness = new Thickness(1);
+            SetResourceReference(BorderBrushProperty, "BrushBorderStrong");
+            fullScreen.DimWhileOpen(this);
+        }
 
         // Play, Remove and Close Game ask before they close the page over edits; so does closing it.
         viewModel.ConfirmLeave = ConfirmLeave;
@@ -175,5 +185,11 @@ public partial class GameDetailsDialog : Window
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    /// <summary>Puts focus on Play, for the controller: A opens Game Details, A again plays.</summary>
+    internal void FocusPlay()
+    {
+        if (PlayButton.IsVisible && PlayButton.IsEnabled) PlayButton.Focus();
     }
 }

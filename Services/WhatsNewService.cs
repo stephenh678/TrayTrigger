@@ -18,12 +18,14 @@ public static class WhatsNewService
     /// <summary>
     /// Whether moving from <paramref name="previous"/> to <paramref name="current"/> should offer the
     /// notes: only forwards, never a first install (nothing recorded), and not again for a stable
-    /// version already shown.
+    /// version already shown, except once more when a beta of it is followed by the version itself:
+    /// the notes grow over the betas, so someone who tried a beta sees the finished list on release.
     /// </summary>
     public static bool IsDue(string previous, SemanticVersion current, string seenKey)
     {
         if (string.IsNullOrWhiteSpace(previous)) return false;
         if (SemanticVersion.TryParse(previous) is not { } was || was.CompareTo(current) >= 0) return false;
+        if (was.IsPrerelease && !current.IsPrerelease && StableKey(was) == StableKey(current)) return true;
         return !string.Equals(StableKey(current), seenKey, StringComparison.Ordinal);
     }
 

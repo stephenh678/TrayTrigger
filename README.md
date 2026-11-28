@@ -74,6 +74,7 @@ Start with the one thing you change by hand before every session.
 | Sim race or fly | Starts SimHub, CrewChief or TrackIR with the game and closes them when you're done. [Companion apps](https://stephenh678.github.io/TrayTrigger/#sim-racing) |
 | Want a feature that isn't there | Runs your own PowerShell before and after any game, and says what it did. [Your scripts](https://stephenh678.github.io/TrayTrigger/#scripts) |
 | Chase stutter | Runs the usual checklist in one click, and shows every tweak's real state. [Stutter Check](https://stephenh678.github.io/TrayTrigger/#stutter) |
+| Play from the couch | Picks and starts games with an Xbox or PlayStation controller, in a full-screen Library on the TV or a handheld. |
 
 ---
 
@@ -115,7 +116,7 @@ Click a game for its **Game Details** page: a hero banner, your play time and th
 
 ### Also in the box
 
-A hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Override per game, a theming engine (colors, corner shapes, font and text size, with themes of your own), and 21 system tweaks that each show Windows' real current state. All of it has a page on the [wiki](https://github.com/stephenh678/TrayTrigger/wiki/Home).
+Game controller support and a full-screen Library for the TV, a hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Override per game, a theming engine (colors, corner shapes, font and text size, with themes of your own), and 21 system tweaks that each show Windows' real current state. All of it has a page on the [wiki](https://github.com/stephenh678/TrayTrigger/wiki/Home).
 
 ---
 

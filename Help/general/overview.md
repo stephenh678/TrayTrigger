@@ -22,6 +22,79 @@ These three are under Settings > Launching > Launching Games.
 - **Keep game launchers minimized when launching a game** asks Steam, GOG Galaxy and Epic to start quietly, so only the game opens. See How a game is launched.
 - **Show a launch popup by the tray icon** shows a small popup by the clock when a game is started from the tray or a hotkey: what it is waiting for, and the reason if the launch fails. See How the tray menu works.
 
+## Moving around with the keyboard
+
+Tab moves from one group of controls to the next, and the arrow keys move inside a group, as in File Explorer and Windows Settings:
+
+- **The sidebar** is one Tab stop. Tab lands on the page you're on; Up and Down move to the others, and Enter or Space opens one.
+- **Each row of tabs** (the Library's categories, its collections, the view buttons, the tabs at the top of System, Settings, About and Activity, and in Game Details) is one Tab stop. Tab lands on the tab that's selected; Left and Right move along the row, and Enter or Space picks one. Ctrl+Tab still changes tabs where it did.
+- **The games** in the Library are one Tab stop. Tab lands on the game you were last on, or the first.
+- **Game Details' links and news** are one Tab stop each; the arrow keys move between them.
+
+Some things you click can't be reached with Tab or the arrow keys, because the keyboard has another way to them:
+
+- **Favorite stars** - the game's menu (the menu key, or Shift+F10) has Add to Favorites and Remove from Favorites.
+- **Play buttons on Details List rows** - Ctrl+Enter plays the row.
+- **Details List column headers** - the sort box above the library sorts the same way.
+- **Game Details' "Edit performance" and "Edit launch"** - the Settings tab beside Overview opens the same settings.
+- **Help links** ("Learn more", "How ... works") - About > Help Topics opens every Help page.
+
+They still work with a click, and a screen reader can still find and press them.
+
+## Using the Library from the keyboard
+
+In the Poster Grid, Extra Large and Compact Icons views, Tab to the games, then:
+
+- **Arrow keys** move to the next game, as in File Explorer. Left and Right carry on to the row above or below; Down from a row with nothing under it goes to the last game.
+- **Home** and **End** go to the first and last game, and **Page Up** and **Page Down** move a screenful of rows.
+- **Enter** opens Game Details, and **Ctrl+Enter** plays the game.
+- **The menu key** (or Shift+F10) opens the game's right-click menu, or the batch menu when the game is one of several selected.
+- **Tab** moves on past the games, to the next group.
+
+The Details List is a list: Up and Down move a row, and Enter and Ctrl+Enter work the same.
+
+## Using a game controller
+
+Turn on **Use a game controller in the Library** in Settings > Library & Art > Library View. An Xbox controller, a PlayStation controller (DualShock 4, DualSense, DualSense Edge; wired or Bluetooth), or a handheld's built-in controls (ROG Ally, Legion Go and the like), then moves around the Library and Game Details, and the windows they open:
+
+- **D-pad or left stick** - move between games, in any view. Hold it to keep moving. The first press, when no game is picked, goes to the game you were last on, or the first.
+- **A** - open the game's Game Details. In Game Details, or on a button, it presses the button that is outlined.
+- **B** - back: closes Game Details, a menu or a prompt; in the Library it clears the selection, then the search.
+- **X** - play the game that is outlined.
+- **Menu** (the button with three lines) - the game's right-click menu. Move through it with the D-pad, A to choose, B to close.
+- **LB and RB** - the previous and next category tab.
+
+**Up from the top row of games** goes to the bar above them: Filters, Sort, the view buttons, the search box and the category tabs. There the D-pad moves to the next control that way, and A presses a button or opens Sort; Down from the bar, or B, goes back to the games. Up again goes back to the control you used last. Holding Up to scroll to the top of your games stops on the top row; press Up again to go on into the bar. Add Game, Add Folder and Scan for Games aren't reached from the controller: they open Windows' own file pickers, which a controller can't use.
+
+- **Filters** - A opens the list. The D-pad moves through it, A ticks a filter (press again to exclude, again to clear), and B closes it.
+- **Sort** - A opens it. The D-pad moves through the orders, A chooses one, and B closes it as it was.
+- **The search box** can be reached, but typing in it needs a keyboard, or Windows' touch keyboard on a handheld.
+
+On a PlayStation controller, Cross is A, Circle is B, Square is X, Options is Menu, and L1 and R1 are LB and RB.
+
+Game Details opens with Play selected, so A on a game and A again plays it. There the D-pad moves to the next button in that direction, and A presses it: Play, the tabs, the ... menu. On a drop-down, such as Performance Profile, A opens it, the D-pad moves through it, A chooses and B closes it as it was. Typing in its Settings tab still needs a keyboard, or Windows' touch keyboard on a handheld, and the controller passes over its Browse..., Choose image and New script buttons (they open Windows' own file pickers, which a controller can't use) and its hotkey box (it would record the controller's moves as the hotkey). When there is more of the page below or above, Up and Down scroll it until the next control is on screen, so text with nothing to press is read on the way.
+
+What it doesn't do:
+
+- **Nothing is read while a game, or any other program, is in front.** The controller is read only while the Library, Game Details or a window they opened (Change Category, Collections, a prompt) is the window in front, so a press in a game never reaches TrayTrigger. A button already held when TrayTrigger comes to the front does nothing until it is let go.
+- **It only moves around TrayTrigger.** It sends nothing to Windows or to other programs, and it doesn't stop Steam, Game Bar or a handheld's own software from seeing the controller too. Nothing is sent to a PlayStation controller either: its lights, rumble and mode are left as they are.
+- **The sidebar, other pages** (Tools, Activity, System, Settings, About) **and the tray menu** still need a mouse, touch or the keyboard. The D-pad never leaves the Library for the sidebar.
+- **Handhelds in a mouse mode.** A handheld set to make its controls work as a mouse and keyboard (a "desktop mode") may not appear to Windows as a controller, and then this setting has nothing to read; in that mode the D-pad may already work as the arrow keys above. Switch the handheld to its controller (gamepad) mode to use this setting.
+
+## Full-screen Library
+
+For a TV or a handheld: the window fills the screen and shows only your games, as Extra Large posters with bigger text, and the controller works whether or not its setting is on. Turn it on from:
+
+- **The tray menu** - Full-Screen Library.
+- **The Library** - the full-screen button at the right end of the bar above your games (it also takes you back).
+- **F11**, on any page.
+- **The controller's View button** (the two squares; Create on a PlayStation controller), in the Library, when Use a game controller in the Library is on.
+- **A shortcut to TrayTrigger.exe with `--couch`** - starts TrayTrigger in it, or, when TrayTrigger is already running in the tray, switches it to it.
+
+Game Details opens over it as a card, with the Library dimmed behind it and no window title bar; Close, Esc or the controller's B closes it. When you start a game, TrayTrigger stays on screen (it doesn't hide to the tray, as it does from the window) until the game's own window covers it, and when the game exits it comes back to the front full screen, so the TV never shows the desktop. A launcher that opens a window of its own, such as one asking you to sign in, still shows on top. Leave it with F11, View, the same button, or by going to another page: the window comes back as it was, with your own view and text size (neither is changed while it's on).
+
+What it doesn't do: the sidebar, Add Game and the other pages stay desktop things, and there is no on-screen keyboard (typing in the search box needs a keyboard, or Windows' touch keyboard on a handheld).
+
 ## Search and filter
 
 Three ways to find something, named for what they do. A **filter** (Library, Tools and Activity) narrows the list you are looking at to what matches. A **page search** (Settings, About and System) finds a card on any tab of that page and takes you to it. **Search everything** looks in all of them at once. Ctrl+F puts the cursor in the filter or search box of the page you are on, Ctrl+K opens Search everything, and Esc clears or closes either.

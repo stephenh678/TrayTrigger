@@ -5,6 +5,7 @@
              xmlns:theming="clr-namespace:TrayTrigger.Services.Theming"
              xmlns:services="clr-namespace:TrayTrigger.Services"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             xmlns:views="clr-namespace:TrayTrigger.Views"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
@@ -272,8 +273,10 @@
         </Style>
 
         <!-- A Details List column header: its label, and a lit background under the pointer, as a column header in Explorer. -->
+        <!-- Takes no focus: the sort box above the library does the same from the keyboard. Still a click. -->
         <Style x:Key="ColumnHeaderButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="5,2"/>
@@ -337,6 +340,14 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <!-- A link to a Help page takes no focus: dozens of them sat between the settings you'd change, and
+                     About > Help Topics opens every page. Still a click, and a screen reader can still press it.
+                     The same style's actions (New script..., Reset, Show in log) stay Tab stops. -->
+                <Trigger Property="Command" Value="{x:Static services:HelpCommands.ShowTopic}">
+                    <Setter Property="Focusable" Value="False"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Segmented Tab Button: for pill/segmented switchers (System page's Specs/Tweaks
@@ -355,6 +366,8 @@
             <Setter Property="Padding" Value="12,5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Tag" Value="False"/>
+            <!-- In a views:FocusGroup strip, Tab lands on the selected segment. -->
+            <Setter Property="views:FocusGroup.IsCurrent" Value="{Binding Tag, RelativeSource={RelativeSource Self}}"/>
             <Setter Property="Foreground">
                 <Setter.Value>
                     <MultiBinding Converter="{StaticResource TabForegroundConverter}">
@@ -506,9 +519,12 @@
             </Setter>
         </Style>
 
-        <!-- Favorite Star Toggle (Game Cards, List Rows, Details Dialog) -->
+        <!-- Favorite Star Toggle (Game Cards, List Rows, Details Dialog). Takes no focus (not just out of the Tab order: arrow keys and a click would still land on it): on every game it doubled
+             the presses to get through the library, and the game's menu (the menu key, or Menu on a controller) has
+             Add to / Remove from Favorites. Still a click, and a screen reader can still press it. -->
         <Style x:Key="FavoriteToggleButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Width" Value="22"/>
             <Setter Property="Height" Value="22"/>
             <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}"/>
@@ -1028,7 +1044,7 @@
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="{DynamicResource ColorFloatingShadow}"/>
                             </Border.Effect>
-                            <ScrollViewer Focusable="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="640">
+                            <ScrollViewer Focusable="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="{DynamicResource MenuMaxHeight}">
                                 <StackPanel IsItemsHost="True"/>
                             </ScrollViewer>
                         </Border>
@@ -1345,16 +1361,22 @@
             </Setter>
         </Style>
 
+        <!-- Menus: each row's padding, the gap between rows, and the tallest a menu gets before it scrolls. The
+             full-screen Library tightens the rows and lets a menu use the screen's height (MainWindow.FullScreen): its
+             text is bigger, and the game menu did not fit in 640. -->
+        <Thickness x:Key="MenuItemPadding">10,7</Thickness>
+        <Thickness x:Key="MenuItemSpacing">0,1</Thickness>
+        <sys:Double x:Key="MenuMaxHeight">640</sys:Double>
         <Style TargetType="MenuItem">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
-            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Padding" Value="{DynamicResource MenuItemPadding}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
-                        <Border x:Name="menuItemBorder" Background="Transparent" CornerRadius="{DynamicResource RadiusControl}" Padding="{TemplateBinding Padding}" Margin="0,1">
+                        <Border x:Name="menuItemBorder" Background="Transparent" CornerRadius="{DynamicResource RadiusControl}" Padding="{TemplateBinding Padding}" Margin="{DynamicResource MenuItemSpacing}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="IconGroup"/>
@@ -1379,7 +1401,7 @@
                                         <Border.Effect>
                                             <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="{DynamicResource ColorFloatingShadow}"/>
                                         </Border.Effect>
-                                        <ScrollViewer Focusable="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="640">
+                                        <ScrollViewer Focusable="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="{DynamicResource MenuMaxHeight}">
                                             <StackPanel IsItemsHost="True"/>
                                         </ScrollViewer>
                                     </Border>
@@ -1531,6 +1553,8 @@
         </Style>
         <!-- "Learn more" at the end of a description, in the same line: a Hyperlink in the description's TextBlock. -->
         <Style x:Key="InlineHelpLink" TargetType="Hyperlink">
+            <!-- Takes no focus, like HelpLinkButton's Help links. -->
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
             <Setter Property="TextDecorations" Value="{x:Null}"/>
             <Setter Property="Command" Value="{x:Static services:HelpCommands.ShowTopic}"/>

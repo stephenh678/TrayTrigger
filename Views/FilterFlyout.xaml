@@ -60,7 +60,7 @@
                Opened="FilterPopup_Opened" PreviewKeyDown="FilterPopup_PreviewKeyDown">
             <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                     CornerRadius="{DynamicResource RadiusCard}" Padding="6,12" MinWidth="270" MaxWidth="300"
-                    Focusable="True" FocusVisualStyle="{x:Null}">
+                    Focusable="True" KeyboardNavigation.IsTabStop="False" FocusVisualStyle="{x:Null}">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="{DynamicResource ColorFloatingShadow}"/>
                 </Border.Effect>

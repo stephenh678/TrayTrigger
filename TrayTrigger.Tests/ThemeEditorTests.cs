@@ -399,7 +399,7 @@ public class ThemeEditorTests : IDisposable
     {
         var vm = Open("Dark");
         vm.Name = "Shore";
-        Assert.Equal("right", vm.Position);  // the built-in themes keep their right edge in view
+        Assert.Equal("bottom-right", vm.Position);  // the built-in themes keep their lower right corner (the TT mark) in view
         vm.Position = "left";
         Assert.True(vm.HasUnsavedChanges);
         Assert.True(Save(vm));
@@ -442,9 +442,9 @@ public class ThemeEditorTests : IDisposable
     [Fact]
     public void AThemeThatTookItsBasesPicture_KeepsTheShownPosition_WhenItGetsAPictureOfItsOwn() => WpfTestHost.Run(() =>
     {
-        // No "background" in the file: the picture and its position (Right) come from Dark, and the window shows Right.
+        // No "background" in the file: the picture and its position (bottom right) come from Dark, and the window shows that.
         var vm = OpenFile("Plain", "{ \"name\": \"Plain\" }", out string path);
-        Assert.Equal("right", vm.Position);
+        Assert.Equal("bottom-right", vm.Position);
         string source = Picture("mine.png");
         vm.PickPictureFile = () => source;
         vm.ChoosePictureCommand.Execute(null);
@@ -452,7 +452,7 @@ public class ThemeEditorTests : IDisposable
         Assert.True(Save(vm));
 
         // A picture of its own with no "position" line would be centered: what was shown has to be what is saved.
-        Assert.Equal("right", ThemeCatalog.ResolveBackground(Read(path))!.Position);
+        Assert.Equal("bottom-right", ThemeCatalog.ResolveBackground(Read(path))!.Position);
     });
 
     [Fact]

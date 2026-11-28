@@ -27,6 +27,11 @@ public partial class App : Application
 
     private static Mutex? _singleInstanceMutex;
     private static EventWaitHandle? _showWindowEvent;
+    // "--couch" from a second copy: the running one opens the full-screen Library (the show event only shows the window).
+    private const string FullScreenEventName = "TrayTrigger_FullScreenLibrary_Event";
+    private static EventWaitHandle? _fullScreenEvent;
+
+    private static bool AsksForFullScreenLibrary(string[] args) => args.Any(a => a.Equals("--couch", StringComparison.OrdinalIgnoreCase));
 
     private const int MaxDispatcherExceptionsPerWindow = 3;
     private static readonly TimeSpan DispatcherExceptionWindow = TimeSpan.FromSeconds(30);
@@ -52,6 +57,8 @@ public partial class App : Application
     private StartupManager _startupManager = null!;
     private TrayPromotionService _trayPromotionService = null!;
     private MainViewModel _mainViewModel = null!;
+    // Kept so the timer it owns lives as long as the app.
+    private GamepadNavigator? _gamepadNavigator;
 
     private TaskbarIcon? _trayIcon;
 
@@ -365,6 +372,12 @@ public partial class App : Application
                             bool sent = PlayRequestChannel.TrySend(playRequest, TimeSpan.FromSeconds(10));
                             Log(sent ? "Sent the play request to the existing instance." : "No existing instance took the play request.");
                         }
+                        // A copy from before the full-screen Library has no such event: it gets the usual show below.
+                        else if (AsksForFullScreenLibrary(e.Args) && EventWaitHandle.TryOpenExisting(FullScreenEventName, out var fullScreen))
+                        {
+                            using (fullScreen) fullScreen.Set();
+                            Log("Asked the existing instance for the full-screen Library.");
+                        }
                         else
                         {
                             using var evt = EventWaitHandle.OpenExisting(EventName);
@@ -403,15 +416,16 @@ public partial class App : Application
             try
             {
                 _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
+                _fullScreenEvent = new EventWaitHandle(false, EventResetMode.AutoReset, FullScreenEventName);
+                var wakeUps = new WaitHandle[] { _showWindowEvent, _fullScreenEvent };
                 var listenerThread = new Thread(() =>
                 {
                     while (!_isShuttingDown)
                     {
-                        if (_showWindowEvent.WaitOne())
-                        {
-                            if (_isShuttingDown) break;
-                            Dispatcher.Invoke(ShowMainWindow);
-                        }
+                        int which = WaitHandle.WaitAny(wakeUps);
+                        if (_isShuttingDown) break;
+                        if (which == 1) Dispatcher.Invoke(OpenFullScreenLibrary);
+                        else Dispatcher.Invoke(ShowMainWindow);
                     }
                 })
                 {
@@ -540,6 +554,10 @@ public partial class App : Application
             _ = Task.Run(() => scriptLibrary.EnsureInstalled(scriptsInUse));
         }
 
+        // Settings > Library & Art "Use a game controller in the Library": reads nothing while it is off. Not in a
+        // capture or test run, where a controller on the desk would move what is being checked.
+        if (!isScreenshot) _gamepadNavigator = new GamepadNavigator(_mainViewModel);
+
         // Constructing MainWindow initializes WPF's D3D render stack (GPU driver DLLs load
         // immediately) even if it's never shown, so skip it when starting minimized to the tray -
         // ShowMainWindow() constructs it lazily on first use. Screenshot mode still needs it up
@@ -573,6 +591,7 @@ public partial class App : Application
         // Steam" - for as long as the game runs, because nothing else re-reads GameStarted.
         _launcherService.SessionGameStarted += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
         _launcherService.SessionEnded += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
+        _launcherService.SessionEnded += _ => Dispatcher.BeginInvoke(ReturnToFullScreenLibraryAfterGame, System.Windows.Threading.DispatcherPriority.Background);
         _launcherService.SessionSuspendChanged += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
 
         WireLaunchPopupAndCompanionTools();
@@ -644,6 +663,9 @@ public partial class App : Application
         {
             Log("Showing MainWindow...");
             ShowMainWindow();
+            // "--couch": straight into the full-screen Library (a shortcut for a TV or a handheld).
+            if (!isScreenshot && AsksForFullScreenLibrary(e.Args))
+                _mainViewModel.IsFullScreenLibrary = true;
         }
 
         if (_restoreResult != null)
@@ -694,6 +716,52 @@ public partial class App : Application
         foreach (var tool in vm.Tools.ToolsSnapshot) paths.Add(tool.TargetPath);
         return paths;
     }
+
+    /// <summary>The full-screen Library, from the tray or "--couch": on, and the window in front.</summary>
+    public void OpenFullScreenLibrary()
+    {
+        if (_mainViewModel == null) return;
+        ShowMainWindow();
+        _mainViewModel.IsFullScreenLibrary = true;
+    }
+
+    /// <summary>
+    /// A game has ended: in the full-screen Library, once no game is left running, TrayTrigger comes back to the front
+    /// full screen (it hid in the tray when the game started), so the TV never shows the desktop.
+    /// </summary>
+    private void ReturnToFullScreenLibraryAfterGame()
+    {
+        if (!StillReturningToFullScreen()) return;
+        ShowMainWindow();
+        LoggingService.Info("App", "Game ended: the full-screen Library is brought to the front");
+        // Putting the game's settings back closes its launcher and tools over the next few seconds, and the launch
+        // notice shows and closes; each window that closes hands the front to another one (a console, Claude, Explorer),
+        // with the taskbar over the Library. So for 15 seconds, whenever the Library itself isn't in front, it is brought
+        // back, past Windows' focus lock. Not over Game Details or a prompt of TrayTrigger's own; the launch notice,
+        // though one of its windows, doesn't count (it was taken as "TrayTrigger is in front" and the Library lost out).
+        int looks = 0;
+        var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        settle.Tick += (_, _) =>
+        {
+            if (++looks > 15 || !StillReturningToFullScreen() || _mainWindow == null)
+            {
+                settle.Stop();
+                return;
+            }
+            var handle = new System.Windows.Interop.WindowInteropHelper(_mainWindow).Handle;
+            var front = ProcessLauncherService.ForegroundWindow();
+            if (handle == IntPtr.Zero || front == handle) return;
+            if (Windows.OfType<Window>().Any(w => w.IsActive && w != _mainWindow && w is not Views.LaunchPopupWindow)) return;
+            string was = ProcessLauncherService.ProgramOf(front);
+            ProcessLauncherService.ActivateWindow(handle);
+            LoggingService.Verbose("App", $"The full-screen Library was brought back to the front after the game ({was} was in front; now {ProcessLauncherService.ProgramOf(ProcessLauncherService.ForegroundWindow())})");
+        };
+        settle.Start();
+    }
+
+    /// <summary>Still in the full-screen Library with no game running: coming back to the front is still wanted.</summary>
+    private bool StillReturningToFullScreen() =>
+        !_isShuttingDown && _mainViewModel?.IsFullScreenLibrary == true && !(_launcherService?.GetActiveSessions().Count > 0);
 
     public void OpenSection(NavSection section)
     {
@@ -847,6 +915,15 @@ public partial class App : Application
             _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();
 
+            // The view and the window placement go back before they are saved (the full-screen Library changes both).
+            try
+            {
+                if (_mainViewModel?.IsFullScreenLibrary == true) _mainViewModel.IsFullScreenLibrary = false;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Swallowed("App", ex, "leaving the full-screen Library on exit");
+            }
             SaveSettingsOnShutdown("App.ExitApplication");
 
             _trayToolTipTimer?.Stop();
@@ -873,6 +950,7 @@ public partial class App : Application
 
             _singleInstanceMutex?.Dispose();
             _showWindowEvent?.Dispose();
+            _fullScreenEvent?.Dispose();
         }
         catch (Exception ex)
         {

@@ -31,7 +31,17 @@ public class WhatsNewServiceTests
     public void Not_due_again_once_the_stable_version_was_shown()
     {
         Assert.False(WhatsNewService.IsDue("1.6.2-beta.4", V("1.6.2-beta.5"), "1.6.2"));
-        Assert.False(WhatsNewService.IsDue("1.6.2-beta.5", V("1.6.2"), "1.6.2"));
+        Assert.False(WhatsNewService.IsDue("1.6.2", V("1.6.2"), "1.6.2"));
+    }
+
+    [Fact]
+    public void Due_once_more_when_a_beta_is_followed_by_its_release()
+    {
+        // Seen on a beta of 2.0.0: the release itself shows the finished notes once more.
+        Assert.True(WhatsNewService.IsDue("2.0.0-beta.3", V("2.0.0"), "2.0.0"));
+        // Not from a beta of another version, nor for a later release of the same one.
+        Assert.False(WhatsNewService.IsDue("2.0.0", V("2.0.0"), "2.0.0"));
+        Assert.True(WhatsNewService.IsDue("1.9.0-beta.1", V("2.0.0"), ""));
     }
 
     [Fact]

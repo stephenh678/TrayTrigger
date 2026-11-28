@@ -80,7 +80,7 @@
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" HorizontalAlignment="Left"
                     views:ScrollToTop.Target="{Binding ElementName=EditScroll}">
                 <!-- A WrapPanel: six tabs outgrow the dialog at a large text size, and a second row beats a clipped last tab. -->
-                <WrapPanel Orientation="Horizontal">
+                <WrapPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
                     <Button Content="All" Command="{Binding SelectSectionCommand}" CommandParameter="All"
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllSection}"/>
                     <Button Content="Identity &amp; Library" Command="{Binding SelectSectionCommand}" CommandParameter="Identity" Margin="2,0,0,0"
@@ -238,7 +238,7 @@
                                 </TextBlock>
                                       </StackPanel>
                                         <WrapPanel DockPanel.Dock="Bottom">
-                                            <Button Content="Choose Image..." Command="{Binding ChooseHeroCommand}" AutomationProperties.Name="Choose a hero banner"
+                                            <Button Content="Choose Image..." Command="{Binding ChooseHeroCommand}" views:GamepadNavigator.Skip="True" AutomationProperties.Name="Choose a hero banner"
                                                     Style="{StaticResource ModernOutlineButton}" Padding="12,4" Margin="0,0,6,0"/>
                                             <Button Content="Use Automatic" Command="{Binding UseAutomaticHeroCommand}" AutomationProperties.Name="Use the automatic hero banner"
                                                     Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,2,0"/>
@@ -311,7 +311,7 @@
                                     </TextBlock.Style>
                                 </TextBlock>
                                                 <WrapPanel>
-                                                    <Button Content="Choose..." Command="{Binding BrowseCoverCommand}" AutomationProperties.Name="Choose a poster"
+                                                    <Button Content="Choose..." Command="{Binding BrowseCoverCommand}" views:GamepadNavigator.Skip="True" AutomationProperties.Name="Choose a poster"
                                                             Style="{StaticResource ModernOutlineButton}" Padding="10,4" Margin="0,0,6,4"/>
                                                     <Button Content="Use Automatic" Command="{Binding UseAutomaticPosterCommand}" AutomationProperties.Name="Use the automatic poster"
                                                             Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,2,4"/>
@@ -348,7 +348,7 @@
                                     </TextBlock.Style>
                                 </TextBlock>
                                                 <WrapPanel>
-                                                    <Button Content="Choose..." Command="{Binding BrowseIconCommand}" AutomationProperties.Name="Choose an icon"
+                                                    <Button Content="Choose..." Command="{Binding BrowseIconCommand}" views:GamepadNavigator.Skip="True" AutomationProperties.Name="Choose an icon"
                                                             Style="{StaticResource ModernOutlineButton}" Padding="10,4" Margin="0,0,6,4"/>
                                                     <Button Content="Use Automatic" Command="{Binding UseAutomaticIconCommand}" AutomationProperties.Name="Use the automatic icon"
                                                             Style="{StaticResource ModernGhostButton}" Padding="8,4" Margin="0,0,0,4"/>
@@ -442,7 +442,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox AutomationProperties.Name="{Binding ExecutableLabel}" Grid.Column="0" Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource PathTextBox}" Margin="0,0,8,0"/>
-                                <Button AutomationProperties.Name="Browse for the executable" Grid.Column="1" Content="Browse..." Command="{Binding BrowseExeCommand}"
+                                <Button AutomationProperties.Name="Browse for the executable" Grid.Column="1" Content="Browse..." Command="{Binding BrowseExeCommand}" views:GamepadNavigator.Skip="True"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
                             <TextBlock Text="{Binding LinkTargetHint}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,-6,0,10"
@@ -470,7 +470,7 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBox AutomationProperties.Name="Working directory" Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource PathTextBox}" Margin="0,0,8,0"/>
-                                        <Button AutomationProperties.Name="Browse for the working directory" Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}"
+                                        <Button AutomationProperties.Name="Browse for the working directory" Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}" views:GamepadNavigator.Skip="True"
                                                 Style="{StaticResource ModernOutlineButton}"/>
                                     </Grid>
 
@@ -499,7 +499,7 @@
                                     <!-- Recorded from real key presses, and refused on the spot if another game, the
                                          window hotkey, or another app already has the combo. Its message is rendered
                                          below, across the whole row, rather than wrapped under the 160 px box. -->
-                                    <views:HotkeyRecorderBox AutomationProperties.Name="Launch hotkey" x:Name="LaunchHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
+                                    <views:HotkeyRecorderBox AutomationProperties.Name="Launch hotkey" x:Name="LaunchHotkeyBox" views:GamepadNavigator.Skip="True" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
                                                              ShowInlineMessage="False" Width="180" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Global Launch Hotkey" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
@@ -865,12 +865,12 @@
                                 <Button AutomationProperties.Name="Test the pre-launch script" Grid.Column="1" Content="Test" Command="{Binding TestPreLaunchScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                                         ToolTip="Run this script now with the values in this dialog (hidden, not elevated, 30 s limit) and show its exit code and output"/>
-                                <Button AutomationProperties.Name="Browse for a pre-launch script" Grid.Column="2" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
+                                <Button AutomationProperties.Name="Browse for a pre-launch script" Grid.Column="2" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}" views:GamepadNavigator.Skip="True"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
                             <TextBlock Text="{Binding PreLaunchScriptError}" Style="{StaticResource FieldErrorText}" Margin="0,-6,0,10"/>
                             <StackPanel Orientation="Horizontal" Margin="0,-6,0,8">
-                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPreLaunchScriptCommand}"
+                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPreLaunchScriptCommand}" views:GamepadNavigator.Skip="True"
                                         ToolTip="Create a new PowerShell script of your own from the blank template, in the scripts folder, and open it for editing"/>
                                 <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPreLaunchScriptCommand}"/>
@@ -896,13 +896,13 @@
                                 <Button AutomationProperties.Name="Test the post-exit script" Grid.Column="1" Content="Test" Command="{Binding TestPostExitScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                                         ToolTip="Run this script now as a post-exit run with playtime 0 (hidden, not elevated, 30 s limit) and show its exit code and output"/>
-                                <Button AutomationProperties.Name="Browse for a post-exit script" Grid.Column="2" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
+                                <Button AutomationProperties.Name="Browse for a post-exit script" Grid.Column="2" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}" views:GamepadNavigator.Skip="True"
                                         IsEnabled="{Binding CanEditPostExitScript}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
                             <TextBlock Text="{Binding PostExitScriptError}" Style="{StaticResource FieldErrorText}" Margin="0,0,0,4"/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPostExitScriptCommand}"
+                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPostExitScriptCommand}" views:GamepadNavigator.Skip="True"
                                         IsEnabled="{Binding CanEditPostExitScript}"
                                         ToolTip="Create a new PowerShell script of your own from the blank template, in the scripts folder, and open it for editing"/>
                                 <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>

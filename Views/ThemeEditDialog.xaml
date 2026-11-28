@@ -273,7 +273,7 @@
                                 <TextBlock Text="Starts from" Margin="0,12,0,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                 <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                         CornerRadius="{DynamicResource RadiusCard}" Padding="3" HorizontalAlignment="Left">
-                                    <StackPanel Orientation="Horizontal">
+                                    <StackPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
                                         <Button Content="Dark" Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsDark}" Click="StartFromDark_Click" AutomationProperties.Name="Start from Dark"/>
                                         <Button Content="Light" Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLight}" Click="StartFromLight_Click" Margin="2,0,0,0" AutomationProperties.Name="Start from Light"/>
                                     </StackPanel>

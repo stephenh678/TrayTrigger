@@ -102,9 +102,10 @@
             </Grid>
         </Border>
 
-        <!-- Attribution (RAWG's terms need an active link wherever their data shows; Steam needs none) -->
+        <!-- Attribution (RAWG's terms need an active link wherever their data shows; Steam needs none). The link takes
+             focus only once shown: one in a collapsed TextBlock still took a Tab press, with nothing on screen. -->
         <TextBlock x:Name="AttributionTextBlock" Grid.Row="3" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,12" Visibility="Collapsed">
-            <Hyperlink x:Name="AttributionLink" Click="AttributionLink_Click" Foreground="{DynamicResource BrushTextSecondary}"><Run x:Name="AttributionRun"/></Hyperlink>
+            <Hyperlink x:Name="AttributionLink" Focusable="False" Click="AttributionLink_Click" Foreground="{DynamicResource BrushTextSecondary}"><Run x:Name="AttributionRun"/></Hyperlink>
         </TextBlock>
 
         <!-- Buttons -->

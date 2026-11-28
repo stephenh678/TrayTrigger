@@ -818,6 +818,21 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Settings > Library &amp; Art: a game controller moves around the Library and Game Details (Views.GamepadNavigator).</summary>
+    public bool ControllerNavigation
+    {
+        get => _settings.ControllerNavigation;
+        set
+        {
+            if (_settings.ControllerNavigation != value)
+            {
+                _settings.ControllerNavigation = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public bool AutoCategorizeFromSteam
     {
         get => _settings.AutoCategorizeFromSteam;
@@ -849,22 +864,43 @@ public partial class SettingsViewModel : ViewModelBase
 
     public string LibraryViewMode
     {
-        get => NormalizeViewMode(_settings.LibraryViewMode);
+        get => _viewModeShown ?? NormalizeViewMode(_settings.LibraryViewMode);
         set
         {
             string normalized = NormalizeViewMode(value);
-            if (_settings.LibraryViewMode != normalized)
-            {
-                _settings.LibraryViewMode = normalized;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsGridView));
-                OnPropertyChanged(nameof(IsExtraLargeView));
-                OnPropertyChanged(nameof(IsIconsView));
-                OnPropertyChanged(nameof(IsListView));
-                OnPropertyChanged(nameof(IsPosterView));
-                AutoSaveSettings();
-            }
+            // A view picked while another is only shown (the full-screen Library) is the one kept, and saved.
+            bool wasShown = _viewModeShown != null;
+            _viewModeShown = null;
+            bool changed = _settings.LibraryViewMode != normalized;
+            if (changed) _settings.LibraryViewMode = normalized;
+            if (changed || wasShown) RaiseViewModeChanged();
+            if (changed) AutoSaveSettings();
         }
+    }
+
+    // A view shown for a while without being saved (the full-screen Library's Extra Large), or null.
+    private string? _viewModeShown;
+
+    /// <summary>
+    /// Shows this view without saving it, until <c>null</c> ends it (or a view is picked, which is then kept): the
+    /// full-screen Library shows Extra Large and leaves the saved view as it was, even if TrayTrigger is ended meanwhile.
+    /// </summary>
+    internal void ShowViewModeFor(string? mode)
+    {
+        string? shown = mode == null ? null : NormalizeViewMode(mode);
+        if (shown == _viewModeShown) return;
+        _viewModeShown = shown;
+        RaiseViewModeChanged();
+    }
+
+    private void RaiseViewModeChanged()
+    {
+        OnPropertyChanged(nameof(LibraryViewMode));
+        OnPropertyChanged(nameof(IsGridView));
+        OnPropertyChanged(nameof(IsExtraLargeView));
+        OnPropertyChanged(nameof(IsIconsView));
+        OnPropertyChanged(nameof(IsListView));
+        OnPropertyChanged(nameof(IsPosterView));
     }
 
     /// <summary>Either poster view - the two that <see cref="PosterDetailsOnHover"/> applies to.</summary>

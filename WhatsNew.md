@@ -6,21 +6,17 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 2.0.0
 
-- **Amazon Games** - Scan for Games now finds your Amazon Games and launches them through the Amazon Games app.
-- **itch.io** - Scan for Games now finds games installed with the itch app, and starts them without the app needing to be open.
-- **Sort by any column** - click a column header in the Details List view to sort by it, and again to reverse it.
-- **Reverse any sort** - the arrow beside the sort box, in the Library and on the Tools page, turns the order round.
-- **Your PC beside the requirements** - Game Details shows your own parts under each of a game's PC requirements, and warns where your PC falls short.
-- **Resizable columns** - drag a column's edge in the Details List view to make it wider or narrower.
-- **See every game's profile** - the Details List view has a Profile column, and you can sort by it.
-- **Sort by size** - Size on Disk in the Library's sort box shows which games take the most room.
-- **Repair a game** - Game Details' ... menu opens the game in its launcher, where Verify, Repair and Uninstall are.
-- **One line for categories and collections** - Collections now sit beside the category tabs. When they don't both fit, drag the divider between them to give either side more room.
-- **Tab arrows** - When the tabs don't fit, arrows at each end scroll them.
-- **Easier System, Settings and About pages** - Each opens on its first tab and shows one tab at a time, and cards that group settings have a clear heading. Settings has a new Launchers tab for launchers and scanning.
-- **On/off switches** - Each tweak and profile tweak has one switch that shows whether it's on. Preset and opt-in tweaks sit under their own headings.
-- **Hardware Specs at a glance** - Live readings sit in tiles at the top, and the specs are two to a row.
-- **Restore point option moved** - It is now on the Performance Preset card, beside the buttons it applies to.
+- **Play from the couch with a controller** - Pick and play games with an Xbox or PlayStation controller, wired or Bluetooth, or a handheld's own controls: the D-pad moves, A opens a game, X plays it, and LB and RB switch categories. Turn it on in Settings > Library & Art.
+- **Full-screen Library** - Your games as big posters for a TV or a handheld, with Game Details as a card on top. Press F11, choose it from the tray menu or press View on the controller, and TrayTrigger comes back full screen when your game exits.
+- **Amazon Games and itch.io** - Scan for Games now finds games from both apps, with their own badges, categories and filters, alongside the other eight stores.
+- **A redesigned System & Performance page** - One tab at a time, a Hardware Specs tab with live readings in tiles across the top, and a single on/off switch on every tweak that shows whether it's on.
+- **A redesigned Settings page** - One tab at a time, clear headings on every card with each button beside what it acts on, and a new Launchers tab for your launchers and scanning.
+- **Quicker with the keyboard** - The arrow keys, Home, End and Page Up and Page Down move between games in every view, and Tab moves from group to group instead of stopping on every button.
+- **Your PC beside the requirements** - Game Details shows your own processor, graphics card, memory and free space under each of a game's PC requirements, and warns where your PC falls short.
+- **Sort and size the Details List** - Click a column to sort by it, drag its edge to resize it, and use the new arrow beside the sort box to reverse any order. Size on Disk and Performance Profile are new sorts too.
+- **Repair a game from its page** - Game Details' ... menu opens the game in its launcher, where its Verify, Repair and Uninstall live.
+- **A wider, sharper banner** - Game Details' banner now runs the full width of the page, at full resolution on large screens.
+- **Categories and collections on one line** - Collections sit beside the category tabs, and arrows scroll the tabs when there are more than fit.
 
 ## 1.8.1
 

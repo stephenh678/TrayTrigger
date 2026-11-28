@@ -3613,6 +3613,41 @@ public partial class App
                 return;
             }
 
+            // --test-card-keys <out.txt>: arrow keys, Home, End and Page Down in each card view (App.CardKeysCheck.cs).
+            if (e.Args[i].Equals("--test-card-keys", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunCardKeysCheck(e.Args[i + 1]);
+                return;
+            }
+
+            // --test-gamepad <out.txt>: the controller navigation driven by made-up readings (App.GamepadCheck.cs).
+            if (e.Args[i].Equals("--test-gamepad", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunGamepadCheck(e.Args[i + 1]);
+                return;
+            }
+
+            // --test-controllers <out.txt> [seconds]: what the real controllers report, XInput and PlayStation (App.GamepadCheck.cs).
+            if (e.Args[i].Equals("--test-controllers", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunControllersCheck(e.Args[i + 1], i + 2 < e.Args.Length && int.TryParse(e.Args[i + 2], out int seconds) ? seconds : 5);
+                return;
+            }
+
+            // --test-fullscreen <out.txt>: the full-screen Library on and off, and that everything goes back (App.FullScreenCheck.cs).
+            if (e.Args[i].Equals("--test-fullscreen", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunFullScreenCheck(e.Args[i + 1]);
+                return;
+            }
+
+            // --test-tab-order <out.txt>: every Tab stop in the Library's views and Game Details (App.TabOrderCheck.cs).
+            if (e.Args[i].Equals("--test-tab-order", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunTabOrderCheck(e.Args[i + 1]);
+                return;
+            }
+
             // --test-layout-audit <out.txt>: text cut off and elements clipped on each page and dialog (App.LayoutAudit.cs).
             if (e.Args[i].Equals("--test-layout-audit", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

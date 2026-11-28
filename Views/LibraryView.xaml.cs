@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TrayTrigger.Services;
 using System.Windows;
 using System.Windows.Controls;
@@ -194,8 +195,9 @@ public partial class LibraryView : UserControl
         var menu = (ContextMenu)FindResource("GameBatchContextMenu");
         menu.DataContext = ViewModel;
         menu.PlacementTarget = element;
-        // The selection bar's More opens the same menu above itself; a right-click opens it here.
-        menu.Placement = PlacementMode.MousePoint;
+        // The selection bar's More opens the same menu above itself; a right-click opens it at the mouse,
+        // and the menu key or Shift+F10 (CursorLeft is -1) under the card.
+        menu.Placement = e.CursorLeft < 0 ? PlacementMode.Bottom : PlacementMode.MousePoint;
         menu.IsOpen = true;
     }
 
@@ -207,5 +209,118 @@ public partial class LibraryView : UserControl
         if (_contextMenuCard == null) return;
         _contextMenuCard.IsContextMenuOpen = false;
         _contextMenuCard = null;
+    }
+
+    /// <summary>
+    /// Arrow keys, Home, End, Page Up and Page Down move between the cards of the Poster Grid, Extra Large and
+    /// Compact Icons views the way File Explorer's icon views do: Left and Right step through the list, carrying
+    /// on to the next or previous row; Up and Down go to the card above or below, and Down on the row before a
+    /// shorter last row goes to its last card. Only when a card (or its Play button) has focus and no modifier is
+    /// held, so the scroll bar and Shift/Ctrl keys keep doing what they did. WPF's own guess at a direction got
+    /// stuck at row ends and landed on the Play buttons in Compact Icons.
+    /// </summary>
+    private void OnCardGridKeyDown(object sender, KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.None) return;
+        if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End or Key.PageUp or Key.PageDown)) return;
+        if (e.OriginalSource is not DependencyObject source || CardOf(source) is not { } card) return;
+
+        var cards = VisibleCards();
+        int index = cards.IndexOf(card);
+        if (index < 0) return;
+        e.Handled = true;
+
+        int target = CardGridNavigation.Target(e.Key, index, cards.Count, CardsPerRow(cards), RowsPerPage(card));
+        if (target == index) return;
+        cards[target].Focus();
+        cards[target].BringIntoView();
+    }
+
+    /// <summary>
+    /// Whether focus is in the rows the controller reaches above the games: the category and collection tabs, and the
+    /// search, sort, filter and view bar. Not the header's Add Game, Add Folder and Scan for Games: they open Windows'
+    /// own file and folder pickers, which a controller can't work or close.
+    /// </summary>
+    internal bool IsInTopBar(DependencyObject? focused)
+    {
+        if (focused is not Visual visual) return false;
+        return visual.IsDescendantOf(TabRow) || visual.IsDescendantOf(LibraryToolbar);
+    }
+
+    /// <summary>Focus into the rows above the games: <paramref name="preferred"/> if it is still there and can take it, else the Filters button.</summary>
+    internal void FocusTopBar(IInputElement? preferred)
+    {
+        if (preferred is UIElement { IsVisible: true, IsEnabled: true, Focusable: true } element && IsInTopBar(element) && element.Focus()) return;
+        FilterFlyoutControl.FilterButton.Focus();
+    }
+
+    /// <summary>True when focus is on a game: a card or its Play button, or a Details List row.</summary>
+    internal bool IsGameFocused(DependencyObject? focused)
+    {
+        if (focused == null) return false;
+        if (CardOf(focused) != null) return true;
+        return focused is ListBoxItem item && ItemsControl.ItemsControlFromItemContainer(item) == GamesListBox;
+    }
+
+    /// <summary>
+    /// Puts focus on a game in the view on screen: <paramref name="preferred"/> when it is in the view, else the
+    /// selected Details List row (or the first row), or the first card.
+    /// </summary>
+    internal void FocusGames(GameCardViewModel? preferred = null)
+    {
+        if (GamesListBox.IsVisible)
+        {
+            if (GamesListBox.Items.Count == 0) return;
+            int index = preferred != null ? GamesListBox.Items.IndexOf(preferred) : -1;
+            if (index < 0) index = Math.Max(0, GamesListBox.SelectedIndex);
+            GamesListBox.SelectedIndex = index;
+            GamesListBox.ScrollIntoView(GamesListBox.Items[index]);
+            GamesListBox.UpdateLayout();
+            (GamesListBox.ItemContainerGenerator.ContainerFromIndex(index) as ListBoxItem)?.Focus();
+            return;
+        }
+        if (!CardScroller.IsVisible) return;
+        var cards = VisibleCards();
+        if (cards.Count == 0) return;
+        var card = cards.Find(c => c.DataContext == preferred) ?? cards[0];
+        card.Focus();
+        card.BringIntoView();
+    }
+
+    /// <summary>The card a focused element belongs to: the card itself, or the card around its Play button.</summary>
+    private static Border? CardOf(DependencyObject element)
+    {
+        for (var d = element; d != null && d is not ItemsControl; d = VisualTreeHelper.GetParent(d))
+            if (d is Border { Name: "CardBorder" or "IconCardBorder" } border) return border;
+        return null;
+    }
+
+    /// <summary>The cards of the view on screen, in the list's order (the WrapPanels don't virtualise, so every card exists).</summary>
+    private List<Border> VisibleCards()
+    {
+        var items = PosterItems.IsVisible ? PosterItems : IconItems;
+        var cards = new List<Border>(items.Items.Count);
+        for (int i = 0; i < items.Items.Count; i++)
+            if (items.ItemContainerGenerator.ContainerFromIndex(i) is ContentPresenter presenter
+                && VisualTreeHelper.GetChildrenCount(presenter) > 0
+                && VisualTreeHelper.GetChild(presenter, 0) is Border border)
+                cards.Add(border);
+        return cards;
+    }
+
+    /// <summary>How many cards the WrapPanel fits on its first row.</summary>
+    private int CardsPerRow(List<Border> cards)
+    {
+        double top = cards[0].TranslatePoint(default, CardScroller).Y;
+        int perRow = 1;
+        while (perRow < cards.Count && Math.Abs(cards[perRow].TranslatePoint(default, CardScroller).Y - top) < 1) perRow++;
+        return perRow;
+    }
+
+    /// <summary>Whole rows of cards that fit in the scroller, at least one: how far Page Up and Page Down go.</summary>
+    private int RowsPerPage(Border card)
+    {
+        double rowHeight = card.ActualHeight + card.Margin.Top + card.Margin.Bottom;
+        return rowHeight > 0 ? Math.Max(1, (int)(CardScroller.ViewportHeight / rowHeight)) : 1;
     }
 }

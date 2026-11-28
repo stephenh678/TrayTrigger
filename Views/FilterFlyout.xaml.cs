@@ -88,7 +88,8 @@ public partial class FilterFlyout : UserControl
     /// Puts focus on the flyout itself, so Escape works and Tab goes to its first control. A Popup does
     /// not take focus on its own, which left the panel unusable without a mouse. Focus goes to the panel
     /// and not to its first option: an option with focus draws a blue outline, which on opening read as
-    /// that option being picked.
+    /// that option being picked. The panel is not a Tab stop itself (KeyboardNavigation.IsTabStop="False"), so going round the
+    /// controls with Tab never lands on it with nothing outlined.
     /// </summary>
     private void FilterPopup_Opened(object? sender, EventArgs e)
     {

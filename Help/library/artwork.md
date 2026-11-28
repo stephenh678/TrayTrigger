@@ -34,7 +34,7 @@ Turn it on with the eye button beside the view buttons above the library, or in 
 - Choose what stays on every card under the checkbox in Settings > Library & Art: the launcher logo, category, HIDDEN, PLAYING and NOT INSTALLED (or MISSING) tags, a favorite's star, the title, playtime and last played date. Anything ticked stays on screen, and the rest waits for the pointer. Out of the box only the PLAYING tag stays.
 - A game that isn't installed always stays dimmed, and the Play button always waits until you point at the card.
 - A game with no poster keeps its icon and name, since there's no art to recognize it by.
-- Favorite a game from its right-click menu. In this mode the star on the card isn't a Tab stop, because it only shows while the card has focus.
+- Favorite a game from its right-click menu, or click the star while you point at the card. Tab and the arrow keys never stop on the star; from the keyboard, the menu key opens the menu.
 - With Windows' Animation effects turned off, the art doesn't zoom and the details appear without fading.
 
 ## Refresh All Game Posters

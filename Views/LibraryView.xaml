@@ -33,6 +33,16 @@
                        <!-- 1. Header: title and subtitle on the left; the game count and the add buttons on the right, so the
                             row below can give its whole width to the category and collection strips. -->
                        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+                           <!-- Not in the full-screen Library: only the games, and the bar to sort and filter them. -->
+                           <DockPanel.Style>
+                               <Style TargetType="DockPanel">
+                                   <Style.Triggers>
+                                       <DataTrigger Binding="{Binding IsFullScreenLibrary}" Value="True">
+                                           <Setter Property="Visibility" Value="Collapsed"/>
+                                       </DataTrigger>
+                                   </Style.Triggers>
+                               </Style>
+                           </DockPanel.Style>
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -78,7 +88,7 @@
                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}">
                                <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource SideArrowScrollViewer}"
                                              PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
-                                   <ItemsControl x:Name="CategoryItems" ItemsSource="{Binding CategoryTabs}">
+                                   <ItemsControl x:Name="CategoryItems" ItemsSource="{Binding CategoryTabs}" views:FocusGroup.IsGroup="True">
                                        <ItemsControl.ItemsPanel>
                                            <ItemsPanelTemplate>
                                                <StackPanel Orientation="Horizontal"/>
@@ -134,7 +144,7 @@
                                    Visibility="{Binding HasCollections, Converter={StaticResource BoolToVis}}">
                                <ScrollViewer Style="{StaticResource SideArrowScrollViewer}"
                                              PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
-                                   <ItemsControl x:Name="CollectionItems" ItemsSource="{Binding CollectionTabs}">
+                                   <ItemsControl x:Name="CollectionItems" ItemsSource="{Binding CollectionTabs}" views:FocusGroup.IsGroup="True">
                                        <ItemsControl.ItemsPanel>
                                            <ItemsPanelTemplate>
                                                <StackPanel Orientation="Horizontal"/>
@@ -161,9 +171,10 @@
                        </views:TabRowPanel>
 
                        <!-- 3. Search, Sort & View Mode Bar -->
-                       <Grid Grid.Row="2" Margin="0,0,0,14">
+                       <Grid x:Name="LibraryToolbar" Grid.Row="2" Margin="0,0,0,14">
                            <Grid.ColumnDefinitions>
                                <ColumnDefinition Width="*"/>
+                               <ColumnDefinition Width="Auto"/>
                                <ColumnDefinition Width="Auto"/>
                                <ColumnDefinition Width="Auto"/>
                                <ColumnDefinition Width="Auto"/>
@@ -253,10 +264,10 @@
                                </Button>
                            </Border>
 
-                           <!-- View Mode Switcher (Grid, Icons, List) -->
+                           <!-- View Mode Switcher (Grid, Icons, List): one Tab stop, Left and Right move along it. -->
                            <Border Grid.Column="4" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
-                               <StackPanel Orientation="Horizontal">
+                               <StackPanel Orientation="Horizontal" views:FocusGroup.IsGroup="True">
 
                                    <!-- Every button is icon-only, so each carries a tooltip and an automation
                                         name. Extra Large uses a "large tiles" glyph (E8A9) - the old E71D
@@ -290,6 +301,39 @@
                                                   Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                </StackPanel>
+                           </Border>
+
+                           <!-- The full-screen Library (for a TV or a handheld), on and off: F11 and the controller's View
+                                button do the same. -->
+                           <Border Grid.Column="5" Margin="10,0,0,0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
+                               <Button Command="{Binding ToggleFullScreenLibraryCommand}" Width="32" Height="30" Padding="0" Cursor="Hand">
+                                   <TextBlock FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
+                                              Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                       <TextBlock.Style>
+                                           <Style TargetType="TextBlock">
+                                               <Setter Property="Text" Value="&#xE740;"/>
+                                               <Style.Triggers>
+                                                   <DataTrigger Binding="{Binding IsFullScreenLibrary}" Value="True">
+                                                       <Setter Property="Text" Value="&#xE73F;"/>
+                                                   </DataTrigger>
+                                               </Style.Triggers>
+                                           </Style>
+                                       </TextBlock.Style>
+                                   </TextBlock>
+                                   <Button.Style>
+                                       <Style TargetType="Button" BasedOn="{StaticResource SegmentedTabButton}">
+                                           <Setter Property="ToolTip" Value="Full-screen Library (F11): only your games, big, for a TV or a handheld"/>
+                                           <Setter Property="AutomationProperties.Name" Value="Full-screen Library"/>
+                                           <Style.Triggers>
+                                               <DataTrigger Binding="{Binding IsFullScreenLibrary}" Value="True">
+                                                   <Setter Property="ToolTip" Value="Back to the window (F11)"/>
+                                                   <Setter Property="AutomationProperties.Name" Value="Leave the full-screen Library"/>
+                                               </DataTrigger>
+                                           </Style.Triggers>
+                                       </Style>
+                                   </Button.Style>
+                               </Button>
                            </Border>
                        </Grid>
 
@@ -460,7 +504,7 @@
                            </Border>
 
                            <!-- ScrollViewer for WrapPanel Views (View 1: Poster Cards & View 2: Compact Icons) -->
-                           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                           <ScrollViewer x:Name="CardScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PreviewKeyDown="OnCardGridKeyDown">
                                <ScrollViewer.Style>
                                    <Style TargetType="ScrollViewer">
                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -475,7 +519,10 @@
                                        </Style.Triggers>
                                    </Style>
                                </ScrollViewer.Style>
-                               <Grid>
+                               <!-- Room above and below the cards for the hover zoom: an Extra Large card grows 9px a side
+                                    into its 7px margin, and the top row was cut 2px by the scroller's edge. Not at the sides,
+                                    so the grid's gaps and edges stay as they are. -->
+                               <Grid Margin="0,4,0,4">
 
                                    <!-- ============================================================== -->
                                    <!-- VIEW 1: POSTER CARDS, NORMAL AND EXTRA LARGE                   -->
@@ -484,7 +531,8 @@
                                    <!-- them for the larger pair. Compact Icons and the Details List    -->
                                    <!-- are different designs and stay separate.                        -->
                                    <!-- ============================================================== -->
-                                   <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
+                                   <!-- The games are one Tab stop: Tab lands on the game you were last on, the arrow keys move between them (OnCardGridKeyDown). -->
+                                   <ItemsControl x:Name="PosterItems" ItemsSource="{Binding FilteredGames}" Focusable="False" KeyboardNavigation.TabNavigation="Once">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>
@@ -754,7 +802,7 @@
                                                                <!-- Declared first so it gets its room first: at a large text size the left badges and category would otherwise take the whole row and push the favorite star out of the card. -->
                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                                                                    <!-- Favorite Star - outermost corner -->
-                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
+                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center" Focusable="False"
                                                                            views:PosterDetailFade.Part="FavoriteStar"
             AutomationProperties.Name="{Binding FavoriteMenuLabel}">
                                                                        <Button.Style>
@@ -1028,7 +1076,7 @@
                                    <!-- ============================================================== -->
                                    <!-- VIEW 2: COMPACT ICONS VIEW                                     -->
                                    <!-- ============================================================== -->
-                                   <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
+                                   <ItemsControl x:Name="IconItems" ItemsSource="{Binding FilteredGames}" Focusable="False" KeyboardNavigation.TabNavigation="Once">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
                                                <Setter Property="Visibility" Value="Collapsed"/>
@@ -1077,7 +1125,7 @@
 
                                                        <!-- Top Badges -->
                                                        <DockPanel Grid.Row="0" Height="14">
-                                                           <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}"
+                                                           <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}" Focusable="False"
                                                                    Width="14" Height="14" Padding="0" Margin="0,0,3,0"
                                                                    Background="Transparent" BorderThickness="0" Cursor="Hand"
         AutomationProperties.Name="{Binding FavoriteMenuLabel}" ToolTip="{Binding FavoriteMenuLabel}" VerticalAlignment="Center">
@@ -1482,7 +1530,8 @@
                                                    <!-- Action Buttons -->
                                                    <StackPanel Grid.Column="8" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                        <!-- Details needs no button here: a left-click anywhere on the row opens it. -->
-                                                       <Button Command="{Binding LaunchCommand}" AutomationProperties.Name="Play Game"
+                                                       <!-- Takes no focus: Ctrl+Enter (X on a controller) plays the row. Still a click. -->
+                                                       <Button Command="{Binding LaunchCommand}" AutomationProperties.Name="Play Game" Focusable="False"
                                                                Height="34" Width="34">
                                                            <Button.Style>
                                                                <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">

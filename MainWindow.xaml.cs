@@ -115,6 +115,7 @@ public partial class MainWindow : Window
         _viewModel.RequestCollections += OnRequestCollections;
         _viewModel.RequestEditSteamAppId += OnRequestEditSteamAppId;
         _viewModel.RequestMinimizeToTray += OnRequestMinimizeToTray;
+        WireFullScreen();
 
         Closed += (s, e) =>
         {
@@ -199,7 +200,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void CaptureWindowPlacement()
     {
-        if (!IsLoaded) return;
+        // Full screen is not a placement to keep: the window goes back to the one it had before.
+        if (!IsLoaded || IsFullScreen) return;
         var settings = _viewModel.SettingsVM.Settings;
 
         if (WindowState == WindowState.Normal)
@@ -369,6 +371,8 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        // Closing (Alt+F4, or hiding to the tray) leaves the full-screen Library: the window it had comes back first.
+        _viewModel.IsFullScreenLibrary = false;
         if (!_isExplicitExit)
         {
             e.Cancel = true;
@@ -409,6 +413,13 @@ public partial class MainWindow : Window
     /// </summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // F11: the full-screen Library, on and off, from any page (on goes to the Library).
+        if (e.Key == Key.F11 && Keyboard.Modifiers == ModifierKeys.None && !FocusIsInHotkeyBox())
+        {
+            _viewModel.IsFullScreenLibrary = !_viewModel.IsFullScreenLibrary;
+            e.Handled = true;
+            return;
+        }
         // Ctrl+K is the window's search, from any page (Ctrl+F stays each page's own box). Not while a hotkey
         // is being recorded: that box is waiting to hear exactly this chord.
         if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control && !FocusIsInHotkeyBox())
@@ -783,6 +794,10 @@ public partial class MainWindow : Window
         // A tray-menu or hotkey launch while the window is already hidden has nothing to hide and
         // no placement to persist; the save was a full settings.json rewrite per launch.
         if (!IsVisible) return;
+        // The full-screen Library stays on screen: hidden at once, it uncovered the desktop and the launcher for the
+        // seconds before the game's window came up. The game covers it when it opens, and it is there when the game
+        // ends (App.ReturnToFullScreenLibraryAfterGame brings it to the front).
+        if (IsFullScreen) return;
         CaptureWindowPlacement();
         Hide();
         _viewModel.SettingsVM.AutoSaveSettings();

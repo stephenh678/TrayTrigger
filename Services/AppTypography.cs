@@ -70,7 +70,15 @@ public static class AppTypography
     /// Puts the text at the size for the theme on screen: its own <c>textSize</c> in percent when it has one, and otherwise the
     /// size from Settings.
     /// </summary>
-    public static void ApplyForTheme(int? percent) => Apply(OverrideScale ?? (percent ?? SystemPercent) / 100.0);
+    public static void ApplyForTheme(int? percent)
+    {
+        double scale = OverrideScale ?? (percent ?? SystemPercent) / 100.0;
+        if (FullScreenMinimumScale is { } least) scale = Math.Max(scale, least);
+        Apply(scale);
+    }
+
+    /// <summary>While the full-screen Library is on, text is at least this size (a TV is read from across a room). Not saved.</summary>
+    public static double? FullScreenMinimumScale { get; set; }
 
     private static IReadOnlyDictionary<string, double> ReadDesigned()
     {
