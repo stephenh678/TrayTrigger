@@ -794,6 +794,10 @@ public partial class MainWindow : Window
         // A tray-menu or hotkey launch while the window is already hidden has nothing to hide and
         // no placement to persist; the save was a full settings.json rewrite per launch.
         if (!IsVisible) return;
+        // The full-screen Library stays on screen: hidden at once, it uncovered the desktop and the launcher for the
+        // seconds before the game's window came up. The game covers it when it opens, and it is there when the game
+        // ends (App.ReturnToFullScreenLibraryAfterGame brings it to the front).
+        if (IsFullScreen) return;
         CaptureWindowPlacement();
         Hide();
         _viewModel.SettingsVM.AutoSaveSettings();
