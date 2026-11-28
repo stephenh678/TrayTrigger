@@ -72,6 +72,19 @@ public partial class App
                     Settle(window);
                     report.AppendLine($"  {key,-9} -> {Where()}");
                 }
+
+                // A click between the cards (on the scroller, as on its scroll bar), then Right: the keys carry on in the
+                // games instead of scrolling the page.
+                var scroller = Descendants(page).OfType<ScrollViewer>().First(v => v.Name == "CardScroller");
+                Keyboard.Focus(scroller);
+                report.AppendLine($"  scroller focusable: {scroller.Focusable}");
+                foreach (var routed in new[] { UIElement.PreviewMouseLeftButtonDownEvent, UIElement.MouseLeftButtonDownEvent })
+                    scroller.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left) { RoutedEvent = routed });
+                Settle(window);
+                report.AppendLine($"  click     -> {Where()}");
+                SendTestKey(Key.Right);
+                Settle(window);
+                report.AppendLine($"  Right     -> {Where()}");
             }
             File.WriteAllText(outPath, report.ToString());
         }

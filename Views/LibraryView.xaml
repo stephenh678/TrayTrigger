@@ -504,7 +504,10 @@
                            </Border>
 
                            <!-- ScrollViewer for WrapPanel Views (View 1: Poster Cards & View 2: Compact Icons) -->
-                           <ScrollViewer x:Name="CardScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PreviewKeyDown="OnCardGridKeyDown">
+                           <!-- Never focused itself: a click on its scroll bar or between cards took focus, and the arrow keys then
+                                scrolled instead of moving between games. A click puts focus on a game (OnCardScrollerMouseDown). -->
+                           <ScrollViewer x:Name="CardScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False"
+                                         PreviewKeyDown="OnCardGridKeyDown" PreviewMouseLeftButtonDown="OnCardScrollerMouseDown">
                                <ScrollViewer.Style>
                                    <Style TargetType="ScrollViewer">
                                        <Setter Property="Visibility" Value="Collapsed"/>
