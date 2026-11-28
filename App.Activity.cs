@@ -77,8 +77,9 @@ public partial class App
         string previous = settings.LastRunVersion;
         if (string.Equals(previous, current, StringComparison.OrdinalIgnoreCase)) return;
         settings.LastRunVersion = current;
-        // The "What's new" notes are offered once per stable version: a beta of 1.6.2 and then 1.6.2
-        // itself are one offer. Kept until shown, so a toast that was missed still gets its popup.
+        // The "What's new" notes are offered once per stable version, and once more when a beta of it is
+        // followed by the release (the notes are finished by then). Kept until shown, so a toast that was
+        // missed still gets its popup.
         if (settings.ShowWhatsNew && WhatsNewService.IsDue(previous, UpdateService.CurrentSemVer, settings.WhatsNewSeenVersion))
         {
             settings.WhatsNewPendingVersion = WhatsNewService.StableKey(UpdateService.CurrentSemVer);
