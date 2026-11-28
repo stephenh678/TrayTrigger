@@ -128,6 +128,9 @@ public partial class ProcessLauncherService
     [LibraryImport("user32.dll")]
     private static partial uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr lpdwProcessId);
 
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowThreadProcessId")]
+    private static partial uint GetWindowProcessId(IntPtr hWnd, out uint processId);
+
     [LibraryImport("kernel32.dll")]
     private static partial uint GetCurrentThreadId();
 
@@ -1380,6 +1383,23 @@ public partial class ProcessLauncherService
     /// </summary>
     /// <summary>The window in front, whichever program it belongs to.</summary>
     internal static IntPtr ForegroundWindow() => GetForegroundWindow();
+
+    /// <summary>The name of the program a window belongs to, for the log ("none" or "?" when it can't be told).</summary>
+    internal static string ProgramOf(IntPtr hWnd)
+    {
+        if (hWnd == IntPtr.Zero) return "none";
+        GetWindowProcessId(hWnd, out uint pid);
+        try
+        {
+            using var process = Process.GetProcessById((int)pid);
+            return process.ProcessName;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            LoggingService.Swallowed("Launcher", ex, "naming the program of the window in front");
+            return "?";
+        }
+    }
 
     internal static void ActivateWindow(IntPtr hWnd)
     {

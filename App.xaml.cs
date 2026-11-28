@@ -734,24 +734,27 @@ public partial class App : Application
         if (!StillReturningToFullScreen()) return;
         ShowMainWindow();
         LoggingService.Info("App", "Game ended: the full-screen Library is brought to the front");
-        // Putting the game's settings back closes its launcher and tools over the next few seconds, and each window
-        // that closes hands the front to another one (a console, Explorer), with the taskbar over the Library. So it
-        // is brought to the front again while that settles, past Windows' focus lock, unless one of TrayTrigger's own
-        // windows (Game Details) is already in front.
+        // Putting the game's settings back closes its launcher and tools over the next few seconds, and the launch
+        // notice shows and closes; each window that closes hands the front to another one (a console, Claude, Explorer),
+        // with the taskbar over the Library. So for 15 seconds, whenever the Library itself isn't in front, it is brought
+        // back, past Windows' focus lock. Not over Game Details or a prompt of TrayTrigger's own; the launch notice,
+        // though one of its windows, doesn't count (it was taken as "TrayTrigger is in front" and the Library lost out).
         int looks = 0;
-        var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+        var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         settle.Tick += (_, _) =>
         {
-            if (++looks > 4 || !StillReturningToFullScreen() || _mainWindow == null)
+            if (++looks > 15 || !StillReturningToFullScreen() || _mainWindow == null)
             {
                 settle.Stop();
                 return;
             }
-            if (Windows.OfType<Window>().Any(w => w.IsActive)) return;
             var handle = new System.Windows.Interop.WindowInteropHelper(_mainWindow).Handle;
-            if (handle == IntPtr.Zero || ProcessLauncherService.ForegroundWindow() == handle) return;
+            var front = ProcessLauncherService.ForegroundWindow();
+            if (handle == IntPtr.Zero || front == handle) return;
+            if (Windows.OfType<Window>().Any(w => w.IsActive && w != _mainWindow && w is not Views.LaunchPopupWindow)) return;
+            string was = ProcessLauncherService.ProgramOf(front);
             ProcessLauncherService.ActivateWindow(handle);
-            LoggingService.Verbose("App", "The full-screen Library was brought to the front again after the game's put-back");
+            LoggingService.Verbose("App", $"The full-screen Library was brought back to the front after the game ({was} was in front; now {ProcessLauncherService.ProgramOf(ProcessLauncherService.ForegroundWindow())})");
         };
         settle.Start();
     }
