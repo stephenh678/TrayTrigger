@@ -1,4 +1,4 @@
-#if DEBUG
+﻿#if DEBUG
 #pragma warning disable CS8602, CS8604
 using System;
 using System.Collections.Generic;
@@ -802,7 +802,7 @@ public partial class App
                         demoCards[n].Game.Collections = demo;
                     }
                     // Twelve games make two full rows of six.
-                    if (demoCards.Count > 12) _mainViewModel.Library.Games.Remove(demoCards[^1]);
+                    for (int n = demoCards.Count - 1; n >= 12; n--) _mainViewModel.Library.Games.Remove(demoCards[n]);
                     _mainViewModel.Library.RebuildCategories();
                 }
                 _mainWindow.Show();
@@ -2687,6 +2687,8 @@ public partial class App
                             DlssProbeService.Locate(g.Game.ExecutablePath, g.Game.WorkingDirectory).Root is { Length: > 0 } root &&
                             DlssProbeService.FindShippedRuntimes(root).Count > 0 != noDlss)
                         : null)?.Game
+                    // The site's Launch close-up shows a Steam game, so the Steam launch option reads as it does for most players.
+                    ?? (forSite && section == GameEditSection.Launch ? _mainViewModel.Games.FirstOrDefault(g => g.Game.IsSteamGame)?.Game : null)
                     ?? _mainViewModel.Games.FirstOrDefault()?.Game;
                 var sampleGame = source == null
                     ? new GameEntry { Name = "DOOM Eternal", Category = "Action", ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe" }
@@ -3638,6 +3640,13 @@ public partial class App
             if (e.Args[i].Equals("--test-fullscreen", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {
                 RunFullScreenCheck(e.Args[i + 1]);
+                return;
+            }
+
+            // --screenshot-fullscreen <out-dir> ["game name"] [WxH]: the full-screen Library at a TV's size, and Game Details over it (App.FullScreenShots.cs).
+            if (e.Args[i].Equals("--screenshot-fullscreen", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunFullScreenShots(e.Args[i + 1], i + 2 < e.Args.Length ? e.Args[i + 2] : null, i + 3 < e.Args.Length ? e.Args[i + 3] : null);
                 return;
             }
 
